@@ -12,9 +12,10 @@ own rules — different economy, different production, different verbs.
   - Linux/macOS: `python3 -m http.server 8123`
   then open <http://localhost:8123/>.
 
-Pick a faction; the AI opponent plays a *different* faction, chosen at random.
-Win by destroying the enemy's core (Headquarters / Hive / Ark / Ossuary / Haven)
-while protecting your own.
+Pick a faction and the number of AI opponents (1–3, each a different random
+faction). Every match is a free-for-all: destroy the enemy cores (Headquarters /
+Hive / Ark / Ossuary / Haven) — the last core standing wins. When a core falls,
+that faction's entire army falls with it.
 
 ## The map
 
@@ -29,25 +30,31 @@ A large point-symmetric battlefield with neutral objectives worth fighting over:
   Destroy a hoard and whoever lands the kill pockets a **+350 bounty**. The
   biggest camp sits dead center, wrapped around the center obelisk.
 
-## Multiplayer (peer-to-peer, no server)
+## Multiplayer (2–4 players, peer-to-peer, no server)
 
-Play 1v1 against a friend over a direct WebRTC connection — there is no game server,
-no account, no matchmaking service. Signaling is done by hand:
+Play free-for-all with up to 4 people (plus AI bots to fill seats) over direct
+WebRTC connections — no game server, no account, no matchmaking. Signaling is
+done by hand:
 
-1. Both players open their own copy of the game (each person just needs this folder).
-2. The host clicks **HOST GAME** and sends the generated **invite code** to the friend
+1. Everyone opens the game (the GitHub Pages link or their own copy of this folder).
+2. The host clicks **HOST GAME** and sends the generated **invite code** to a friend
    (Discord, WhatsApp, email — anything).
-3. The friend clicks **JOIN GAME**, pastes the invite code, presses **CONNECT**, and
+3. That friend clicks **JOIN GAME**, pastes the invite code, presses **CONNECT**, and
    sends the generated **reply code** back.
 4. The host pastes the reply code and presses **CONNECT**. You're linked.
-5. In the lobby, each player clicks a faction card (must be different factions);
-   the host presses **START MATCH**.
+5. For a 3rd or 4th player the host presses **INVITE PLAYER** in the lobby and
+   repeats the code exchange with the next friend.
+6. **BOTS** cycles the number of AI players filling the remaining seats.
+7. Everyone clicks a faction card (all different); the host presses **START MATCH**.
 
-The host's browser runs the simulation and streams compact snapshots (~1 KB, 10×/s);
-the guest sends commands back. After a match you land back in the lobby for a rematch.
-A public STUN address is used only for NAT discovery; game traffic flows directly
-between the two browsers. Most home networks connect fine — a strict corporate NAT
-on both ends may not.
+The host's browser runs the simulation and streams compact snapshots to every
+guest (~1 KB, 10×/s); guests send commands back. If a guest disconnects mid-match,
+an AI takes over their faction; if the host disconnects, the match ends. After a
+match everyone lands back in the lobby for a rematch.
+
+STUN servers are used for NAT discovery and game traffic flows directly between
+browsers. If both homes sit behind strict NATs a TURN relay is required — free
+credentials from expressturn.com go in the marked spot near the bottom of `game.js`.
 
 ## The five factions
 

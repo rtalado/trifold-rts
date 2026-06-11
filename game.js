@@ -102,7 +102,7 @@ const ECON = {
   // choir: trickle + a cut of every death on the map; units decay in the field
   // but are sustained near the lattice and lifesteal in combat
   choirBase: 1.8, choirConduit: 0.8, choirDeathFlat: 4, choirDeathPct: 0.04,
-  choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.65, choirLattice: 270,
+  choirDecay: 1.5, choirFloor: 0.35, choirSustain: 1.8, choirLeech: 0.65, choirLattice: 270,
   // syndicate: compound interest on the banked treasury, bounties on kills
   synBase: 2.8, synInterest: 0.010, synCapBase: 1400, synCapPer: 500,
   synHouseFlat: 0.8, synBountyFlat: 8, synBountyPct: 0.05, synDropKeepout: 380,
@@ -138,20 +138,28 @@ function countUnits(fac) { return game.entities.reduce((n, e) => n + (!e.dead &&
 function armyOf(fac) { return ents(e => e.fac === fac && e.def.kind === 'unit' && (e.def.dmg > 0 || e.def.aura) && !e.def.harvester && !e.def.core); }
 
 // ---------------- game setup ----------------
-function newGame(playerFac) { // single player vs AI
-  const others = PLAYABLE.filter(f => f !== playerFac);
-  const aiFac = others[Math.floor(Math.random() * others.length)];
-  buildMatch(playerFac, aiFac, 'sp', playerFac);
+function newGame(playerFac) { // single player vs 1-3 AIs
+  const sel = document.getElementById('aiCount');
+  const n = clamp(sel ? +sel.value : 1, 1, 3);
+  const pool = PLAYABLE.filter(f => f !== playerFac);
+  const seats = [{ fac: playerFac, ai: false }];
+  for (let i = 0; i < n; i++) {
+    const k = Math.floor(Math.random() * pool.length);
+    seats.push({ fac: pool.splice(k, 1)[0], ai: true });
+  }
+  buildMatch(seats, 'sp', playerFac);
 }
 
-// facA spawns bottom-left, facB top-right. In MP the host is facA.
-// Both peers run buildMatch with identical args so initial entity ids line up.
-function buildMatch(facA, facB, mode, localFac) {
+// seats: [{fac, ai}] in seat order — seat 0 bottom-left (host/local), then
+// top-right, top-left, bottom-right. Free-for-all: last core standing wins.
+// All peers run buildMatch with identical seats so initial entity ids line up.
+function buildMatch(seats, mode, localFac) {
   nextId = 1;
   game = {
     t: 0, over: false, entities: [], proj: [], fx: [], nodes: [], obelisks: [],
     creep: new Uint8Array(GW * GH),
-    facA, facB, aiFac: facB, localFac, mode, players: {},
+    facs: seats.map(s => s.fac), ais: seats.filter(s => s.ai).map(s => s.fac),
+    localFac, mode, players: {},
     sel: [], placing: null,
     cam: { x: 0, y: 0, z: 1 },
     creepTimer: 0, hudTimer: 0, aiTimer: 0, netTimer: 0, netFx: [],
@@ -184,9 +192,13 @@ function buildMatch(facA, facB, mode, localFac) {
   // the contested center obelisk sits inside the big wild camp
   game.obelisks.push({ id: oid++, x: WORLD_W / 2, y: WORLD_H / 2, owner: null, prog: 0, progFac: null });
 
-  const bases = { a: { x: 460, y: WORLD_H - 460 }, b: { x: WORLD_W - 460, y: 460 } };
-  setupFaction(facA, bases.a, false);
-  setupFaction(facB, bases.b, mode === 'sp');
+  const corners = [
+    { x: 460, y: WORLD_H - 460 },           // seat 0: bottom-left
+    { x: WORLD_W - 460, y: 460 },           // seat 1: top-right
+    { x: 460, y: 460 },                     // seat 2: top-left
+    { x: WORLD_W - 460, y: WORLD_H - 460 }, // seat 3: bottom-right
+  ];
+  seats.forEach((s, i) => setupFaction(s.fac, corners[i], s.ai));
 
   // neutral camps: ravagers guarding a treasure hoard (kill the hoard → bounty)
   const camp = (cx, cy, guards, hoards) => {
@@ -201,8 +213,7 @@ function buildMatch(facA, facB, mode, localFac) {
   camp(1024, 2016, 3, 1); camp(WORLD_W - 1024, WORLD_H - 2016, 3, 1);
   camp(WORLD_W / 2, WORLD_H / 2, 5, 2); // king of the hill
 
-  const myBase = localFac === facA ? bases.a : bases.b;
-  const enemyFac = localFac === facA ? facB : facA;
+  const myBase = corners[seats.findIndex(s => s.fac === localFac)] || corners[0];
   game.cam.x = clamp(myBase.x - canvas.width / 2, 0, WORLD_W - canvas.width);
   game.cam.y = clamp(myBase.y - canvas.height / 2, 0, WORLD_H - canvas.height);
 
@@ -215,9 +226,9 @@ function buildMatch(facA, facB, mode, localFac) {
   setTimeout(() => { if (game) hint.style.display = 'none'; }, 26000);
   document.getElementById('hudFac').textContent = FACTIONS[localFac].name;
   document.getElementById('hudFac').style.color = FACTIONS[localFac].color;
-  document.getElementById('hudEnemy').innerHTML =
-    'ENEMY: <span style="color:' + FACTIONS[enemyFac].color + '">' + FACTIONS[enemyFac].name
-    + (mode === 'sp' ? '' : ' (friend)') + '</span>';
+  document.getElementById('hudEnemy').innerHTML = 'VS: ' + seats.filter(s => s.fac !== localFac)
+    .map(s => '<span style="color:' + FACTIONS[s.fac].color + '">' + FACTIONS[s.fac].name
+      + (s.ai ? ' (AI)' : '') + '</span>').join(' · ');
   refreshCard();
 }
 
@@ -300,10 +311,11 @@ function applyDamage(t, dmg, attacker) {
   if (t.hp <= 0) {
     t.dead = true;
     if (attacker && game.players[attacker.fac]) game.players[attacker.fac].kills++;
-    // every death anywhere pays the Choir essence — friend or foe
+    // every death anywhere pays the Choir essence — friend or foe.
+    // Scaled by enemy count: more players = more corpses, not more income.
     const choirP = game.players.choir;
     if (choirP) {
-      const g = ECON.choirDeathFlat + t.hpMax * ECON.choirDeathPct;
+      const g = (ECON.choirDeathFlat + t.hpMax * ECON.choirDeathPct) / Math.max(1, game.facs.length - 1);
       choirP.res += g; choirP.gainAccum += g;
     }
     // syndicate collects a bounty on its kills
@@ -576,7 +588,7 @@ function tickQueue(e, dt) {
 // route an error message to whichever human owns this faction (local or remote)
 function localMsg(fac, text) {
   if (fac === game.localFac) floatMsg(text);
-  else if (game.mode === 'host' && !game.players[fac].isAI) netSend({ t: 'msg', text });
+  else if (game.mode === 'host' && !game.players[fac].isAI) sendToFac(fac, { t: 'msg', text });
 }
 
 function enqueue(e, type) {
@@ -817,10 +829,12 @@ function tickProjectiles(dt) {
 // ---------------- AI ----------------
 function aiTick(fac) {
   const p = game.players[fac];
-  const enemyFac = fac === game.localFac ? game.aiFac : game.localFac;
-  const enemyCore = ents(e => e.fac === enemyFac && e.def.core)[0];
   const myCore = ents(e => e.fac === fac && e.def.core)[0];
-  if (!myCore || !enemyCore) return;
+  if (!myCore) return;
+  // FFA: pressure the nearest surviving enemy
+  const enemyCore = ents(e => e.def.core && e.fac !== fac && e.fac !== 'wild')
+    .sort((a, b) => dist(a, myCore) - dist(b, myCore))[0];
+  if (!enemyCore) return;
   const army = armyOf(fac);
   const underAttack = p.lastAttack && game.t - p.lastAttack.t < 6;
 
@@ -1031,15 +1045,19 @@ function update(dt) {
     if (p.incomeT >= 1) { p.income = p.gainAccum / p.incomeT; p.gainAccum = 0; p.incomeT = 0; }
   }
 
-  if (game.mode === 'sp') {
+  // AI factions (single-player opponents, lobby bots, dropped players)
+  if (game.mode !== 'guest') {
     game.aiTimer -= dt;
-    if (game.aiTimer <= 0) { game.aiTimer = 1.0; aiTick(game.aiFac); }
+    if (game.aiTimer <= 0) {
+      game.aiTimer = 1.0;
+      for (const f of game.ais) if (!game.players[f].eliminated) aiTick(f);
+    }
   }
 
-  // host: stream a state snapshot to the guest ~10×/s
+  // host: stream a state snapshot to all guests ~10×/s
   if (game.mode === 'host') {
     game.netTimer -= dt;
-    if (game.netTimer <= 0) { game.netTimer = 0.1; netSend(buildSnap()); game.netFx.length = 0; }
+    if (game.netTimer <= 0) { game.netTimer = 0.1; netCast(buildSnap()); game.netFx.length = 0; }
   }
 
   // sweep the dead
@@ -1049,18 +1067,24 @@ function update(dt) {
   }
   game.nodes = game.nodes.filter(n => n.amount > 0);
 
-  // victory check
-  for (const fac of [game.localFac, game.aiFac]) {
-    if (!ents(e => e.fac === fac && e.def.core).length) {
-      endGame(fac === game.localFac ? game.aiFac : game.localFac);
-      return;
+  // elimination & victory (free-for-all: last core standing)
+  for (const fac of game.facs) {
+    const p = game.players[fac];
+    if (!p.eliminated && !ents(e => e.fac === fac && e.def.core).length) {
+      p.eliminated = true;
+      for (const e of game.entities) if (e.fac === fac) e.dead = true; // the army dies with the core
+      if (game.mode === 'host') netCast({ t: 'elim', fac });
+      floatMsg(fac === game.localFac ? 'Your core has fallen — spectating…'
+        : FACTIONS[fac].name + ' has been eliminated');
     }
   }
+  const alive = game.facs.filter(f => !game.players[f].eliminated);
+  if (alive.length <= 1) { endGame(alive[0] || game.localFac); return; }
 }
 
 function endGame(winner) {
   game.over = true;
-  if (game.mode === 'host') netSend({ t: 'end', winner });
+  if (game.mode === 'host') netCast({ t: 'end', winner });
   const won = winner === game.localFac;
   const t = document.getElementById('endTitle');
   t.textContent = won ? 'VICTORY' : 'DEFEAT';
@@ -1945,35 +1969,85 @@ function guestTick(dt) {
 }
 
 // ---------------- connection plumbing ----------------
-const net = { pc: null, dc: null, role: null, myFac: null, theirFac: null };
+// Host keeps one peer connection per guest (up to 3); guests keep one to the host.
+const net = { role: null, myFac: null, bots: 0,
+  peers: [], pending: null,        // host side
+  pc: null, dc: null,              // guest side
+  lobbyFacs: null, lobbyBots: 0 }; // guest's view of the lobby
 
-function netConnected() { return !!(net.dc && net.dc.readyState === 'open'); }
-function netSend(o) { if (netConnected()) net.dc.send(JSON.stringify(o)); }
+function netConnected() {
+  if (net.role === 'host') return net.peers.some(p => p.dc.readyState === 'open');
+  return !!(net.dc && net.dc.readyState === 'open');
+}
+function netSend(o) { // guest → host
+  if (net.dc && net.dc.readyState === 'open') net.dc.send(JSON.stringify(o));
+}
+function netCast(o) { // host → every guest
+  const s = JSON.stringify(o);
+  for (const p of net.peers) if (p.dc.readyState === 'open') p.dc.send(s);
+}
+function sendToFac(fac, o) { // host → the guest playing fac
+  const p = net.peers.find(p => p.fac === fac);
+  if (p && p.dc.readyState === 'open') p.dc.send(JSON.stringify(o));
+}
+function humanSeatCount() { return 1 + net.peers.length; }
 
-function wireDC() {
+function wireDC() { // guest side
   net.dc.onopen = () => showLobby();
-  net.dc.onmessage = ev => handleNet(JSON.parse(ev.data));
+  net.dc.onmessage = ev => handleNet(JSON.parse(ev.data), null);
   net.dc.onclose = () => onDisconnect();
   net.dc.onerror = () => onDisconnect();
 }
 
-function handleNet(m) {
+function wirePeer(peer) { // host side
+  peer.dc.onopen = () => {
+    if (game && !game.over) { peer.pc.close(); return; } // no joining a running match
+    net.peers.push(peer);
+    if (net.pending === peer) net.pending = null;
+    net.bots = Math.min(net.bots, 4 - humanSeatCount());
+    showLobby(); castLobby();
+  };
+  peer.dc.onmessage = ev => handleNet(JSON.parse(ev.data), peer);
+  peer.dc.onclose = () => dropPeer(peer);
+  peer.dc.onerror = () => dropPeer(peer);
+}
+
+function dropPeer(peer) {
+  const i = net.peers.indexOf(peer);
+  if (i < 0) return;
+  net.peers.splice(i, 1);
+  if (game && game.mode === 'host' && !game.over && peer.fac
+      && game.players[peer.fac] && !game.players[peer.fac].eliminated) {
+    // hand the empty seat to an AI so the match can continue
+    game.players[peer.fac].isAI = true;
+    if (!game.ais.includes(peer.fac)) game.ais.push(peer.fac);
+    const text = FACTIONS[peer.fac].name + ' disconnected — an AI takes over';
+    floatMsg(text); netCast({ t: 'msg', text });
+  } else if (!game || game.over) { castLobby(); updateLobby(); }
+}
+
+function handleNet(m, peer) {
   switch (m.t) {
-    case 'fac': net.theirFac = m.fac; updateLobby(); break;
+    case 'fac': if (peer) { peer.fac = m.fac; castLobby(); updateLobby(); } break;
+    case 'lobby': net.lobbyFacs = m.facs; net.lobbyBots = m.bots; updateLobby(); break;
     case 'start':
-      net.theirFac = m.a; net.myFac = m.b;
-      buildMatch(m.a, m.b, 'guest', m.b);
+      net.myFac = m.you;
+      buildMatch(m.seats, 'guest', m.you);
       break;
     case 'snap': if (game && game.mode === 'guest' && !game.over) applySnap(m); break;
-    case 'cmd': if (game && game.mode === 'host' && !game.over) handleCmd(m); break;
+    case 'cmd': if (game && game.mode === 'host' && !game.over && peer && peer.fac) handleCmd(m, peer.fac); break;
     case 'msg': floatMsg(m.text); break;
+    case 'elim':
+      if (game && game.mode === 'guest' && !game.over)
+        floatMsg(m.fac === game.localFac ? 'Your core has fallen — spectating…'
+          : FACTIONS[m.fac].name + ' has been eliminated');
+      break;
     case 'end': if (game && game.mode === 'guest' && !game.over) endGame(m.winner); break;
   }
 }
 
-// host: execute a guest command (validated against the guest's faction)
-function handleCmd(m) {
-  const fac = game.facB;
+// host: execute a guest command (validated against that guest's faction)
+function handleCmd(m, fac) {
   if (m.kind === 'order') {
     const sel = (m.ids || []).map(byId).filter(e => e && e.fac === fac);
     if (sel.length) applyOrder(fac, sel, m.x, m.y);
@@ -1991,15 +2065,16 @@ function handleCmd(m) {
   }
 }
 
-function onDisconnect() {
-  if (game && game.mode !== 'sp' && !game.over) {
+function onDisconnect() { // guest lost the host — the match cannot continue
+  if (game && game.mode === 'guest' && !game.over) {
     game.over = true;
     document.getElementById('endTitle').textContent = 'CONNECTION LOST';
     document.getElementById('endTitle').style.color = '#e0b84d';
-    document.getElementById('endDetail').textContent = 'The link to your opponent dropped.';
+    document.getElementById('endDetail').textContent = 'The link to the host dropped.';
     document.getElementById('endscreen').style.display = 'flex';
   }
-  net.pc = null; net.dc = null; net.role = null; net.theirFac = null; net.myFac = null;
+  net.pc = null; net.dc = null; net.role = null; net.myFac = null;
+  net.lobbyFacs = null; net.lobbyBots = 0; net.bots = 0;
   document.getElementById('mpLobby').style.display = 'none';
   document.getElementById('mpPanel').style.display = 'none';
   for (const c of document.querySelectorAll('#cards .card')) c.classList.remove('picked');
@@ -2057,33 +2132,38 @@ async function sdpDecode(s) {
 }
 
 // surface connection progress/failure instead of failing silently
-function wirePCStatus() {
-  net.pc.onconnectionstatechange = () => {
-    if (!net.pc) return;
-    const st = net.pc.connectionState;
+function wirePCStatus(pc) {
+  pc.onconnectionstatechange = () => {
+    const st = pc.connectionState;
     if (st === 'connecting') mpUI({ status: 'Codes accepted — connecting…' });
     else if (st === 'failed') mpUI({ status: 'Connection FAILED. Usually this means a very strict NAT on both ends. Both players: refresh the page and try again with fresh codes (or one of you try a phone hotspot).' });
   };
 }
 
-async function startHost() {
+// host: one invite round per joining friend (call again from the lobby to add more)
+async function startHostInvite() {
   net.role = 'host';
-  net.pc = new RTCPeerConnection(RTC_CFG);
-  wirePCStatus();
-  net.dc = net.pc.createDataChannel('game');
-  wireDC();
-  await net.pc.setLocalDescription(await net.pc.createOffer());
-  await iceDone(net.pc);
+  const pc = new RTCPeerConnection(RTC_CFG);
+  const peer = { pc, dc: pc.createDataChannel('game'), fac: null };
+  net.pending = peer;
+  wirePCStatus(pc);
+  wirePeer(peer);
+  await pc.setLocalDescription(await pc.createOffer());
+  await iceDone(pc);
   mpState = 'host-wait-answer';
+  const nth = humanSeatCount(); // 1 = first invite
   mpUI({
-    step: '1. Send this INVITE code to your friend (Discord, WhatsApp, anything).\n2. Paste their REPLY code below and press CONNECT.',
-    out: await sdpEncode(net.pc.localDescription), status: '',
+    step: '1. Send this INVITE code to ' + (nth > 1 ? 'the NEXT player' : 'your friend')
+      + ' (Discord, WhatsApp, anything).\n2. Paste their REPLY code below and press CONNECT.'
+      + (nth > 1 ? '\n(Players connected so far: ' + nth + ')' : ''),
+    out: await sdpEncode(pc.localDescription), status: '',
   });
 }
 
 async function hostAccept(answerText) {
+  if (!net.pending) { mpUI({ status: 'No open invite — press INVITE PLAYER first.' }); return; }
   try {
-    await net.pc.setRemoteDescription(new RTCSessionDescription(await sdpDecode(answerText)));
+    await net.pending.pc.setRemoteDescription(new RTCSessionDescription(await sdpDecode(answerText)));
     mpUI({ status: 'Connecting…' });
   } catch (e) { mpUI({ status: 'That reply code is invalid or incomplete — make sure the WHOLE code was copied (long messages can get cut off).' }); }
 }
@@ -2092,7 +2172,7 @@ async function joinWithOffer(offerText) {
   try {
     net.role = 'guest';
     net.pc = new RTCPeerConnection(RTC_CFG);
-    wirePCStatus();
+    wirePCStatus(net.pc);
     net.pc.ondatachannel = ev => { net.dc = ev.channel; wireDC(); };
     await net.pc.setRemoteDescription(new RTCSessionDescription(await sdpDecode(offerText)));
     await net.pc.setLocalDescription(await net.pc.createAnswer());
@@ -2122,8 +2202,16 @@ function showLobby() {
 
 function pickFaction(f) {
   net.myFac = f;
-  netSend({ t: 'fac', fac: f });
+  if (net.role === 'guest') netSend({ t: 'fac', fac: f });
+  else castLobby();
   updateLobby();
+}
+
+function lobbyFacs() { // host's authoritative seat list (humans only)
+  return [net.myFac, ...net.peers.map(p => p.fac)];
+}
+function castLobby() {
+  if (net.role === 'host') netCast({ t: 'lobby', facs: lobbyFacs(), bots: net.bots });
 }
 
 function updateLobby() {
@@ -2132,17 +2220,31 @@ function updateLobby() {
   for (const c of document.querySelectorAll('#cards .card'))
     c.classList.toggle('picked', c.dataset.fac === net.myFac);
   const nameOf = f => f ? FACTIONS[f].name : '—';
-  let txt = 'CONNECTED · click a faction card to pick · You: ' + nameOf(net.myFac)
-    + ' · Friend: ' + nameOf(net.theirFac);
-  const clash = net.myFac && net.myFac === net.theirFac;
-  if (clash) txt += '  (pick different factions!)';
+  // host knows the truth; guests render the last lobby broadcast
+  const facs = net.role === 'host' ? lobbyFacs() : (net.lobbyFacs || [net.myFac]);
+  const bots = net.role === 'host' ? net.bots : net.lobbyBots;
+  const picked = facs.filter(Boolean);
+  const clash = new Set(picked).size !== picked.length;
+  const myIdx = facs.indexOf(net.myFac);
+  const others = facs.filter((f, i) => i !== myIdx);
+  let txt = facs.length + ' player' + (facs.length > 1 ? 's' : '')
+    + (bots ? ' + ' + bots + ' bot' + (bots > 1 ? 's' : '') : '')
+    + ' · pick a faction card · You: ' + nameOf(net.myFac)
+    + (others.length ? ' · Friends: ' + others.map(nameOf).join(', ') : '');
+  if (clash) txt += '  (everyone must pick a DIFFERENT faction!)';
   document.getElementById('lobbyText').textContent = txt;
   const startBtn = document.getElementById('mpStart');
+  const inviteBtn = document.getElementById('mpInvite');
+  const botBtn = document.getElementById('mpBot');
   if (net.role === 'host') {
     startBtn.style.display = 'inline-block';
-    startBtn.disabled = !(net.myFac && net.theirFac && !clash);
+    startBtn.disabled = !(picked.length === facs.length && !clash && facs.length + bots >= 2);
+    inviteBtn.style.display = botBtn.style.display = 'inline-block';
+    inviteBtn.disabled = humanSeatCount() + net.bots >= 4;
+    botBtn.textContent = 'BOTS: ' + net.bots;
   } else {
     startBtn.style.display = 'none';
+    inviteBtn.style.display = botBtn.style.display = 'none';
   }
 }
 
@@ -2155,14 +2257,24 @@ for (const card of document.querySelectorAll('#cards .card')) {
 }
 
 document.getElementById('mpHostBtn').addEventListener('click', () => {
-  if (net.pc) return;
+  if (net.role || net.pc) return;
   mpUI({ step: 'Creating invite code…', out: '', status: '' });
-  startHost();
+  startHostInvite();
 });
 document.getElementById('mpJoinBtn').addEventListener('click', () => {
-  if (net.pc) return;
+  if (net.role || net.pc) return;
   mpState = 'join-enter-offer';
   mpUI({ step: 'Paste the host\'s INVITE code below and press CONNECT.', out: '', status: '' });
+});
+document.getElementById('mpInvite').addEventListener('click', () => {
+  if (net.role !== 'host' || humanSeatCount() + net.bots >= 4 || net.pending) return;
+  mpUI({ step: 'Creating invite code…', out: '', status: '' });
+  startHostInvite();
+});
+document.getElementById('mpBot').addEventListener('click', () => {
+  if (net.role !== 'host') return;
+  net.bots = (net.bots + 1) % (4 - humanSeatCount() + 1);
+  castLobby(); updateLobby();
 });
 document.getElementById('mpGo').addEventListener('click', () => {
   const text = document.getElementById('mpIn').value;
@@ -2177,7 +2289,18 @@ document.getElementById('mpCopy').addEventListener('click', () => {
   mpUI({ status: 'Copied to clipboard.' });
 });
 document.getElementById('mpStart').addEventListener('click', () => {
-  if (net.role !== 'host' || !net.myFac || !net.theirFac || net.myFac === net.theirFac) return;
-  netSend({ t: 'start', a: net.myFac, b: net.theirFac });
-  buildMatch(net.myFac, net.theirFac, 'host', net.myFac);
+  if (net.role !== 'host') return;
+  const humans = lobbyFacs();
+  if (humans.some(f => !f) || new Set(humans).size !== humans.length) return;
+  // bots fill the remaining seats with random unused factions
+  const seats = humans.map((f, i) => ({ fac: f, ai: false }));
+  const pool = PLAYABLE.filter(f => !humans.includes(f));
+  for (let i = 0; i < net.bots && seats.length < 4 && pool.length; i++) {
+    const k = Math.floor(Math.random() * pool.length);
+    seats.push({ fac: pool.splice(k, 1)[0], ai: true });
+  }
+  if (seats.length < 2) return;
+  if (net.pending) { try { net.pending.pc.close(); } catch (e) {} net.pending = null; }
+  for (const p of net.peers) sendToFac(p.fac, { t: 'start', seats, you: p.fac });
+  buildMatch(seats, 'host', net.myFac);
 });
