@@ -2006,24 +2006,63 @@ function onDisconnect() {
 }
 
 // ---------------- manual WebRTC signaling ----------------
-const RTC_CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const RTC_CFG = { iceServers: [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+  // free TURN relay — lets strict-NAT / CGNAT homes connect (traffic relays through it)
+  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
+    username: 'openrelayproject', credential: 'openrelayproject' },
+] };
 let mpState = null;
 
 function iceDone(pc) {
   if (pc.iceGatheringState === 'complete') return Promise.resolve();
   return new Promise(res => {
-    const to = setTimeout(res, 3000); // settle for whatever candidates we have
+    const to = setTimeout(res, 6000); // settle for whatever candidates we have
     pc.addEventListener('icegatheringstatechange', () => {
       if (pc.iceGatheringState === 'complete') { clearTimeout(to); res(); }
     });
   });
 }
-const sdpEncode = d => btoa(JSON.stringify(d));
-const sdpDecode = s => JSON.parse(atob(s.trim()));
+
+// invite codes: deflate-compressed base64 (fits in one Discord message),
+// tolerant of the whitespace/line breaks messengers like to add
+async function sdpEncode(d) {
+  const raw = new TextEncoder().encode(JSON.stringify(d));
+  if (typeof CompressionStream !== 'undefined') {
+    const cs = new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    const bytes = new Uint8Array(await new Response(cs).arrayBuffer());
+    let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+    return '1' + btoa(bin);
+  }
+  let bin = ''; for (const b of raw) bin += String.fromCharCode(b);
+  return '0' + btoa(bin);
+}
+async function sdpDecode(s) {
+  s = s.replace(/\s+/g, '');
+  const tag = s[0], body = s.slice(1);
+  if (tag === '1') {
+    const bytes = Uint8Array.from(atob(body), c => c.charCodeAt(0));
+    const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return JSON.parse(await new Response(ds).text());
+  }
+  if (tag === '0') return JSON.parse(atob(body));
+  return JSON.parse(atob(s)); // legacy untagged code
+}
+
+// surface connection progress/failure instead of failing silently
+function wirePCStatus() {
+  net.pc.onconnectionstatechange = () => {
+    if (!net.pc) return;
+    const st = net.pc.connectionState;
+    if (st === 'connecting') mpUI({ status: 'Codes accepted — connecting…' });
+    else if (st === 'failed') mpUI({ status: 'Connection FAILED. Usually this means a very strict NAT on both ends. Both players: refresh the page and try again with fresh codes (or one of you try a phone hotspot).' });
+  };
+}
 
 async function startHost() {
   net.role = 'host';
   net.pc = new RTCPeerConnection(RTC_CFG);
+  wirePCStatus();
   net.dc = net.pc.createDataChannel('game');
   wireDC();
   await net.pc.setLocalDescription(await net.pc.createOffer());
@@ -2031,31 +2070,32 @@ async function startHost() {
   mpState = 'host-wait-answer';
   mpUI({
     step: '1. Send this INVITE code to your friend (Discord, WhatsApp, anything).\n2. Paste their REPLY code below and press CONNECT.',
-    out: sdpEncode(net.pc.localDescription), status: '',
+    out: await sdpEncode(net.pc.localDescription), status: '',
   });
 }
 
 async function hostAccept(answerText) {
   try {
-    await net.pc.setRemoteDescription(new RTCSessionDescription(sdpDecode(answerText)));
+    await net.pc.setRemoteDescription(new RTCSessionDescription(await sdpDecode(answerText)));
     mpUI({ status: 'Connecting…' });
-  } catch (e) { mpUI({ status: 'That reply code is invalid — paste the whole thing.' }); }
+  } catch (e) { mpUI({ status: 'That reply code is invalid or incomplete — make sure the WHOLE code was copied (long messages can get cut off).' }); }
 }
 
 async function joinWithOffer(offerText) {
   try {
     net.role = 'guest';
     net.pc = new RTCPeerConnection(RTC_CFG);
+    wirePCStatus();
     net.pc.ondatachannel = ev => { net.dc = ev.channel; wireDC(); };
-    await net.pc.setRemoteDescription(new RTCSessionDescription(sdpDecode(offerText)));
+    await net.pc.setRemoteDescription(new RTCSessionDescription(await sdpDecode(offerText)));
     await net.pc.setLocalDescription(await net.pc.createAnswer());
     await iceDone(net.pc);
     mpUI({
       step: 'Send this REPLY code back to the host.',
-      out: sdpEncode(net.pc.localDescription),
+      out: await sdpEncode(net.pc.localDescription),
       status: 'Waiting for the host to connect…',
     });
-  } catch (e) { mpUI({ status: 'That invite code is invalid — paste the whole thing.' }); }
+  } catch (e) { mpUI({ status: 'That invite code is invalid or incomplete — make sure the WHOLE code was copied (long messages can get cut off).' }); }
 }
 
 // ---------------- lobby ----------------
