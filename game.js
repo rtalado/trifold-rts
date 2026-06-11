@@ -2132,8 +2132,35 @@ function wirePCStatus(pc) {
   pc.onconnectionstatechange = () => {
     const st = pc.connectionState;
     if (st === 'connecting') mpUI({ status: 'Codes accepted — connecting…' });
-    else if (st === 'failed') mpUI({ status: 'Connection FAILED. Refresh and retry with fresh codes. If it keeps failing, your two networks may not allow a direct link — have one player try a different network (e.g. a phone hotspot).' });
+    else if (st === 'failed') mpUI({ status: 'Connection FAILED. Both players: refresh and exchange FRESH codes. If it keeps failing, your two networks may not allow a direct link — have one player try a different network (e.g. a phone hotspot).' });
   };
+}
+
+// Manual signaling is slow: a human ferries the reply code through a chat
+// app, while the joiner's browser starts its connection attempt the moment
+// that code is created — and would give up after ~15 s of silence (the
+// host's NAT drops everything until the host pastes the reply). Trickling
+// extra remote candidates in keeps the attempt — and our NAT mappings —
+// alive for up to 5 minutes, so the host can paste whenever the code lands.
+function keepProbing(pc, offerSdp) {
+  const cands = [...offerSdp.matchAll(/a=(candidate:\S+ 1 (?:udp|UDP) \d+ (\S+) (\d+) typ \w+[^\r\n]*)/g)]
+    .map(m => ({ line: m[1], ip: m[2], port: +m[3] }));
+  let tick = 0;
+  const iv = setInterval(() => {
+    if (net.pc !== pc || netConnected() || pc.connectionState === 'closed') { clearInterval(iv); return; }
+    if (++tick > 60) { // ~5 minutes — the codes have gone stale
+      clearInterval(iv);
+      mpUI({ status: 'No connection after 5 minutes — both players refresh and exchange fresh codes.' });
+      return;
+    }
+    for (const c of cands) {
+      pc.addIceCandidate({ candidate: c.line, sdpMLineIndex: 0 }).catch(() => {});
+      if (!c.ip.endsWith('.local')) { // nearby-port guesses also help with symmetric NATs
+        const p = 1024 + (c.port - 1024 + tick) % 64512;
+        pc.addIceCandidate({ candidate: 'candidate:probe' + tick + ' 1 udp 2 ' + c.ip + ' ' + p + ' typ host', sdpMLineIndex: 0 }).catch(() => {});
+      }
+    }
+  }, 5000);
 }
 
 // host: one invite round per joining friend (call again from the lobby to add more)
@@ -2170,14 +2197,21 @@ async function joinWithOffer(offerText) {
     net.pc = new RTCPeerConnection(RTC_CFG);
     wirePCStatus(net.pc);
     net.pc.ondatachannel = ev => { net.dc = ev.channel; wireDC(); };
-    await net.pc.setRemoteDescription(new RTCSessionDescription(await sdpDecode(offerText)));
-    await net.pc.setLocalDescription(await net.pc.createAnswer());
+    const offer = await sdpDecode(offerText);
+    await net.pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await net.pc.createAnswer();
+    // take the passive DTLS role: wait silently for the host to reach out
+    // instead of running our handshake timer against a host that may not
+    // paste the reply code for another minute
+    answer.sdp = answer.sdp.replace(/a=setup:active/, 'a=setup:passive');
+    await net.pc.setLocalDescription(answer);
     await iceDone(net.pc);
     mpUI({
       step: 'Send this REPLY code back to the host.',
       out: await sdpEncode(net.pc.localDescription),
       status: 'Waiting for the host to connect…',
     });
+    keepProbing(net.pc, offer.sdp);
   } catch (e) { mpUI({ status: 'That invite code is invalid or incomplete — make sure the WHOLE code was copied (long messages can get cut off).' }); }
 }
 
