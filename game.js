@@ -2012,8 +2012,8 @@ function onDisconnect() {
 // and paste them below; until then, connections that need a relay will fail.
 const TURN = {
   urls: ['turn:relay1.expressturn.com:3478'],
-  username: '',   // ← ExpressTURN username
-  credential: '', // ← ExpressTURN password
+  username: '000000002096551680',   // ← ExpressTURN username
+  credential: 'CZYJbMP+NNtR9AHrkmw1k+S/CGQ=', // ← ExpressTURN password
 };
 const RTC_CFG = { iceServers: [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
