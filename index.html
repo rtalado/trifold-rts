@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TRIFOLD — Asymmetric RTS</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; overflow:hidden; background:#0a0c10; height:100%;
+    font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; color:#cdd6e4; user-select:none; }
+  canvas#game { display:block; cursor: crosshair; }
+
+  /* ---------- main menu ---------- */
+  #menu { position:fixed; inset:0; background: radial-gradient(ellipse at 50% 30%, #131a26 0%, #07090d 70%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50;
+    overflow-y:auto; padding:24px 0; }
+  #menu h1 { font-size:48px; letter-spacing:14px; margin:0 0 6px 0; color:#e8eef8; font-weight:200; }
+  #menu .sub { color:#7b8aa3; margin-bottom:24px; letter-spacing:3px; font-size:13px; }
+  #cards { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; max-width:96vw; }
+  .card { width:248px; background:#0e131c; border:1px solid #222d40; border-radius:10px; padding:16px;
+    cursor:pointer; transition: transform .15s, border-color .15s, box-shadow .15s; }
+  .card:hover { transform: translateY(-6px); }
+  .card h2 { margin:0 0 2px 0; font-size:20px; letter-spacing:1px; }
+  .card .tag { font-size:12px; opacity:.75; font-style:italic; margin-bottom:14px; }
+  .card ul { padding-left:18px; margin:0 0 16px 0; font-size:12.5px; line-height:1.65; color:#aab6c9; }
+  .card .play { display:block; width:100%; padding:9px 0; text-align:center; border-radius:6px;
+    font-weight:600; letter-spacing:2px; font-size:13px; }
+  .card.vanguard:hover { border-color:#4da6ff; box-shadow:0 0 30px #4da6ff33; }
+  .card.myriad:hover   { border-color:#c75cff; box-shadow:0 0 30px #c75cff33; }
+  .card.exodus:hover   { border-color:#ffc94d; box-shadow:0 0 30px #ffc94d33; }
+  .card.choir:hover    { border-color:#3fe0c8; box-shadow:0 0 30px #3fe0c833; }
+  .card.syndicate:hover{ border-color:#ff6b52; box-shadow:0 0 30px #ff6b5233; }
+  .card.vanguard h2, .card.vanguard .tag { color:#7cbfff; }
+  .card.myriad h2,   .card.myriad .tag   { color:#d98aff; }
+  .card.exodus h2,   .card.exodus .tag   { color:#ffd97d; }
+  .card.choir h2,    .card.choir .tag    { color:#7af0dc; }
+  .card.syndicate h2,.card.syndicate .tag{ color:#ff9c85; }
+  .card.vanguard .play { background:#173153; color:#9fd0ff; }
+  .card.myriad .play   { background:#3a1d52; color:#e3b3ff; }
+  .card.exodus .play   { background:#4a3a14; color:#ffe3a3; }
+  .card.choir .play    { background:#0e3f3a; color:#9ff0e2; }
+  .card.syndicate .play{ background:#4a1a12; color:#ffb8a6; }
+  #menu .foot { margin-top:26px; font-size:12px; color:#5d6b82; }
+  .card.picked { border-color:#7dffa8 !important; box-shadow:0 0 30px #7dffa833 !important; }
+
+  /* ---------- multiplayer panel ---------- */
+  #mpzone { margin-top:28px; width:900px; max-width:92vw; }
+  #mpButtons { display:flex; align-items:center; justify-content:center; gap:12px; }
+  #mpButtons .mplabel { font-size:12px; letter-spacing:2px; color:#7b8aa3; }
+  #mpButtons button, #mpGo, #mpCopy, #mpStart {
+    background:#141c2a; color:#cdd6e4; border:1px solid #2a3954; border-radius:5px;
+    padding:8px 18px; cursor:pointer; font-size:12px; letter-spacing:1px; }
+  #mpButtons button:hover, #mpGo:hover, #mpCopy:hover, #mpStart:hover:not(:disabled) {
+    background:#1d2a40; border-color:#4a6494; }
+  #mpStart { background:#173153; color:#9fd0ff; font-weight:600; }
+  #mpStart:disabled { opacity:.38; cursor:default; }
+  #mpPanel { display:none; margin-top:14px; background:#0e131c; border:1px solid #222d40;
+    border-radius:8px; padding:14px 16px; }
+  #mpStep { font-size:12.5px; color:#aab6c9; white-space:pre-line; margin-bottom:10px; line-height:1.5; }
+  .mprow { display:flex; gap:8px; margin-bottom:8px; }
+  .mprow textarea { flex:1; height:54px; background:#0a0e15; color:#6d7f9c; border:1px solid #222d40;
+    border-radius:5px; font-size:10px; padding:6px; resize:none; font-family:monospace; }
+  #mpStatus { font-size:12px; color:#ffd97d; min-height:16px; }
+  #mpLobby { display:none; margin-top:14px; align-items:center; justify-content:center; gap:16px;
+    background:#0e131c; border:1px solid #2a5440; border-radius:8px; padding:12px 16px; }
+  #lobbyText { font-size:12.5px; color:#9fd9b4; letter-spacing:.5px; }
+
+  /* ---------- HUD ---------- */
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:10; display:none; }
+  #topbar { position:absolute; top:0; left:0; right:0; height:34px; background:#0b0f16ee;
+    border-bottom:1px solid #1d2738; display:flex; align-items:center; padding:0 14px; gap:26px; font-size:13.5px; }
+  #topbar .facname { font-weight:600; letter-spacing:2px; }
+  #topbar .stat b { color:#fff; }
+  #bottombar { position:absolute; left:0; right:0; bottom:0; height:158px; display:flex; align-items:flex-end;
+    padding:0 10px 10px 10px; gap:10px; }
+  #minimapWrap { background:#0b0f16ee; border:1px solid #1d2738; border-radius:6px; padding:5px; pointer-events:auto; }
+  #minimap { display:block; cursor:pointer; }
+  #selinfo { flex:0 0 270px; height:142px; background:#0b0f16ee; border:1px solid #1d2738; border-radius:6px;
+    padding:10px 12px; font-size:12.5px; line-height:1.55; overflow:hidden; white-space:pre-line; }
+  #cmdcard { flex:1; height:142px; background:#0b0f16ee; border:1px solid #1d2738; border-radius:6px;
+    padding:8px; pointer-events:auto; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; }
+  #cmdcard button { min-width:118px; height:60px; background:#141c2a; color:#cdd6e4; border:1px solid #2a3954;
+    border-radius:5px; cursor:pointer; font-size:12px; line-height:1.3; padding:4px 8px; text-align:left; }
+  #cmdcard button:hover:not(:disabled) { background:#1d2a40; border-color:#4a6494; }
+  #cmdcard button:disabled { opacity:.38; cursor:default; }
+  #cmdcard button .k { float:right; color:#6d7f9c; font-weight:700; }
+  #cmdcard button .c { display:block; color:#8fa3c4; font-size:11px; margin-top:3px; }
+  #msg { position:absolute; bottom:175px; left:50%; transform:translateX(-50%); font-size:14px;
+    color:#ffd97d; text-shadow:0 1px 3px #000; transition:opacity .4s; opacity:0; }
+  #hint { position:absolute; top:44px; left:50%; transform:translateX(-50%); max-width:640px; text-align:center;
+    background:#0b0f16dd; border:1px solid #2a3954; border-radius:8px; padding:9px 18px; font-size:13px;
+    color:#aab6c9; line-height:1.5; }
+
+  /* ---------- end screen ---------- */
+  #endscreen { position:fixed; inset:0; background:#05070add; display:none; z-index:60;
+    flex-direction:column; align-items:center; justify-content:center; }
+  #endscreen h1 { font-size:46px; letter-spacing:10px; font-weight:200; margin:0 0 10px 0; }
+  #endscreen .detail { color:#8fa3c4; margin-bottom:30px; font-size:14px; }
+  #endscreen button { padding:12px 38px; background:#173153; color:#9fd0ff; border:1px solid #2a4a78;
+    border-radius:6px; font-size:15px; letter-spacing:2px; cursor:pointer; }
+  #endscreen button:hover { background:#1f3f6b; }
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <h1>TRIFOLD</h1>
+  <div class="sub">ONE WAR &nbsp;·&nbsp; FIVE WAYS TO WAGE IT</div>
+  <div id="cards">
+    <div class="card vanguard" data-fac="vanguard">
+      <h2>IRON VANGUARD</h2>
+      <div class="tag">The Architects</div>
+      <ul>
+        <li><b>Classic macro RTS.</b> Workers harvest crystal, you build the war machine.</li>
+        <li>Barracks, factories, defensive turrets &mdash; a base that grows into a fortress.</li>
+        <li>Balanced units: cheap marines, long-range snipers, siege tanks.</li>
+        <li>Lose your <b>Headquarters</b> and the campaign collapses.</li>
+      </ul>
+      <span class="play">COMMAND THE VANGUARD</span>
+    </div>
+    <div class="card myriad" data-fac="myriad">
+      <h2>MYRIAD SWARM</h2>
+      <div class="tag">The Flood</div>
+      <ul>
+        <li><b>No workers. No mining.</b> Your creep IS your economy &mdash; every covered tile feeds you biomass.</li>
+        <li>Units cost nothing: growths <b>breed them endlessly, for free</b>.</li>
+        <li>You don't command soldiers, you steer a tide. Set the swarm rally and spread.</li>
+        <li>The swarm heals on creep. Off creep, it is merely meat.</li>
+        <li>Protect the <b>Hive</b> at all costs.</li>
+      </ul>
+      <span class="play">BECOME THE FLOOD</span>
+    </div>
+    <div class="card exodus" data-fac="exodus">
+      <h2>SOLARI EXODUS</h2>
+      <div class="tag">The Pilgrims</div>
+      <ul>
+        <li><b>No base. No buildings. Ever.</b></li>
+        <li>One sacred <b>Ark</b> &mdash; mobile fortress, factory and treasury in one. Deploy it on crystal to siphon energy.</li>
+        <li>A handful of priceless, shielded elites: blinking seekers, beam lancers, aegis guardians.</li>
+        <li>Shields regenerate &mdash; retreat, recover, strike again. Lose nothing, or lose everything.</li>
+      </ul>
+      <span class="play">LEAD THE EXODUS</span>
+    </div>
+    <div class="card choir" data-fac="choir">
+      <h2>ASHEN CHOIR</h2>
+      <div class="tag">The Revenants</div>
+      <ul>
+        <li><b>All death feeds you.</b> Every unit that falls — yours or theirs — pays Essence.</li>
+        <li>The lattice sustains your spirits; in the field they <b>fade</b> — but feast on the damage they deal.</li>
+        <li>Build only within the lattice: Soul Conduits extend your reach and trickle Essence.</li>
+        <li>Silence the <b>Ossuary</b> and the Choir is no more.</li>
+      </ul>
+      <span class="play">RAISE THE CHOIR</span>
+    </div>
+    <div class="card syndicate" data-fac="syndicate">
+      <h2>GILDED SYNDICATE</h2>
+      <div class="tag">The Magnates</div>
+      <ul>
+        <li><b>Gold breeds gold.</b> Your treasury earns compound interest — hoard or hire.</li>
+        <li>Mercenaries arrive <b>instantly</b>, for a price. Every kill pays a bounty.</li>
+        <li>Air-drop Watchposts on <b>any unclaimed ground</b>; Countinghouses raise the interest cap.</li>
+        <li>The <b>Haven</b> is vault and fortress in one — bankrupt is dead.</li>
+      </ul>
+      <span class="play">FUND THE WAR</span>
+    </div>
+  </div>
+  <div id="mpzone">
+    <div id="mpButtons">
+      <span class="mplabel">PLAY WITH A FRIEND — PEER TO PEER, NO SERVER</span>
+      <button id="mpHostBtn">HOST GAME</button>
+      <button id="mpJoinBtn">JOIN GAME</button>
+    </div>
+    <div id="mpPanel">
+      <div id="mpStep"></div>
+      <div class="mprow"><textarea id="mpOut" readonly placeholder="your code will appear here"></textarea><button id="mpCopy">COPY</button></div>
+      <div class="mprow"><textarea id="mpIn" placeholder="paste your friend's code here"></textarea><button id="mpGo">CONNECT</button></div>
+      <div id="mpStatus"></div>
+    </div>
+    <div id="mpLobby">
+      <span id="lobbyText"></span>
+      <button id="mpStart" disabled>START MATCH</button>
+    </div>
+  </div>
+  <div class="foot">Single player: click a faction card — your AI opponent will be a different faction, chosen at random.<br>
+    Controls: drag-select · right-click to act · 1–7 command hotkeys · WASD/edges to pan · mouse wheel to zoom<br>
+    Hold the ground near an <b>Obelisk</b> to capture it (+income) · plunder neutral <b>Hoards</b> for a bounty (mind the guards)</div>
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="topbar">
+    <span class="facname" id="hudFac"></span>
+    <span class="stat" id="hudRes"></span>
+    <span class="stat" id="hudIncome"></span>
+    <span class="stat" id="hudArmy"></span>
+    <span class="stat" style="margin-left:auto" id="hudEnemy"></span>
+  </div>
+  <div id="hint"></div>
+  <div id="msg"></div>
+  <div id="bottombar">
+    <div id="minimapWrap"><canvas id="minimap" width="220" height="143"></canvas></div>
+    <div id="selinfo"></div>
+    <div id="cmdcard"></div>
+  </div>
+</div>
+
+<div id="endscreen">
+  <h1 id="endTitle"></h1>
+  <div class="detail" id="endDetail"></div>
+  <button onclick="backToMenu()">RETURN TO MENU</button>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
