@@ -2006,11 +2006,18 @@ function onDisconnect() {
 }
 
 // ---------------- manual WebRTC signaling ----------------
+// TURN relay: required when a direct connection between the two homes is
+// impossible (strict NAT / CGNAT on both ends). Anonymous public relays no
+// longer exist — get free credentials (1000 GB/month) at expressturn.com
+// and paste them below; until then, connections that need a relay will fail.
+const TURN = {
+  urls: ['turn:relay1.expressturn.com:3478'],
+  username: '',   // ← ExpressTURN username
+  credential: '', // ← ExpressTURN password
+};
 const RTC_CFG = { iceServers: [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
-  // free TURN relay — lets strict-NAT / CGNAT homes connect (traffic relays through it)
-  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
-    username: 'openrelayproject', credential: 'openrelayproject' },
+  ...(TURN.username ? [TURN] : []),
 ] };
 let mpState = null;
 
