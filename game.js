@@ -2100,49 +2100,31 @@ function iceDone(pc) {
   });
 }
 
-// invite codes: a full SDP is ~1 KB of boilerplate that is identical on
-// every connection. Only the values that actually differ travel in the code
-// — ICE credentials, DTLS fingerprint, candidate addresses — and the rest
-// is rebuilt from a template on the other side. Codes are tolerant of the
-// whitespace/line breaks messengers like to add (no field contains any).
-function sdpEncode(d) {
-  const get = re => (d.sdp.match(re) || [])[1] || '';
-  const fpHex = get(/a=fingerprint:sha-256 (\S+)/i);
-  const fp = btoa(fpHex.split(':').map(h => String.fromCharCode(parseInt(h, 16))).join(''));
-  const cands = [], seen = new Set();
-  for (const m of d.sdp.matchAll(/a=candidate:\S+ \d+ (\S+) \d+ (\S+) (\d+) typ (host|srflx)/gi)) {
-    const [, proto, ip, port, typ] = m;
-    if (proto.toLowerCase() !== 'udp' || seen.has(ip + ',' + port)) continue;
-    seen.add(ip + ',' + port);
-    cands.push((typ.toLowerCase() === 'srflx' ? 's' : 'h') + ip + ',' + port);
+// invite codes: the browser's complete SDP, untouched — exactly what is
+// proven to connect — deflate-compressed into base64 so it still fits in
+// one Discord message. Tolerant of the whitespace/line breaks messengers
+// like to add.
+async function sdpEncode(d) {
+  const raw = new TextEncoder().encode(JSON.stringify(d));
+  if (typeof CompressionStream !== 'undefined') {
+    const cs = new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    const bytes = new Uint8Array(await new Response(cs).arrayBuffer());
+    let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+    return '1' + btoa(bin);
   }
-  return '2' + (d.type === 'offer' ? 'o' : 'a')
-    + [get(/a=ice-ufrag:(\S+)/i), get(/a=ice-pwd:(\S+)/i), fp, ...cands].join('~');
+  let bin = ''; for (const b of raw) bin += String.fromCharCode(b);
+  return '0' + btoa(bin);
 }
-function sdpDecode(s) {
+async function sdpDecode(s) {
   s = s.replace(/\s+/g, '');
-  if (s[0] !== '2') throw new Error('bad code');
-  const type = s[1] === 'o' ? 'offer' : 'answer';
-  const [ufrag, pwd, fp, ...cands] = s.slice(2).split('~');
-  const fpHex = Array.from(atob(fp), c =>
-    c.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()).join(':');
-  let sdp = 'v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\n'
-    + 'a=group:BUNDLE 0\r\n'
-    + 'm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n'
-    + 'c=IN IP4 0.0.0.0\r\na=mid:0\r\n'
-    + 'a=ice-ufrag:' + ufrag + '\r\na=ice-pwd:' + pwd + '\r\n'
-    + 'a=fingerprint:sha-256 ' + fpHex + '\r\n'
-    + 'a=setup:' + (type === 'offer' ? 'actpass' : 'active') + '\r\n'
-    + 'a=sctp-port:5000\r\na=max-message-size:262144\r\n';
-  cands.forEach((c, i) => {
-    const typ = c[0] === 's' ? 'srflx' : 'host';
-    const [ip, port] = c.slice(1).split(',');
-    const prio = (typ === 'host' ? 126 : 100) * 16777216 + (65535 - i) * 256 + 255;
-    sdp += 'a=candidate:' + (i + 1) + ' 1 UDP ' + prio + ' ' + ip + ' ' + port
-      + ' typ ' + typ + (typ === 'srflx' ? ' raddr 0.0.0.0 rport 0' : '') + '\r\n';
-  });
-  sdp += 'a=end-of-candidates\r\n';
-  return { type, sdp };
+  const tag = s[0], body = s.slice(1);
+  if (tag === '1') {
+    const bytes = Uint8Array.from(atob(body), c => c.charCodeAt(0));
+    const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return JSON.parse(await new Response(ds).text());
+  }
+  if (tag === '0') return JSON.parse(atob(body));
+  return JSON.parse(atob(s)); // legacy untagged code
 }
 
 // surface connection progress/failure instead of failing silently
@@ -2150,7 +2132,7 @@ function wirePCStatus(pc) {
   pc.onconnectionstatechange = () => {
     const st = pc.connectionState;
     if (st === 'connecting') mpUI({ status: 'Codes accepted — connecting…' });
-    else if (st === 'failed') mpUI({ status: 'Connection FAILED. There is no relay server — if both homes have a very strict NAT, a direct link is impossible. Refresh and retry with fresh codes; if it keeps failing, have one player switch networks (e.g. a phone hotspot).' });
+    else if (st === 'failed') mpUI({ status: 'Connection FAILED. Refresh and retry with fresh codes. If it keeps failing, your two networks may not allow a direct link — have one player try a different network (e.g. a phone hotspot).' });
   };
 }
 
