@@ -52,9 +52,12 @@ guest (~1 KB, 10×/s); guests send commands back. If a guest disconnects mid-mat
 an AI takes over their faction; if the host disconnects, the match ends. After a
 match everyone lands back in the lobby for a rematch.
 
-STUN servers are used for NAT discovery and game traffic flows directly between
-browsers. If both homes sit behind strict NATs a TURN relay is required — free
-credentials from expressturn.com go in the marked spot near the bottom of `game.js`.
+There are no third-party services involved: no relay, no account, no signaling
+server. The only outside contact is a public STUN lookup so each browser learns
+its own internet address; all game traffic flows directly between browsers. The
+one limitation of going relay-free: if both homes sit behind very strict NATs a
+direct link is impossible — have one player switch networks (a phone hotspot
+usually works).
 
 ## The five factions
 

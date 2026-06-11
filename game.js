@@ -2081,25 +2081,19 @@ function onDisconnect() { // guest lost the host — the match cannot continue
 }
 
 // ---------------- manual WebRTC signaling ----------------
-// TURN relay: required when a direct connection between the two homes is
-// impossible (strict NAT / CGNAT on both ends). Anonymous public relays no
-// longer exist — get free credentials (1000 GB/month) at expressturn.com
-// and paste them below; until then, connections that need a relay will fail.
-const TURN = {
-  urls: ['turn:free.expressturn.com:3478'],
-  username: '000000002096551680',   // ← ExpressTURN username
-  credential: 'CZYJbMP+NNtR9AHrkmw1k+S/CGQ=', // ← ExpressTURN password
-};
+// Pure peer-to-peer: no relay, no account, no server of ours. The only
+// outside contact is a public STUN lookup ("what is my address?") so the
+// codes carry routable addresses; all game traffic flows browser-to-browser.
+// On the same LAN it connects even with STUN unreachable.
 const RTC_CFG = { iceServers: [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
-  ...(TURN.username ? [TURN] : []),
 ] };
 let mpState = null;
 
 function iceDone(pc) {
   if (pc.iceGatheringState === 'complete') return Promise.resolve();
   return new Promise(res => {
-    const to = setTimeout(res, 6000); // settle for whatever candidates we have
+    const to = setTimeout(res, 3000); // settle for whatever candidates we have
     pc.addEventListener('icegatheringstatechange', () => {
       if (pc.iceGatheringState === 'complete') { clearTimeout(to); res(); }
     });
@@ -2136,7 +2130,7 @@ function wirePCStatus(pc) {
   pc.onconnectionstatechange = () => {
     const st = pc.connectionState;
     if (st === 'connecting') mpUI({ status: 'Codes accepted — connecting…' });
-    else if (st === 'failed') mpUI({ status: 'Connection FAILED. Usually this means a very strict NAT on both ends. Both players: refresh the page and try again with fresh codes (or one of you try a phone hotspot).' });
+    else if (st === 'failed') mpUI({ status: 'Connection FAILED. There is no relay server — if both homes have a very strict NAT, a direct link is impossible. Refresh and retry with fresh codes; if it keeps failing, have one player switch networks (e.g. a phone hotspot).' });
   };
 }
 
