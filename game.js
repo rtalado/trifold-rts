@@ -2086,7 +2086,7 @@ function onDisconnect() { // guest lost the host — the match cannot continue
 // longer exist — get free credentials (1000 GB/month) at expressturn.com
 // and paste them below; until then, connections that need a relay will fail.
 const TURN = {
-  urls: ['turn:relay1.expressturn.com:3478'],
+  urls: ['turn:free.expressturn.com:3478'],
   username: '000000002096551680',   // ← ExpressTURN username
   credential: 'CZYJbMP+NNtR9AHrkmw1k+S/CGQ=', // ← ExpressTURN password
 };
