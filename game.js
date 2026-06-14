@@ -78,17 +78,20 @@ const DEFS = {
   hq:       { fac:'vanguard', kind:'building', name:'Headquarters', hp:1600, size:42, core:true, produces:['worker'], dropoff:true },
   worker:   { fac:'vanguard', kind:'unit', name:'Worker', hp:45, size:8, speed:75, cost:50, time:6, dmg:3, range:12, cd:1, aggro:0, shot:'melee', harvester:true, builder:true },
   barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','sniper','medic'] },
-  factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['tank'] },
+  factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['tank','flametank','goliath'] },
   airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship'] },
   turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:420, size:14, cost:100, time:12, dmg:9, range:195, cd:0.65, aggro:215, shot:'bullet' },
+  techlab:  { fac:'vanguard', kind:'building', name:'Tech Lab', hp:600, size:24, cost:150, time:14, researchLab:true },
   marine:   { fac:'vanguard', kind:'unit', name:'Marine', hp:75, size:8, speed:82, cost:60, time:5, dmg:8, range:95, cd:0.8, aggro:170, shot:'bullet' },
   sniper:   { fac:'vanguard', kind:'unit', name:'Sniper', hp:50, size:8, speed:65, cost:110, time:8, dmg:30, range:215, cd:2.2, aggro:235, shot:'beam' },
   medic:    { fac:'vanguard', kind:'unit', name:'Medic', hp:60, size:8, speed:80, cost:75, time:6, aggro:0, aura:110, heal:6 },
   tank:     { fac:'vanguard', kind:'unit', name:'Siege Tank', hp:280, size:14, speed:52, cost:200, time:12, dmg:34, range:165, cd:2.4, aggro:195, shot:'shell', splash:42 },
   gunship:  { fac:'vanguard', kind:'unit', name:'Gunship', hp:140, size:10, speed:120, cost:180, time:11, dmg:7, range:120, cd:0.35, aggro:200, shot:'bullet' },
+  flametank:{ fac:'vanguard', kind:'unit', name:'Hellhound', hp:210, size:13, speed:74, cost:170, time:11, dmg:14, range:82, cd:0.5, aggro:150, shot:'glob', splash:34 },
+  goliath:  { fac:'vanguard', kind:'unit', name:'Goliath', hp:380, size:15, speed:48, cost:270, time:15, dmg:26, range:185, cd:1.4, aggro:200, shot:'bullet' },
 
   // ----- MYRIAD SWARM -----
-  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother'], grows:['tumor','spawnpit','spittermound','hunterden','spine'], spawns:'drone', spawnEvery:7 },
+  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother','ravager'], grows:['tumor','spawnpit','spittermound','hunterden','spine','evochamber'], spawns:'drone', spawnEvery:7 },
   tumor:       { fac:'myriad', kind:'building', name:'Creep Tumor', hp:130, size:10, cost:50,  time:8,  creepR:6.5 },
   spawnpit:    { fac:'myriad', kind:'building', name:'Spawn Pit', hp:350, size:21, cost:150, time:14, spawns:'drone',   spawnEvery:5 },
   spittermound:{ fac:'myriad', kind:'building', name:'Spitter Mound', hp:380, size:21, cost:200, time:16, spawns:'spitter', spawnEvery:8.5 },
@@ -98,76 +101,94 @@ const DEFS = {
   spitter:     { fac:'myriad', kind:'unit', name:'Spitter', hp:60, size:8, speed:78, dmg:9, range:115, cd:1.1, aggro:180, shot:'glob' },
   hunter:      { fac:'myriad', kind:'unit', name:'Hunter', hp:110, size:9, speed:115, dmg:13, range:16, cd:0.8, aggro:195, shot:'melee' },
   broodmother: { fac:'myriad', kind:'unit', name:'Broodmother', hp:420, size:16, speed:55, cost:300, time:20, dmg:22, range:26, cd:1.4, aggro:185, shot:'melee', splash:38 },
+  evochamber:  { fac:'myriad', kind:'building', name:'Evolution Chamber', hp:480, size:22, cost:150, time:14, researchLab:true },
+  ravager:     { fac:'myriad', kind:'unit', name:'Ravager', hp:170, size:11, speed:84, cost:200, time:13, dmg:20, range:150, cd:1.2, aggro:195, shot:'glob', splash:24 },
 
   // ----- SOLARI EXODUS -----
-  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, produces:['collector','seeker','lancer','guardian','phoenix','templar'] },
+  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true, produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis'] },
   collector:{ fac:'exodus', kind:'unit', name:'Collector', hp:70, shield:30, size:8, speed:84, cost:60, time:6, aggro:0, harvester:true },
   seeker:   { fac:'exodus', kind:'unit', name:'Seeker', hp:65, shield:45, size:8, speed:112, cost:120, time:9, dmg:10, range:55, cd:0.6, aggro:205, shot:'melee', blink:true },
   lancer:   { fac:'exodus', kind:'unit', name:'Lancer', hp:70, shield:55, size:9, speed:60, cost:220, time:14, dmg:30, range:235, cd:2.1, aggro:250, shot:'beam' },
   guardian: { fac:'exodus', kind:'unit', name:'Guardian', hp:120, shield:90, size:11, speed:72, cost:180, time:12, aggro:0, aura:150 },
   phoenix:  { fac:'exodus', kind:'unit', name:'Phoenix', hp:70, shield:50, size:9, speed:125, cost:150, time:10, dmg:8, range:110, cd:0.5, aggro:210, shot:'bullet' },
   templar:  { fac:'exodus', kind:'unit', name:'Templar', hp:80, shield:70, size:10, speed:65, cost:260, time:15, dmg:24, range:140, cd:2.4, aggro:200, shot:'shell', splash:55 },
+  aegis:    { fac:'exodus', kind:'unit', name:'Aegis', hp:240, shield:180, size:14, speed:50, cost:300, time:16, dmg:26, range:60, cd:0.9, aggro:190, shot:'melee', splash:30 },
 
   // ----- ASHEN CHOIR -----
-  ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'], grows:['conduit','reliquary','spire'] },
+  ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'], grows:['conduit','reliquary','spire','oracle'] },
   conduit:   { fac:'choir', kind:'building', name:'Soul Conduit', hp:160, size:11, cost:60, time:7 },
   reliquary: { fac:'choir', kind:'building', name:'Reliquary', hp:600, size:26, cost:180, time:16, produces:['revenant'] },
   spire:     { fac:'choir', kind:'building', name:'Mourning Spire', hp:450, size:14, cost:130, time:12, dmg:12, range:185, cd:1.0, aggro:205, shot:'beam' },
   wraith:    { fac:'choir', kind:'unit', name:'Wraith', hp:95, size:8, speed:105, cost:50, time:4, dmg:9, range:16, cd:0.55, aggro:185, shot:'melee' },
   banshee:   { fac:'choir', kind:'unit', name:'Banshee', hp:75, size:8, speed:70, cost:130, time:9, dmg:15, range:150, cd:1.3, aggro:195, shot:'beam' },
   revenant:  { fac:'choir', kind:'unit', name:'Revenant', hp:380, size:14, speed:58, cost:300, time:18, dmg:30, range:30, cd:1.6, aggro:190, shot:'melee', splash:40 },
+  oracle:    { fac:'choir', kind:'building', name:'Bone Oracle', hp:480, size:22, cost:150, time:13, researchLab:true },
+  lich:      { fac:'choir', kind:'unit', name:'Lich', hp:120, size:10, speed:64, cost:180, time:12, dmg:24, range:175, cd:1.6, aggro:210, shot:'beam' },
 
   // ----- GILDED SYNDICATE -----
-  haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut'], grows:['watchpost','countinghouse'] },
+  haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut','marauder'], grows:['watchpost','countinghouse','blackmarket'] },
   watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet' },
   countinghouse: { fac:'syndicate', kind:'building', name:'Countinghouse', hp:500, size:24, cost:200, time:8 },
   enforcer:      { fac:'syndicate', kind:'unit', name:'Enforcer', hp:90, size:8, speed:80, cost:90, time:0.5, dmg:9, range:105, cd:0.75, aggro:180, shot:'bullet' },
   arbalest:      { fac:'syndicate', kind:'unit', name:'Arbalest', hp:60, size:8, speed:62, cost:160, time:0.5, dmg:26, range:225, cd:2.0, aggro:240, shot:'beam' },
   juggernaut:    { fac:'syndicate', kind:'unit', name:'Juggernaut', hp:320, size:14, speed:55, cost:320, time:0.5, dmg:30, range:150, cd:2.2, aggro:190, shot:'shell', splash:40 },
+  blackmarket:   { fac:'syndicate', kind:'building', name:'Black Market', hp:520, size:24, cost:150, time:6, researchLab:true },
+  marauder:      { fac:'syndicate', kind:'unit', name:'Marauder', hp:180, size:11, speed:74, cost:150, time:0.5, dmg:14, range:120, cd:0.9, aggro:185, shot:'glob', splash:20 },
 
   // ----- WARDEN COVENANT (fortress: income from total standing building HP) -----
-  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g'], grows:['rampart','bastion','foundry_w'] },
+  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g'], grows:['rampart','bastion','foundry_w','college','bunker','redoubt'] },
   rampart:   { fac:'warden', kind:'building', name:'Rampart', hp:1100, size:15, cost:70, time:6 },
   bastion:   { fac:'warden', kind:'building', name:'Bastion', hp:640, size:15, cost:150, time:10, dmg:12, range:200, cd:0.7, aggro:210, shot:'bullet' },
   foundry_w: { fac:'warden', kind:'building', name:'War Foundry', hp:900, size:30, cost:230, time:18, produces:['bombard'] },
   sentinel:  { fac:'warden', kind:'unit', name:'Sentinel', hp:170, size:10, speed:54, cost:80, time:7, dmg:11, range:24, cd:0.9, aggro:170, shot:'melee' },
   warden_g:  { fac:'warden', kind:'unit', name:'Warden Guard', hp:120, size:9, speed:50, cost:120, time:9, dmg:16, range:165, cd:1.2, aggro:200, shot:'bullet' },
   bombard:   { fac:'warden', kind:'unit', name:'Bombard', hp:240, size:14, speed:42, cost:240, time:15, dmg:34, range:200, cd:2.6, aggro:200, shot:'shell', splash:46 },
+  college:   { fac:'warden', kind:'building', name:'War College', hp:700, size:24, cost:150, time:14, researchLab:true },
+  bunker:    { fac:'warden', kind:'building', name:'Bunker', hp:1400, size:18, cost:170, time:12, dmg:10, range:185, cd:0.5, aggro:205, shot:'bullet' },
+  redoubt:   { fac:'warden', kind:'building', name:'Redoubt', hp:820, size:18, cost:220, time:16, dmg:30, range:235, cd:2.2, aggro:235, shot:'shell', splash:42 },
 
   // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
-  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast'], grows:['warcamp','totem'] },
+  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge'] },
   warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:520, size:24, cost:120, time:9, produces:['raider','slinger'] },
   totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:340, size:13, cost:110, time:7, dmg:12, range:165, cd:0.8, aggro:190, shot:'glob' },
   raider:    { fac:'ember', kind:'unit', name:'Raider', hp:70, size:8, speed:128, cost:45, time:4, dmg:9, range:16, cd:0.6, aggro:185, shot:'melee' },
   slinger:   { fac:'ember', kind:'unit', name:'Slinger', hp:52, size:8, speed:100, cost:80, time:5, dmg:11, range:135, cd:0.9, aggro:195, shot:'glob' },
   firebrand: { fac:'ember', kind:'unit', name:'Firebrand', hp:95, size:9, speed:92, cost:150, time:8, dmg:18, range:120, cd:1.3, aggro:200, shot:'shell', splash:34 },
   warbeast:  { fac:'ember', kind:'unit', name:'War Beast', hp:300, size:15, speed:96, cost:280, time:13, dmg:24, range:20, cd:0.9, aggro:185, shot:'melee', splash:26 },
+  warlodge:  { fac:'ember', kind:'building', name:'War Lodge', hp:520, size:22, cost:140, time:12, researchLab:true },
+  firewagon: { fac:'ember', kind:'unit', name:'Fire Wagon', hp:160, size:13, speed:110, cost:160, time:9, dmg:16, range:90, cd:0.7, aggro:175, shot:'glob', splash:36 },
 
   // ----- VERDANT BLOOM (garden: Sap from mature Blooms; Groves breed free Saplings) -----
-  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant'], grows:['bloom','grove','bramble'], spawns:'sapling', spawnEvery:8 },
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','grove','bramble','arboretum'], spawns:'sapling', spawnEvery:8 },
   bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
   grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6 },
   bramble:   { fac:'verdant', kind:'building', name:'Bramble', hp:360, size:13, cost:120, time:9, dmg:11, range:172, cd:0.9, aggro:190, shot:'glob' },
   sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee' },
   thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:70, size:8, speed:74, cost:90, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
   treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:300, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
+  arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true },
+  ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:420, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
 
   // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
-  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','voltaic'], grows:['dynamo','tesla','foundry_s'] },
+  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','voltaic','gladius'], grows:['dynamo','tesla','foundry_s','stormlab'] },
   dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
   tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:16, range:195, cd:1.1, aggro:205, shot:'beam' },
   foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus'] },
   arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:90, shield:40, size:9, speed:118, cost:110, time:8, dmg:9, range:115, cd:0.4, aggro:205, shot:'bullet' },
   voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:80, shield:60, size:9, speed:62, cost:210, time:13, dmg:30, range:230, cd:2.0, aggro:245, shot:'beam' },
   colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:520, shield:160, size:18, speed:48, cost:420, time:24, dmg:40, range:175, cd:2.4, aggro:200, shot:'shell', splash:55 },
+  stormlab:  { fac:'stormforge', kind:'building', name:'Research Bay', hp:520, size:22, cost:150, time:14, researchLab:true },
+  gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:200, shield:90, size:13, speed:70, cost:230, time:14, dmg:22, range:130, cd:1.0, aggro:195, shot:'shell', splash:24 },
 
   // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying) -----
-  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth'], grows:['shrine','spike'] },
+  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth','cultist'], grows:['shrine','spike','sanctum'] },
   shrine:    { fac:'pact', kind:'building', name:'Bone Shrine', hp:420, size:22, cost:120, time:9, spawns:'thrall', spawnEvery:5 },
   spike:     { fac:'pact', kind:'building', name:'Blood Spike', hp:340, size:13, cost:110, time:7, dmg:13, range:168, cd:0.85, aggro:190, shot:'glob' },
   thrall:    { fac:'pact', kind:'unit', name:'Thrall', hp:46, size:7, speed:104, cost:30, time:3, dmg:7, range:14, cd:0.6, aggro:185, shot:'melee' },
   zealot:    { fac:'pact', kind:'unit', name:'Zealot', hp:110, size:9, speed:88, cost:110, time:6, dmg:15, range:18, cd:0.8, aggro:185, shot:'melee' },
   behemoth:  { fac:'pact', kind:'unit', name:'Behemoth', hp:560, size:18, speed:50, cost:340, time:18, dmg:34, range:24, cd:1.4, aggro:185, shot:'melee', splash:40 },
+  sanctum:   { fac:'pact', kind:'building', name:'Blood Sanctum', hp:520, size:22, cost:130, time:12, researchLab:true },
+  cultist:   { fac:'pact', kind:'unit', name:'Cultist', hp:60, size:8, speed:92, cost:70, time:5, dmg:13, range:130, cd:1.0, aggro:190, shot:'glob' },
 
   // ----- NEUTRAL (capture / fight) -----
   // Obelisk: indestructible capture point — hold ground nearby to claim its income.
@@ -264,6 +285,28 @@ const META = {
   thrall:    { desc: 'Dirt-cheap, expendable melee body. Its death spills Blood.' },
   zealot:    { desc: 'Tougher melee fanatic.', req: 'shrine' },
   behemoth:  { desc: 'Massive splashing horror raised from spilled Blood.', req: 'shrine' },
+  // NEW UNITS & BUILDINGS
+  techlab:   { desc: 'Research building. Develops Iron Vanguard weapon & armour upgrades.' },
+  flametank: { desc: 'Fast short-range tank that hoses a cone of fire — devastating against clumped infantry.' },
+  goliath:   { desc: 'Heavy walker with a long-range autocannon. Durable all-rounder; anchors a push.' },
+  evochamber:{ desc: 'Research building grown on creep. Evolves the swarm’s upgrades.' },
+  ravager:   { desc: 'Bred ranged elite that lobs corrosive splash. Needs a Hunter Den.', req: 'hunterden' },
+  aegis:     { desc: 'Heavily shielded vanguard bruiser. Soaks fire and crushes what it reaches.' },
+  oracle:    { desc: 'Lattice research shrine. Unlocks the Choir’s upgrades.' },
+  lich:      { desc: 'Ranged caster spirit with a piercing death-beam. Fragile but hits hard.' },
+  blackmarket:{ desc: 'Air-dropped research den. Brokers the Syndicate’s upgrades.' },
+  marauder:  { desc: 'Instant-hire mercenary bruiser with a short-range grenade launcher.' },
+  college:   { desc: 'Research building. Trains the Covenant’s doctrines & upgrades.' },
+  bunker:    { desc: 'Hugely armoured gun emplacement — the backbone of an impenetrable wall. Needs a Bastion.', req: 'bastion' },
+  redoubt:   { desc: 'Long-range static artillery with splash. Shells anything that nears your line. Needs a War Foundry.', req: 'foundry_w' },
+  warlodge:  { desc: 'Research building. Hones the warband’s edge & upgrades.' },
+  firewagon: { desc: 'Fast vehicle that flings flaming pitch in a splash. Needs a War Camp.', req: 'warcamp' },
+  arboretum: { desc: 'Research building. Cultivates the garden’s upgrades.' },
+  ancient:   { desc: 'Towering elder treant — enormous HP and splashing blows. Needs a Grove.', req: 'grove' },
+  stormlab:  { desc: 'Research building. Designs the Dynasty’s upgrades.' },
+  gladius:   { desc: 'Shielded mid-weight mech with a splashing cannon. Needs a Dynamo.', req: 'dynamo' },
+  sanctum:   { desc: 'Research building. Channels the Pact’s rites & upgrades.' },
+  cultist:   { desc: 'Cheap ranged zealot — the Pact’s only ranged body. Spits hexes from afar.' },
   // NEUTRAL
   obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
@@ -309,6 +352,10 @@ const RESEARCH_BY_FAC = {};
   }
 })();
 
+// which building each faction researches at (the base-less Exodus uses its Ark)
+const LAB_OF = {};
+for (const k in DEFS) if (DEFS[k].researchLab) LAB_OF[DEFS[k].fac] = k;
+
 // derive a player's stat multipliers from the set of upgrades they've researched
 function recalcMul(p) {
   p.dmgMul = 1; p.hpBonusMul = 1; p.shBonusMul = 1;
@@ -346,7 +393,7 @@ function applyResearch(fac, rid) {
 }
 function enqueueResearch(e, rid) {
   const r = RESEARCH[rid], p = game.players[e.fac];
-  if (!r || r.fac !== e.fac || !e.def.core) return false;
+  if (!r || r.fac !== e.fac || !e.def.researchLab) return false;
   if (p.research.has(rid)) { localMsg(e.fac, 'Already researched'); return false; }
   if (researchQueued(e.fac, rid)) { localMsg(e.fac, 'Already researching ' + r.name); return false; }
   if (r.req && !p.research.has(r.req)) { localMsg(e.fac, 'Requires ' + RESEARCH[r.req].name); return false; }
@@ -368,7 +415,9 @@ const ECON = {
   choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.7, choirLattice: 270,
   // syndicate: compound interest on the banked treasury, bounties on kills
   synBase: 2.5, synInterest: 0.011, synCapBase: 1200, synCapPer: 500,
-  synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06, synDropKeepout: 340,
+  synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06,
+  // no building (turret, wall, anything) may be placed within this radius of an enemy structure
+  enemyKeepout: 300,
   // warden: income scales with the total HP of standing (finished) buildings
   wardenBase: 1.0, wardenPerHp: 0.0012,
   // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle
@@ -853,8 +902,8 @@ function updateBuilding(e, dt) {
       }
     }
   }
-  // production queue
-  if (d.produces) tickQueue(e, dt);
+  // production / research queue (research labs have no `produces` but still queue)
+  if (d.produces || (e.queue && e.queue.length)) tickQueue(e, dt);
   // turret combat
   if (d.dmg) {
     e.cd = Math.max(0, e.cd - dt);
@@ -917,12 +966,10 @@ function placeValid(type, fac, x, y) {
       && !e.constructing && !e.growing && Math.hypot(e.x - x, e.y - y) < ECON.choirLattice);
     if (!ok) { placeErrMsg = 'Must build within the lattice — near another Choir structure'; return false; }
   }
-  // syndicate air-drops can't be planted in enemy-held territory (no turret-rushing the base)
-  if (fac === 'syndicate') {
-    const enemyNear = game.entities.some(o => !o.dead && o.fac !== fac && o.fac !== 'neutral'
-      && o.def.kind === 'building' && Math.hypot(o.x - x, o.y - y) < ECON.synDropKeepout);
-    if (enemyNear) { placeErrMsg = 'Too close to enemy territory'; return false; }
-  }
+  // no faction may build in enemy-held territory (no turret-rushing / walling the enemy base)
+  const enemyNear = game.entities.some(o => !o.dead && o.fac !== fac && o.fac !== 'neutral'
+    && o.def.kind === 'building' && Math.hypot(o.x - x, o.y - y) < ECON.enemyKeepout);
+  if (enemyNear) { placeErrMsg = 'Too close to enemy territory'; return false; }
   return true;
 }
 
@@ -1143,15 +1190,22 @@ function tickProjectiles(dt) {
 }
 
 // ---------------- AI ----------------
-// AI buys its upgrade line in order, once it has a comfortable surplus and the
-// core isn't busy producing — keeps bots teching up without starving their army.
-function aiResearch(fac, core, p) {
-  if (!core || core.queue.length || game.t < 120) return;
+// AI builds its research station, then buys its upgrade line in order once it has
+// a comfortable surplus — keeps bots teching up without starving their army.
+function aiResearch(fac, p) {
+  const labType = LAB_OF[fac];
+  if (!labType) return;
+  const lab = ents(e => e.fac === fac && e.type === labType)[0];
+  if (!lab) { // no station yet — build one as a priority (Exodus' lab is its Ark)
+    if (DEFS[labType].kind === 'building' && p.res >= DEFS[labType].cost) aiPlace(fac, labType, p.base);
+    return;
+  }
+  if (lab.constructing || lab.growing || lab.queue.length) return;
   for (const rid of RESEARCH_BY_FAC[fac] || []) {
     const r = RESEARCH[rid];
     if (p.research.has(rid)) continue;
     if (r.req && !p.research.has(r.req)) return;
-    if (p.res >= r.cost + 200) enqueueResearch(core, rid);
+    if (p.res >= r.cost) enqueueResearch(lab, rid);
     return; // research in order; wait if we can't afford the next one yet
   }
 }
@@ -1160,7 +1214,7 @@ function aiTick(fac) {
   const p = game.players[fac];
   const myCore = ents(e => e.fac === fac && e.def.core)[0];
   if (!myCore) return;
-  aiResearch(fac, myCore, p);
+  aiResearch(fac, p);
   // free-for-all: go for the nearest surviving enemy core
   const enemyCore = ents(e => e.def.core && e.fac !== fac && e.fac !== 'neutral')
     .sort((a, b) => dist(myCore, a) - dist(myCore, b))[0];
@@ -1194,7 +1248,10 @@ function aiTick(fac) {
       const r = Math.random();
       enqueue(b, (r < 0.25 && p.res >= 110) ? 'sniper' : (r < 0.4 && p.res >= 75) ? 'medic' : 'marine');
     }
-    for (const b of fact) if (!b.constructing && !b.queue.length && p.res >= 200) enqueue(b, 'tank');
+    for (const b of fact) if (!b.constructing && !b.queue.length && p.res >= 170) {
+      const r = Math.random();
+      enqueue(b, (r < 0.3 && p.res >= 270) ? 'goliath' : (r < 0.6) ? 'flametank' : 'tank');
+    }
     for (const b of air) if (!b.constructing && !b.queue.length && p.res >= 180) enqueue(b, 'gunship');
   }
 
@@ -1219,7 +1276,8 @@ function aiTick(fac) {
     else if (mounds.length < 2 && pits.length >= 1 && p.res >= 200) aiPlace(fac, 'spittermound', p.base);
     else if (dens.length < 2 && pits.length >= 2 && p.res >= 250) aiPlace(fac, 'hunterden', p.base);
     else if (spines.length < 3 && p.res >= 120 && game.t > 150) aiPlace(fac, 'spine', p.base);
-    else if (hive && !hive.queue.length && p.res >= 300 && game.t > 180 && techMet(fac, 'broodmother')) enqueue(hive, 'broodmother');
+    else if (hive && !hive.queue.length && p.res >= 200 && game.t > 160 && techMet(fac, 'ravager'))
+      enqueue(hive, (p.res >= 300 && Math.random() < 0.5) ? 'broodmother' : 'ravager');
     // swarm rally drifts toward the enemy as the game goes on
     p.swarmRally = underAttack && defendPt ? { x: defendPt.x, y: defendPt.y }
       : { x: p.base.x + (enemyCore.x - p.base.x) * 0.3, y: p.base.y + (enemyCore.y - p.base.y) * 0.3 };
@@ -1235,7 +1293,9 @@ function aiTick(fac) {
       const guards = ents(e => e.fac === fac && e.type === 'guardian').length;
       const phoenixes = ents(e => e.fac === fac && e.type === 'phoenix').length;
       const templars = ents(e => e.fac === fac && e.type === 'templar').length;
+      const aegises = ents(e => e.fac === fac && e.type === 'aegis').length;
       if (collectors < 5 && p.res >= 60) enqueue(ark, 'collector');
+      else if (aegises < 2 && p.res >= 300 && game.t > 200) enqueue(ark, 'aegis');
       else if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
       else if (lancers <= seekers / 2 && p.res >= 220) enqueue(ark, 'lancer');
       else if (phoenixes < 2 && p.res >= 150 && game.t > 150) enqueue(ark, 'phoenix');
@@ -1279,7 +1339,8 @@ function aiTick(fac) {
     else if (spires.length < 2 && p.res >= 130 && game.t > 130) aiPlace(fac, 'spire', p.base);
     if (oss && !oss.queue.length && p.res >= 50)
       enqueue(oss, (Math.random() < 0.35 && p.res >= 130) ? 'banshee' : 'wraith');
-    for (const b of reliqs) if (!b.growing && !b.queue.length && p.res >= 300) enqueue(b, 'revenant');
+    for (const b of reliqs) if (!b.growing && !b.queue.length && p.res >= 180)
+      enqueue(b, (p.res >= 300 && Math.random() < 0.6) ? 'revenant' : 'lich');
   }
 
   else if (fac === 'syndicate') { // bank gold for interest, spend the overflow on mercs
@@ -1292,8 +1353,10 @@ function aiTick(fac) {
       const enf = ents(e => e.fac === fac && e.type === 'enforcer').length;
       const arb = ents(e => e.fac === fac && e.type === 'arbalest').length;
       const jug = ents(e => e.fac === fac && e.type === 'juggernaut').length;
+      const mar = ents(e => e.fac === fac && e.type === 'marauder').length;
       if (jug < Math.floor(enf / 5) && p.res >= 650 && techMet(fac, 'juggernaut')) enqueue(haven, 'juggernaut');
       else if (arb < enf / 2 && p.res >= 520 && techMet(fac, 'arbalest')) enqueue(haven, 'arbalest');
+      else if (mar < enf / 3 && p.res >= 500) enqueue(haven, 'marauder');
       else enqueue(haven, 'enforcer');
     }
   }
@@ -1303,9 +1366,13 @@ function aiTick(fac) {
     const ramparts = ents(e => e.fac === fac && e.type === 'rampart').length;
     const bastions = ents(e => e.fac === fac && e.type === 'bastion').length;
     const foundries = ents(e => e.fac === fac && e.type === 'foundry_w').length;
+    const bunkers = ents(e => e.fac === fac && e.type === 'bunker').length;
+    const redoubts = ents(e => e.fac === fac && e.type === 'redoubt').length;
     if (ramparts < 8 && p.res >= 70) aiPlace(fac, 'rampart', p.base);
     else if (bastions < 3 && p.res >= 150) aiPlace(fac, 'bastion', p.base);
+    else if (bunkers < 3 && p.res >= 170 && techMet(fac, 'bunker')) aiPlace(fac, 'bunker', p.base);
     else if (foundries < 1 && p.res >= 230 && game.t > 120) aiPlace(fac, 'foundry_w', p.base);
+    else if (redoubts < 2 && p.res >= 220 && techMet(fac, 'redoubt')) aiPlace(fac, 'redoubt', p.base);
     else if (ramparts < 16 && p.res >= 400) aiPlace(fac, 'rampart', p.base);
     if (keep && !keep.queue.length && p.res >= 90) {
       const guards = ents(e => e.fac === fac && e.type === 'warden_g').length;
@@ -1326,7 +1393,9 @@ function aiTick(fac) {
       if (!e || e.queue.length || e.growing) return;
       const beasts = ents(o => o.fac === fac && o.type === 'warbeast').length;
       const brands = ents(o => o.fac === fac && o.type === 'firebrand').length;
+      const wagons = ents(o => o.fac === fac && o.type === 'firewagon').length;
       if (beasts < 3 && p.res >= 280 && techMet(fac, 'warbeast')) enqueue(e, 'warbeast');
+      else if (wagons < 3 && p.res >= 160 && techMet(fac, 'firewagon')) enqueue(e, 'firewagon');
       else if (brands < 5 && p.res >= 150 && techMet(fac, 'firebrand')) enqueue(e, 'firebrand');
       else if (p.res >= 80 && Math.random() < 0.5) enqueue(e, 'slinger');
       else if (p.res >= 45) enqueue(e, 'raider');
@@ -1349,7 +1418,9 @@ function aiTick(fac) {
     else if (blooms < 12 && p.res >= 300) aiPlace(fac, 'bloom', p.base);
     if (heart && !heart.queue.length && p.res >= 90) {
       const treants = ents(e => e.fac === fac && e.type === 'treant').length;
-      enqueue(heart, (treants < 3 && p.res >= 300 && game.t > 150 && techMet(fac, 'treant')) ? 'treant' : 'thornling');
+      const ancients = ents(e => e.fac === fac && e.type === 'ancient').length;
+      if (ancients < 2 && p.res >= 420 && game.t > 220 && techMet(fac, 'ancient')) enqueue(heart, 'ancient');
+      else enqueue(heart, (treants < 3 && p.res >= 300 && game.t > 150 && techMet(fac, 'treant')) ? 'treant' : 'thornling');
     }
   }
 
@@ -1364,7 +1435,9 @@ function aiTick(fac) {
     if (reactor && !reactor.queue.length && p.res >= 110) {
       const volts = ents(e => e.fac === fac && e.type === 'voltaic').length;
       const arcs = ents(e => e.fac === fac && e.type === 'arclight').length;
-      enqueue(reactor, (volts < arcs / 2 && p.res >= 210 && techMet(fac, 'voltaic')) ? 'voltaic' : 'arclight');
+      const glads = ents(e => e.fac === fac && e.type === 'gladius').length;
+      if (glads < arcs / 2 && p.res >= 230 && techMet(fac, 'gladius')) enqueue(reactor, 'gladius');
+      else enqueue(reactor, (volts < arcs / 2 && p.res >= 210 && techMet(fac, 'voltaic')) ? 'voltaic' : 'arclight');
     }
     for (const f of ents(e => e.fac === fac && e.type === 'foundry_s' && !e.growing))
       if (!f.queue.length && p.res >= 420) enqueue(f, 'colossus');
@@ -1379,7 +1452,9 @@ function aiTick(fac) {
     if (altar && !altar.queue.length && p.res >= 30) {
       const behes = ents(e => e.fac === fac && e.type === 'behemoth').length;
       const zeals = ents(e => e.fac === fac && e.type === 'zealot').length;
+      const cults = ents(e => e.fac === fac && e.type === 'cultist').length;
       if (behes < 3 && p.res >= 340 && game.t > 150 && techMet(fac, 'behemoth')) enqueue(altar, 'behemoth');
+      else if (cults < zeals && p.res >= 70) enqueue(altar, 'cultist');
       else if (zeals < 6 && p.res >= 110 && techMet(fac, 'zealot')) enqueue(altar, 'zealot');
       else if (p.res >= 30) enqueue(altar, 'thrall');
     }
@@ -1700,7 +1775,7 @@ function currentCommands() {
     const inProg = researchQueued(fac, rid);
     const reqMet = !r.req || p.research.has(r.req);
     cmds.push({
-      rid, label: (have ? '✓ ' : 'Research ') + r.name,
+      rid, label: (have ? '✓ ' : '⚙ ') + r.name,
       cost: (have || inProg || !reqMet) ? 0 : r.cost,
       sub: have ? 'Researched' : (inProg ? 'Researching…' : (!reqMet ? 'Requires ' + RESEARCH[r.req].name : null)),
       desc: r.desc,
@@ -1713,13 +1788,12 @@ function currentCommands() {
     });
   };
 
-  if (types.has('worker')) ['barracks', 'factory', 'airfield', 'turret'].forEach(buildBtn);
+  if (types.has('worker')) ['barracks', 'factory', 'airfield', 'turret', 'techlab'].forEach(buildBtn);
 
   if (game.sel.length === 1) {
     const d = sel0.def;
     if (d.grows) d.grows.forEach(buildBtn);
     if (d.produces && !sel0.constructing && !sel0.growing) d.produces.forEach(t => prodBtn(sel0, t));
-    if (d.core && RESEARCH_BY_FAC[fac]) RESEARCH_BY_FAC[fac].forEach(rid => researchBtn(sel0, rid));
     if (sel0.type === 'ark') {
       cmds.push({
         label: sel0.deployed ? 'Undeploy Ark' : 'Deploy Ark', cost: 0, enabled: true,
@@ -1732,8 +1806,10 @@ function currentCommands() {
         },
       });
     }
+    // research is done at the faction's research building (the Ark, for the base-less Exodus)
+    if (d.researchLab && RESEARCH_BY_FAC[fac]) RESEARCH_BY_FAC[fac].forEach(rid => researchBtn(sel0, rid));
   }
-  return cmds.slice(0, 10);
+  return cmds.slice(0, 12);
 }
 
 // compact stat readout for a definition, shown in the build tooltip
@@ -1776,7 +1852,7 @@ function refreshCard() {
   cmds.forEach((c, i) => {
     const b = document.createElement('button');
     b.disabled = !c.enabled;
-    b.innerHTML = '<span class="k">' + hot[i] + '</span>' + c.label
+    b.innerHTML = '<span class="k">' + (hot[i] || '') + '</span>' + c.label
       + (c.cost ? '<span class="c">' + c.cost + ' ' + FACTIONS[game.localFac].res + '</span>' : (c.sub ? '<span class="c">' + c.sub + '</span>' : ''));
     b.onclick = () => { if (c.enabled) c.onClick(); };
     b.addEventListener('mouseenter', () => showTip(c));
@@ -1979,13 +2055,19 @@ function drawEnt(e) {
       } else {
         ctx.fillStyle = col; ctx.fillRect(x - s * 0.45, y - s * 0.3, s * 0.9, s * 0.6);
       }
-    } else if (e.type === 'tank') {
-      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 2;
+    } else if (e.type === 'tank' || e.type === 'flametank' || e.type === 'goliath') {
+      ctx.fillStyle = e.type === 'goliath' ? '#0f2740' : dark; ctx.strokeStyle = col; ctx.lineWidth = 2;
       roundRect(x - s, y - s * 0.7, s * 2, s * 1.4, 4); ctx.fill(); ctx.stroke();
       const t = e.tgt ? byId(e.tgt) : null;
       const a = t ? Math.atan2(t.y - y, t.x - x) : 0;
-      ctx.strokeStyle = col; ctx.lineWidth = 3;
+      ctx.strokeStyle = e.type === 'flametank' ? '#ff9d4d' : col;
+      ctx.lineWidth = e.type === 'goliath' ? 4 : 3;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      if (e.type === 'goliath') { // twin barrels
+        const px = Math.cos(a + Math.PI / 2) * 3, py = Math.sin(a + Math.PI / 2) * 3;
+        ctx.beginPath(); ctx.moveTo(x + px, y + py); ctx.lineTo(x + px + Math.cos(a) * (s + 6), y + py + Math.sin(a) * (s + 6));
+        ctx.moveTo(x - px, y - py); ctx.lineTo(x - px + Math.cos(a) * (s + 6), y - py + Math.sin(a) * (s + 6)); ctx.stroke();
+      }
     } else if (e.type === 'worker') {
       ctx.fillStyle = e.order.type === 'harvest' && e.order.carry > 0 ? '#6ee7ff' : dark;
       ctx.strokeStyle = col; ctx.lineWidth = 1.5;
@@ -2164,10 +2246,10 @@ function drawEnt(e) {
       ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 3 : 2;
       poly(x, y, s, 6, 0); ctx.fill(); ctx.stroke();
       ctx.lineWidth = 1; poly(x, y, s * 0.6, 6, 0); ctx.stroke();
-      if (e.type === 'bastion' || e.type === 'keep') {
+      if (e.def.dmg) { // any armed Warden structure (keep, bastion, bunker, redoubt)
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = e.type === 'redoubt' ? 4 : 3.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
       }
     } else {
@@ -2671,7 +2753,7 @@ function handleCmd(m) {
     if (e && e.fac === fac && e.type === 'ark') { e.deployed = m.on; if (m.on) e.order = { type: 'idle' }; }
   } else if (m.kind === 'research') {
     const e = byId(m.id);
-    if (e && e.fac === fac && e.def.core) enqueueResearch(e, m.rid);
+    if (e && e.fac === fac && e.def.researchLab) enqueueResearch(e, m.rid);
   }
 }
 
