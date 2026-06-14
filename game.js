@@ -2386,28 +2386,120 @@ function guestTick(dt) {
 }
 
 
-// ---------------- multiplayer (local server relay over WebSockets) ----------------
-// The bundled server.js serves this page and relays messages between everyone in a
-// room. The host is authoritative: it simulates and streams snapshots; guests send
-// commands. Up to 4 players (humans + AI) share one lobby, joined by a 5-letter code.
-const net = { ws: null, slot: -1, code: '', host: false, players: [], aiCount: 1, inGame: false };
+// ---------------- multiplayer (peer-to-peer over WebRTC, via PeerJS) ----------------
+// No dedicated server: one player hosts and is authoritative (simulates + streams
+// snapshots); guests connect straight to the host over WebRTC and send commands.
+// Matchmaking goes through the free PeerJS broker, and WebRTC's NAT traversal lets
+// players on different networks connect without port forwarding. The host's browser
+// runs the room logic (slots, lobby, relay) that a server would normally handle.
+// Up to 4 players (humans + AI) share one lobby, joined by a 5-letter code.
+const PEER_PREFIX = 'trifold-rts-v1-';
+const net = { peer: null, hostConn: null, connected: false, slot: -1, code: '', host: false, players: [], aiCount: 1, inGame: false };
+let room = null; // host only: { started, members:[{ pid, conn, slot, fac, host }] }
 
-function netConnected() { return !!(net.ws && net.ws.readyState === 1); }
-function netSend(o) { if (netConnected()) net.ws.send(JSON.stringify(o)); }
+function netConnected() { return net.connected; }
 function mpStatus(s) { document.getElementById('mpStatus').textContent = s || ''; }
 
-function netConnect(onOpen) {
-  if (location.protocol === 'file:') {
-    mpStatus('Open the game through the local server: run start.bat (Windows) or start.sh, then visit the http://… address it prints.');
-    return;
+// Unified send. Host loops messages through its own room logic (it IS the authority);
+// guests send straight to the host. Routing then mirrors the old server relay.
+function netSend(o) {
+  if (net.host) hostHandleMsg('HOST', o);
+  else if (net.hostConn && net.hostConn.open) { try { net.hostConn.send(o); } catch (e) {} }
+}
+
+function makeCode() {
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no easily-confused chars
+  let c = ''; for (let i = 0; i < 5; i++) c += A[(Math.random() * A.length) | 0];
+  return c;
+}
+
+// ---- host: room management (the in-browser stand-in for the old server.js) ----
+function freeSlot() {
+  const used = new Set(room.members.filter(m => m.slot >= 0).map(m => m.slot));
+  for (let i = 0; i < 4; i++) if (!used.has(i)) return i;
+  return -1;
+}
+function lobbyMsg() {
+  return { t: 'lobby', players: room.members.filter(m => m.slot >= 0)
+    .map(m => ({ slot: m.slot, fac: m.fac, host: m.host })).sort((a, b) => a.slot - b.slot) };
+}
+function hostSendTo(pid, o) {
+  if (pid === 'HOST') { handleNet(o); return; } // loopback to the host's own client
+  const m = room.members.find(x => x.pid === pid);
+  if (m && m.conn && m.conn.open) { try { m.conn.send(o); } catch (e) {} }
+}
+function hostBroadcast(o, exceptPid) {
+  for (const m of room.members) if (m.pid !== exceptPid) hostSendTo(m.pid, o);
+}
+function hostHandleMsg(pid, m) {
+  const mem = room && room.members.find(x => x.pid === pid);
+  if (m.t === 'join') {
+    if (!mem) return;
+    if (room.started) { hostSendTo(pid, { t: 'err', msg: 'That match has already started.' }); return; }
+    if (room.members.filter(x => x.slot >= 0).length >= 4) { hostSendTo(pid, { t: 'err', msg: 'That room is full (4 players).' }); return; }
+    mem.slot = freeSlot();
+    hostSendTo(pid, { t: 'joined', code: net.code, slot: mem.slot });
+    hostBroadcast(lobbyMsg());
+  } else if (!mem || mem.slot < 0) {
+    // ignore anything before this peer has joined a slot
+  } else if (m.t === 'pick') {
+    mem.fac = m.fac;
+    hostBroadcast(lobbyMsg());
+  } else if (m.t === 'start') {
+    room.started = true;
+    hostBroadcast({ t: 'start', roster: m.roster, seed: m.seed }); // to everyone, host included
+  } else {
+    hostBroadcast(m, pid); // relay gameplay (snap / cmd / msg / end) to the others
   }
-  if (net.ws && net.ws.readyState <= 1) { onOpen && onOpen(); return; }
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  net.ws = new WebSocket(proto + '://' + location.host);
-  net.ws.onopen = () => onOpen && onOpen();
-  net.ws.onmessage = ev => handleNet(JSON.parse(ev.data));
-  net.ws.onclose = () => onDisconnect();
-  net.ws.onerror = () => mpStatus('Could not reach the game server.');
+}
+
+function hostGame() {
+  const code = makeCode();
+  const peer = new Peer(PEER_PREFIX + code, { debug: 1 });
+  net.peer = peer;
+  peer.on('open', () => {
+    net.host = true; net.connected = true; net.code = code;
+    room = { started: false, members: [{ pid: 'HOST', conn: null, slot: 0, fac: null, host: true }] };
+    handleNet({ t: 'created', code, slot: 0 });
+    hostBroadcast(lobbyMsg());
+  });
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id') { peer.destroy(); hostGame(); return; } // code collision — retry
+    mpStatus('Could not start a room (' + (e.type || e) + '). Check your internet connection.');
+  });
+  peer.on('connection', conn => {
+    const pid = conn.peer;
+    conn.on('open', () => { room.members.push({ pid, conn, slot: -1, fac: null, host: false }); });
+    conn.on('data', msg => hostHandleMsg(pid, msg));
+    const drop = () => {
+      if (!room) return;
+      room.members = room.members.filter(x => x.pid !== pid);
+      hostBroadcast(lobbyMsg());
+    };
+    conn.on('close', drop);
+    conn.on('error', drop);
+  });
+}
+
+function joinGame(code) {
+  const peer = new Peer({ debug: 1 });
+  net.peer = peer; let opened = false;
+  peer.on('open', () => {
+    const conn = peer.connect(PEER_PREFIX + code.toUpperCase(), { reliable: true, serialization: 'json' });
+    net.hostConn = conn;
+    conn.on('open', () => {
+      opened = true; net.host = false; net.connected = true;
+      conn.send({ t: 'join', code: code.toUpperCase() });
+    });
+    conn.on('data', msg => handleNet(msg));
+    conn.on('close', () => { if (opened) onDisconnect(); });
+    conn.on('error', () => { if (!opened) mpStatus('Could not reach that room.'); else onDisconnect(); });
+    setTimeout(() => { if (!opened) mpStatus('No room with that code (or the host went offline).'); }, 9000);
+  });
+  peer.on('error', e => {
+    if (e.type === 'peer-unavailable') mpStatus('No room with that code.');
+    else if (!opened) mpStatus('Could not connect (' + (e.type || e) + '). Check your internet connection.');
+  });
 }
 
 function handleNet(m) {
@@ -2453,10 +2545,12 @@ function onDisconnect() {
     game.over = true;
     document.getElementById('endTitle').textContent = 'CONNECTION LOST';
     document.getElementById('endTitle').style.color = '#e0b84d';
-    document.getElementById('endDetail').textContent = 'The link to the game server dropped.';
+    document.getElementById('endDetail').textContent = 'The peer-to-peer connection dropped.';
     document.getElementById('endscreen').style.display = 'flex';
   }
-  net.ws = null; net.slot = -1; net.code = ''; net.host = false; net.players = []; net.inGame = false;
+  if (net.peer) { try { net.peer.destroy(); } catch (e) {} }
+  net.peer = null; net.hostConn = null; net.connected = false; room = null;
+  net.slot = -1; net.code = ''; net.host = false; net.players = []; net.inGame = false;
   document.getElementById('mpLobby').style.display = 'none';
   document.getElementById('mpPanel').style.display = 'none';
   for (const c of document.querySelectorAll('#cards .card')) c.classList.remove('picked');
@@ -2533,9 +2627,9 @@ for (const card of document.querySelectorAll('#cards .card')) {
   });
 }
 document.getElementById('mpHostBtn').addEventListener('click', () => {
-  if (net.code) return;
+  if (net.peer) return;
   mpStatus('Creating a room…');
-  netConnect(() => netSend({ t: 'create' }));
+  hostGame();
 });
 document.getElementById('mpJoinBtn').addEventListener('click', () => {
   if (net.code) return;
@@ -2546,7 +2640,9 @@ document.getElementById('mpJoinBtn').addEventListener('click', () => {
 document.getElementById('mpJoinGo').addEventListener('click', () => {
   const code = (document.getElementById('mpJoinCode').value || '').trim().toUpperCase();
   if (code.length < 4) { mpStatus('Enter the room code.'); return; }
-  netConnect(() => netSend({ t: 'join', code }));
+  if (net.peer) return;
+  mpStatus('Connecting to room ' + code + '…');
+  joinGame(code);
 });
 document.getElementById('mpJoinCode').addEventListener('keydown', ev => { if (ev.key === 'Enter') document.getElementById('mpJoinGo').click(); });
 document.getElementById('mpStart').addEventListener('click', hostStart);

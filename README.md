@@ -6,11 +6,10 @@ own rules — different economy, different production, different verbs.
 
 ## How to run
 
-- **Easiest:** double-click `index.html` — it runs straight from disk, no server needed.
-- Or serve it locally (handy for dev):
-  - Windows: `powershell -ExecutionPolicy Bypass -File serve.ps1`
-  - Linux/macOS: `python3 -m http.server 8123`
-  then open <http://localhost:8123/>.
+- **Single player:** double-click `index.html` — it runs straight from disk, no server needed.
+- **To play with friends:** double-click `start.bat` (Windows) or run `./start.sh`
+  (Linux/macOS). It starts a tiny local web server and opens the game in your browser.
+  (You can also just open the GitHub Pages link instead — multiplayer works there too.)
 
 Pick a faction and the number of AI opponents (1–3, each a different random
 faction). Every match is a free-for-all: destroy the enemy cores (Headquarters /
@@ -30,33 +29,31 @@ A large point-symmetric battlefield with neutral objectives worth fighting over:
   Destroy a hoard and whoever lands the kill pockets a **+350 bounty**. The
   biggest camp sits dead center, wrapped around the center obelisk.
 
-## Multiplayer (2–4 players, peer-to-peer, no server)
+## Multiplayer (2–4 players, peer-to-peer, no server to run)
 
 Play free-for-all with up to 4 people (plus AI bots to fill seats) over direct
-WebRTC connections — no game server, no account, no matchmaking. Signaling is
-done by hand:
+WebRTC connections. **It works across different networks with no port forwarding,
+VPN, or setup** — WebRTC handles NAT traversal, and matchmaking goes through the
+free public PeerJS broker. Both players just run `start.bat` / `start.sh` (or open
+the GitHub Pages link):
 
-1. Everyone opens the game (the GitHub Pages link or their own copy of this folder).
-2. The host clicks **HOST GAME** and sends the generated **invite code** to a friend
-   (Discord, WhatsApp, email — anything).
-3. That friend clicks **JOIN GAME**, pastes the invite code, presses **CONNECT**, and
-   sends the generated **reply code** back.
-4. The host pastes the reply code and presses **CONNECT**. You're linked.
-5. For a 3rd or 4th player the host presses **INVITE PLAYER** in the lobby and
-   repeats the code exchange with the next friend.
-6. **BOTS** cycles the number of AI players filling the remaining seats.
-7. Everyone clicks a faction card (all different); the host presses **START MATCH**.
+1. One player clicks **HOST GAME** and shares the generated **5-letter room code**
+   with a friend (Discord, WhatsApp, anything).
+2. The friend clicks **JOIN GAME**, types the code, and presses **JOIN**.
+3. For a 3rd or 4th player, repeat — they each JOIN with the same code.
+4. **AI opponents** sets how many bots fill the remaining seats (host only).
+5. Everyone clicks a faction card (all different); the host presses **START MATCH**.
 
-The host's browser runs the simulation and streams compact snapshots to every
-guest (~1 KB, 10×/s); guests send commands back. If a guest disconnects mid-match,
-an AI takes over their faction; if the host disconnects, the match ends. After a
-match everyone lands back in the lobby for a rematch.
+The host's browser is authoritative: it runs the simulation and streams compact
+snapshots to every guest (~10×/s); guests send their commands back, and the host
+also runs the lobby/room logic in-browser. If the host disconnects the match ends;
+if a guest leaves, the others play on. After a match everyone lands back in the
+lobby for a rematch.
 
-There are no third-party services involved: no relay, no account, no signaling
-server. The only outside contact is a public STUN lookup so each browser learns
-its own internet address; all game traffic flows directly between browsers. The
-one limitation of going relay-free: if both homes sit behind very strict NATs a
-direct link is impossible — have one player switch networks (a phone hotspot
+The only outside contact is the PeerJS broker (for matchmaking) and a public STUN
+lookup so each browser learns its own internet address; all game traffic flows
+directly between browsers. The one limitation: if both players sit behind very
+strict NATs a direct link can fail — have one switch networks (a phone hotspot
 usually works).
 
 ## The five factions

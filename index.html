@@ -249,7 +249,7 @@
   </div>
   <div id="mpzone">
     <div id="mpButtons">
-      <span class="mplabel">PLAY WITH FRIENDS (UP TO 4) — RUN start.bat / start.sh, THEN:</span>
+      <span class="mplabel">PLAY WITH FRIENDS (UP TO 4) — WORKS ACROSS DIFFERENT NETWORKS:</span>
       <button id="mpHostBtn">HOST GAME</button>
       <button id="mpJoinBtn">JOIN GAME</button>
     </div>
@@ -269,7 +269,7 @@
     </div>
   </div>
   <div class="foot">Single player: click a faction card — your AI opponent will be a different faction, chosen at random.<br>
-    Multiplayer (2–4): run <b>start.bat</b> (Windows) or <b>start.sh</b>, open the address it prints, then HOST to get a 5-letter code.<br>
+    Multiplayer (2–4): you each run <b>start.bat</b> (Windows) or <b>start.sh</b>; one player clicks HOST for a 5-letter code, the other clicks JOIN. Works across different networks — no port forwarding needed.<br>
     Controls: drag-select · right-click to act · 1–7 command hotkeys · WASD/edges to pan · mouse wheel to zoom<br>
     Hold units near a neutral <b>Obelisk</b> to capture it (+income) · destroy a guarded <b>Hoard</b> for a one-time bounty</div>
 </div>
@@ -300,6 +300,7 @@
   <button onclick="backToMenu()">RETURN TO MENU</button>
 </div>
 
+<script src="libs/peerjs.min.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
