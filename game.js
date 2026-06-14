@@ -12,26 +12,24 @@
    ============================================================ */
 
 // ---------------- constants ----------------
-const TILE = 32, GW = 128, GH = 84;
+const TILE = 32, GW = 80, GH = 52;
 const WORLD_W = GW * TILE, WORLD_H = GH * TILE;
-const ZOOM_MAX = 1.6;
+const HUD_BOTTOM = 158; // height of #bottombar that overlaps the canvas bottom
 
 const FACTIONS = {
-  vanguard:  { name: 'IRON VANGUARD',   color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 40 },
-  myriad:    { name: 'MYRIAD SWARM',    color: '#c75cff', dark: '#3a1d52', res: 'Biomass', cap: 46 },
-  exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 22 },
+  vanguard:  { name: 'IRON VANGUARD',   color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 36 },
+  myriad:    { name: 'MYRIAD SWARM',    color: '#c75cff', dark: '#3a1d52', res: 'Biomass', cap: 60 },
+  exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 18 },
   choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 30 },
   syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 26 },
-  wild:      { name: 'WILDS', color: '#a8b2c4', dark: '#2c3344', res: '-', cap: 0 }, // neutral camps — never playable
 };
-const PLAYABLE = Object.keys(FACTIONS).filter(f => f !== 'wild');
 
 const HINTS = {
   vanguard: 'Workers harvest crystal automatically. Select a Worker to BUILD (Barracks → Marines/Snipers/Medics, Factory → Tanks, Airfield → Gunships, Turrets to defend). Destroy the enemy core; protect your Headquarters.',
   myriad: 'Your creep IS your economy — every covered tile feeds you biomass. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. With the Hive selected, right-click to set the swarm rally. The swarm heals on creep.',
-  exodus: 'You have no base and never will. Move the Ark onto a crystal node and DEPLOY to siphon energy fast, and send PILGRIMS to attune to other nodes (right-click a node) — each one siphons remotely. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
+  exodus: 'You have no base and never will. Move the Ark onto a crystal node and DEPLOY to siphon energy fast (it trickles in slowly anyway). Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
-  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped on any unclaimed ground (away from enemy structures). Hoard or hire — and guard the Haven.',
+  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped ANYWHERE on the map. Hoard or hire — and guard the Haven.',
 };
 
 // ---------------- unit / building definitions ----------------
@@ -44,69 +42,63 @@ const DEFS = {
   barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','sniper','medic'] },
   factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['tank'] },
   airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship'] },
-  turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:500, size:14, cost:100, time:12, dmg:10, range:195, cd:0.65, aggro:215, shot:'bullet' },
-  marine:   { fac:'vanguard', kind:'unit', name:'Marine', hp:85, size:8, speed:82, cost:60, time:5, dmg:9, range:95, cd:0.8, aggro:170, shot:'bullet' },
+  turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:420, size:14, cost:100, time:12, dmg:9, range:195, cd:0.65, aggro:215, shot:'bullet' },
+  marine:   { fac:'vanguard', kind:'unit', name:'Marine', hp:75, size:8, speed:82, cost:60, time:5, dmg:8, range:95, cd:0.8, aggro:170, shot:'bullet' },
   sniper:   { fac:'vanguard', kind:'unit', name:'Sniper', hp:50, size:8, speed:65, cost:110, time:8, dmg:30, range:215, cd:2.2, aggro:235, shot:'beam' },
   medic:    { fac:'vanguard', kind:'unit', name:'Medic', hp:60, size:8, speed:80, cost:75, time:6, aggro:0, aura:110, heal:6 },
-  tank:     { fac:'vanguard', kind:'unit', name:'Siege Tank', hp:280, size:14, speed:52, cost:180, time:12, dmg:34, range:165, cd:2.4, aggro:195, shot:'shell', splash:55 },
-  gunship:  { fac:'vanguard', kind:'unit', name:'Gunship', hp:140, size:10, speed:120, cost:180, time:11, dmg:8, range:120, cd:0.35, aggro:200, shot:'bullet' },
+  tank:     { fac:'vanguard', kind:'unit', name:'Siege Tank', hp:280, size:14, speed:52, cost:200, time:12, dmg:34, range:165, cd:2.4, aggro:195, shot:'shell', splash:42 },
+  gunship:  { fac:'vanguard', kind:'unit', name:'Gunship', hp:140, size:10, speed:120, cost:180, time:11, dmg:7, range:120, cd:0.35, aggro:200, shot:'bullet' },
 
   // ----- MYRIAD SWARM -----
-  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother'], grows:['tumor','spawnpit','spittermound','hunterden','spine'], spawns:'drone', spawnEvery:9 },
+  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother'], grows:['tumor','spawnpit','spittermound','hunterden','spine'], spawns:'drone', spawnEvery:7 },
   tumor:       { fac:'myriad', kind:'building', name:'Creep Tumor', hp:130, size:10, cost:50,  time:8,  creepR:6.5 },
-  spawnpit:    { fac:'myriad', kind:'building', name:'Spawn Pit', hp:350, size:21, cost:150, time:14, spawns:'drone',   spawnEvery:6.5 },
-  spittermound:{ fac:'myriad', kind:'building', name:'Spitter Mound', hp:380, size:21, cost:200, time:16, spawns:'spitter', spawnEvery:10 },
-  hunterden:   { fac:'myriad', kind:'building', name:'Hunter Den', hp:400, size:21, cost:250, time:18, spawns:'hunter', spawnEvery:12 },
+  spawnpit:    { fac:'myriad', kind:'building', name:'Spawn Pit', hp:350, size:21, cost:150, time:14, spawns:'drone',   spawnEvery:5 },
+  spittermound:{ fac:'myriad', kind:'building', name:'Spitter Mound', hp:380, size:21, cost:200, time:16, spawns:'spitter', spawnEvery:8.5 },
+  hunterden:   { fac:'myriad', kind:'building', name:'Hunter Den', hp:400, size:21, cost:250, time:18, spawns:'hunter', spawnEvery:11 },
   spine:       { fac:'myriad', kind:'building', name:'Acid Spine', hp:360, size:13, cost:120, time:10, dmg:11, range:170, cd:0.9, aggro:190, shot:'glob' },
-  drone:       { fac:'myriad', kind:'unit', name:'Drone', hp:44, size:7, speed:98, dmg:5, range:14, cd:0.7, aggro:175, shot:'melee' },
-  spitter:     { fac:'myriad', kind:'unit', name:'Spitter', hp:55, size:8, speed:78, dmg:8, range:115, cd:1.1, aggro:180, shot:'glob' },
-  hunter:      { fac:'myriad', kind:'unit', name:'Hunter', hp:95, size:9, speed:115, dmg:12, range:16, cd:0.8, aggro:195, shot:'melee' },
+  drone:       { fac:'myriad', kind:'unit', name:'Drone', hp:48, size:7, speed:98, dmg:6, range:14, cd:0.7, aggro:175, shot:'melee' },
+  spitter:     { fac:'myriad', kind:'unit', name:'Spitter', hp:60, size:8, speed:78, dmg:9, range:115, cd:1.1, aggro:180, shot:'glob' },
+  hunter:      { fac:'myriad', kind:'unit', name:'Hunter', hp:110, size:9, speed:115, dmg:13, range:16, cd:0.8, aggro:195, shot:'melee' },
   broodmother: { fac:'myriad', kind:'unit', name:'Broodmother', hp:420, size:16, speed:55, cost:300, time:20, dmg:22, range:26, cd:1.4, aggro:185, shot:'melee', splash:38 },
 
   // ----- SOLARI EXODUS -----
-  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2600, shield:1100, size:38, speed:34, core:true, stationary:true, dmg:18, range:185, cd:1.0, aggro:205, shot:'beam', produces:['pilgrim','seeker','lancer','guardian','phoenix','templar'] },
-  pilgrim:  { fac:'exodus', kind:'unit', name:'Pilgrim', hp:55, shield:40, size:8, speed:85, cost:70, time:6, aggro:0, siphon:2.6 },
-  seeker:   { fac:'exodus', kind:'unit', name:'Seeker', hp:75, shield:55, size:8, speed:112, cost:100, time:8, dmg:11, range:55, cd:0.6, aggro:205, shot:'melee', blink:true },
-  lancer:   { fac:'exodus', kind:'unit', name:'Lancer', hp:70, shield:65, size:9, speed:60, cost:180, time:11, dmg:32, range:235, cd:1.8, aggro:250, shot:'beam' },
-  guardian: { fac:'exodus', kind:'unit', name:'Guardian', hp:120, shield:100, size:11, speed:72, cost:160, time:11, aggro:0, aura:150 },
-  phoenix:  { fac:'exodus', kind:'unit', name:'Phoenix', hp:70, shield:55, size:9, speed:125, cost:130, time:9, dmg:9, range:110, cd:0.5, aggro:210, shot:'bullet' },
-  templar:  { fac:'exodus', kind:'unit', name:'Templar', hp:80, shield:80, size:10, speed:65, cost:230, time:13, dmg:26, range:140, cd:2.4, aggro:200, shot:'shell', splash:55 },
+  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', produces:['seeker','lancer','guardian','phoenix','templar'] },
+  seeker:   { fac:'exodus', kind:'unit', name:'Seeker', hp:65, shield:45, size:8, speed:112, cost:120, time:9, dmg:10, range:55, cd:0.6, aggro:205, shot:'melee', blink:true },
+  lancer:   { fac:'exodus', kind:'unit', name:'Lancer', hp:70, shield:55, size:9, speed:60, cost:220, time:14, dmg:30, range:235, cd:2.1, aggro:250, shot:'beam' },
+  guardian: { fac:'exodus', kind:'unit', name:'Guardian', hp:120, shield:90, size:11, speed:72, cost:180, time:12, aggro:0, aura:150 },
+  phoenix:  { fac:'exodus', kind:'unit', name:'Phoenix', hp:70, shield:50, size:9, speed:125, cost:150, time:10, dmg:8, range:110, cd:0.5, aggro:210, shot:'bullet' },
+  templar:  { fac:'exodus', kind:'unit', name:'Templar', hp:80, shield:70, size:10, speed:65, cost:260, time:15, dmg:24, range:140, cd:2.4, aggro:200, shot:'shell', splash:55 },
 
   // ----- ASHEN CHOIR -----
   ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'], grows:['conduit','reliquary','spire'] },
   conduit:   { fac:'choir', kind:'building', name:'Soul Conduit', hp:160, size:11, cost:60, time:7 },
   reliquary: { fac:'choir', kind:'building', name:'Reliquary', hp:600, size:26, cost:180, time:16, produces:['revenant'] },
   spire:     { fac:'choir', kind:'building', name:'Mourning Spire', hp:450, size:14, cost:130, time:12, dmg:12, range:185, cd:1.0, aggro:205, shot:'beam' },
-  wraith:    { fac:'choir', kind:'unit', name:'Wraith', hp:90, size:8, speed:105, cost:50, time:4, dmg:9, range:16, cd:0.55, aggro:185, shot:'melee' },
+  wraith:    { fac:'choir', kind:'unit', name:'Wraith', hp:95, size:8, speed:105, cost:50, time:4, dmg:9, range:16, cd:0.55, aggro:185, shot:'melee' },
   banshee:   { fac:'choir', kind:'unit', name:'Banshee', hp:75, size:8, speed:70, cost:130, time:9, dmg:15, range:150, cd:1.3, aggro:195, shot:'beam' },
   revenant:  { fac:'choir', kind:'unit', name:'Revenant', hp:380, size:14, speed:58, cost:300, time:18, dmg:30, range:30, cd:1.6, aggro:190, shot:'melee', splash:40 },
 
   // ----- GILDED SYNDICATE -----
   haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut'], grows:['watchpost','countinghouse'] },
-  watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:9, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet' },
+  watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet' },
   countinghouse: { fac:'syndicate', kind:'building', name:'Countinghouse', hp:500, size:24, cost:200, time:8 },
   enforcer:      { fac:'syndicate', kind:'unit', name:'Enforcer', hp:90, size:8, speed:80, cost:90, time:0.5, dmg:9, range:105, cd:0.75, aggro:180, shot:'bullet' },
   arbalest:      { fac:'syndicate', kind:'unit', name:'Arbalest', hp:60, size:8, speed:62, cost:160, time:0.5, dmg:26, range:225, cd:2.0, aggro:240, shot:'beam' },
   juggernaut:    { fac:'syndicate', kind:'unit', name:'Juggernaut', hp:320, size:14, speed:55, cost:320, time:0.5, dmg:30, range:150, cd:2.2, aggro:190, shot:'shell', splash:40 },
-
-  // ----- THE WILDS (neutral camps) -----
-  hoard:   { fac:'wild', kind:'building', name:'Ancient Hoard', hp:600, size:18, bounty:350 },
-  ravager: { fac:'wild', kind:'unit', name:'Ravager', hp:160, size:10, speed:70, dmg:14, range:18, cd:0.9, aggro:170, shot:'melee' },
 };
 
 // economy tuning
 const ECON = {
-  workerCarry: 14, workerMine: 1.5,
-  myriadBase: 2.0, myriadPerTile: 0.010,
-  exodusBase: 2.5, exodusSiphon: 5.2,
+  workerCarry: 10, workerMine: 2.0,
+  myriadBase: 2.0, myriadPerTile: 0.012,
+  exodusBase: 1.5, exodusSiphon: 4.5,
   // choir: trickle + a cut of every death on the map; units decay in the field
   // but are sustained near the lattice and lifesteal in combat
-  choirBase: 1.8, choirConduit: 0.8, choirDeathFlat: 4, choirDeathPct: 0.04,
-  choirDecay: 1.5, choirFloor: 0.35, choirSustain: 1.8, choirLeech: 0.65, choirLattice: 270,
+  choirBase: 1.8, choirConduit: 0.8, choirDeathFlat: 5, choirDeathPct: 0.06,
+  choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.7, choirLattice: 270,
   // syndicate: compound interest on the banked treasury, bounties on kills
-  synBase: 2.8, synInterest: 0.010, synCapBase: 1400, synCapPer: 500,
-  synHouseFlat: 0.8, synBountyFlat: 8, synBountyPct: 0.05, synDropKeepout: 380,
-  obelisk: 1.5, obeliskTime: 8, obeliskR: 150,
+  synBase: 2.5, synInterest: 0.011, synCapBase: 1200, synCapPer: 500,
+  synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06,
 };
 
 // ---------------- global state ----------------
@@ -138,41 +130,31 @@ function countUnits(fac) { return game.entities.reduce((n, e) => n + (!e.dead &&
 function armyOf(fac) { return ents(e => e.fac === fac && e.def.kind === 'unit' && (e.def.dmg > 0 || e.def.aura) && !e.def.harvester && !e.def.core); }
 
 // ---------------- game setup ----------------
-function newGame(playerFac) { // single player vs 1-3 AIs
-  const sel = document.getElementById('aiCount');
-  const n = clamp(sel ? +sel.value : 1, 1, 3);
-  const pool = PLAYABLE.filter(f => f !== playerFac);
-  const seats = [{ fac: playerFac, ai: false }];
-  for (let i = 0; i < n; i++) {
-    const k = Math.floor(Math.random() * pool.length);
-    seats.push({ fac: pool.splice(k, 1)[0], ai: true });
-  }
-  buildMatch(seats, 'sp', playerFac);
+function newGame(playerFac) { // single player vs AI
+  const others = Object.keys(FACTIONS).filter(f => f !== playerFac);
+  const aiFac = others[Math.floor(Math.random() * others.length)];
+  buildMatch(playerFac, aiFac, 'sp', playerFac);
 }
 
-// seats: [{fac, ai}] in seat order — seat 0 bottom-left (host/local), then
-// top-right, top-left, bottom-right. Free-for-all: last core standing wins.
-// All peers run buildMatch with identical seats so initial entity ids line up.
-function buildMatch(seats, mode, localFac) {
+// facA spawns bottom-left, facB top-right. In MP the host is facA.
+// Both peers run buildMatch with identical args so initial entity ids line up.
+function buildMatch(facA, facB, mode, localFac) {
   nextId = 1;
   game = {
-    t: 0, over: false, entities: [], proj: [], fx: [], nodes: [], obelisks: [],
+    t: 0, over: false, entities: [], proj: [], fx: [], nodes: [],
     creep: new Uint8Array(GW * GH),
-    facs: seats.map(s => s.fac), ais: seats.filter(s => s.ai).map(s => s.fac),
-    localFac, mode, players: {},
+    facA, facB, aiFac: facB, localFac, mode, players: {},
     sel: [], placing: null,
-    cam: { x: 0, y: 0, z: 1 },
+    cam: { x: 0, y: 0 },
     creepTimer: 0, hudTimer: 0, aiTimer: 0, netTimer: 0, netFx: [],
   };
 
-  // crystal nodes (point-symmetric map, 4096×2688)
+  // crystal nodes (point-symmetric map)
   const mirror = p => ({ x: WORLD_W - p.x, y: WORLD_H - p.y });
   const half = [
-    { x: 700,  y: 2380, amt: 1600 }, { x: 360,  y: 1900, amt: 1600 }, // near base
-    { x: 1080, y: 2080, amt: 2000 }, { x: 560,  y: 1480, amt: 2000 }, // naturals
-    { x: 1620, y: 2330, amt: 2200 }, { x: 1080, y: 1320, amt: 2200 }, // mid
-    { x: 2050, y: 1900, amt: 2600 }, { x: 820,  y: 820,  amt: 2600 }, // deep
-    { x: 1850, y: 1180, amt: 3000 },                                  // toward center
+    { x: 560, y: 1255, amt: 1600 }, { x: 410, y: 1080, amt: 1600 },   // near base
+    { x: 840, y: 1010, amt: 2000 }, { x: 340, y: 700, amt: 2000 },    // expansions
+    { x: 1010, y: 830, amt: 2500 },                                    // toward center
   ];
   let nid = 1;
   for (const n of half) {
@@ -181,39 +163,12 @@ function buildMatch(seats, mode, localFac) {
     game.nodes.push({ id: nid++, x: m.x, y: m.y, amount: n.amt, max: n.amt, r: 20 });
   }
 
-  // obelisks: capture by holding ground nearby — each pays its owner +income
-  const obHalf = [{ x: 1280, y: 2520 }, { x: 420, y: 1050 }, { x: 1900, y: 1520 }];
-  let oid = 1;
-  for (const o of obHalf) {
-    game.obelisks.push({ id: oid++, x: o.x, y: o.y, owner: null, prog: 0, progFac: null });
-    const m = mirror(o);
-    game.obelisks.push({ id: oid++, x: m.x, y: m.y, owner: null, prog: 0, progFac: null });
-  }
-  // the contested center obelisk sits inside the big wild camp
-  game.obelisks.push({ id: oid++, x: WORLD_W / 2, y: WORLD_H / 2, owner: null, prog: 0, progFac: null });
+  const bases = { a: { x: 380, y: 1300 }, b: { x: WORLD_W - 380, y: WORLD_H - 1300 } };
+  setupFaction(facA, bases.a, false);
+  setupFaction(facB, bases.b, mode === 'sp');
 
-  const corners = [
-    { x: 460, y: WORLD_H - 460 },           // seat 0: bottom-left
-    { x: WORLD_W - 460, y: 460 },           // seat 1: top-right
-    { x: 460, y: 460 },                     // seat 2: top-left
-    { x: WORLD_W - 460, y: WORLD_H - 460 }, // seat 3: bottom-right
-  ];
-  seats.forEach((s, i) => setupFaction(s.fac, corners[i], s.ai));
-
-  // neutral camps: ravagers guarding a treasure hoard (kill the hoard → bounty)
-  const camp = (cx, cy, guards, hoards) => {
-    for (let i = 0; i < hoards; i++)
-      spawnEnt('hoard', 'wild', cx - 80 + i * 160, cy);
-    for (let i = 0; i < guards; i++) {
-      const a = i * Math.PI * 2 / guards;
-      spawnEnt('ravager', 'wild', cx + Math.cos(a) * 70, cy + Math.sin(a) * 70);
-    }
-  };
-  camp(1024, 672, 3, 1);  camp(WORLD_W - 1024, WORLD_H - 672, 3, 1);
-  camp(1024, 2016, 3, 1); camp(WORLD_W - 1024, WORLD_H - 2016, 3, 1);
-  camp(WORLD_W / 2, WORLD_H / 2, 5, 2); // king of the hill
-
-  const myBase = corners[seats.findIndex(s => s.fac === localFac)] || corners[0];
+  const myBase = localFac === facA ? bases.a : bases.b;
+  const enemyFac = localFac === facA ? facB : facA;
   game.cam.x = clamp(myBase.x - canvas.width / 2, 0, WORLD_W - canvas.width);
   game.cam.y = clamp(myBase.y - canvas.height / 2, 0, WORLD_H - canvas.height);
 
@@ -226,9 +181,9 @@ function buildMatch(seats, mode, localFac) {
   setTimeout(() => { if (game) hint.style.display = 'none'; }, 26000);
   document.getElementById('hudFac').textContent = FACTIONS[localFac].name;
   document.getElementById('hudFac').style.color = FACTIONS[localFac].color;
-  document.getElementById('hudEnemy').innerHTML = 'VS: ' + seats.filter(s => s.fac !== localFac)
-    .map(s => '<span style="color:' + FACTIONS[s.fac].color + '">' + FACTIONS[s.fac].name
-      + (s.ai ? ' (AI)' : '') + '</span>').join(' · ');
+  document.getElementById('hudEnemy').innerHTML =
+    'ENEMY: <span style="color:' + FACTIONS[enemyFac].color + '">' + FACTIONS[enemyFac].name
+    + (mode === 'sp' ? '' : ' (friend)') + '</span>';
   refreshCard();
 }
 
@@ -245,7 +200,7 @@ function setupFaction(fac, base, isAI) {
   if (fac === 'vanguard') {
     p.res = 250;
     spawnEnt('hq', fac, base.x, base.y);
-    for (let i = 0; i < 5; i++) spawnEnt('worker', fac, base.x - 70 + i * 36, base.y + 70);
+    for (let i = 0; i < 4; i++) spawnEnt('worker', fac, base.x - 60 + i * 36, base.y + 70);
     p.waveSize = 8;
   } else if (fac === 'myriad') {
     p.res = 150;
@@ -257,7 +212,7 @@ function setupFaction(fac, base, isAI) {
     p.res = 200;
     spawnEnt('ark', fac, base.x, base.y);
     for (let i = 0; i < 2; i++) spawnEnt('seeker', fac, base.x - 40 + i * 80, base.y + 65);
-    p.waveSize = 9;
+    p.waveSize = 6;
   } else if (fac === 'choir') {
     p.res = 250;
     spawnEnt('ossuary', fac, base.x, base.y);
@@ -281,7 +236,6 @@ function spawnEnt(type, fac, x, y, opts = {}) {
     cd: 0, blinkCd: 0, scanT: Math.random() * 0.25, tgt: 0,
     order: { type: 'idle' }, dead: false,
     queue: [], rally: null, deployed: false,
-    home: { x, y },
   };
   if (d.creepR) e.creepCur = opts.creepCur != null ? opts.creepCur : 2;
   if (d.spawns) e.spawnTimer = d.spawnEvery;
@@ -311,23 +265,16 @@ function applyDamage(t, dmg, attacker) {
   if (t.hp <= 0) {
     t.dead = true;
     if (attacker && game.players[attacker.fac]) game.players[attacker.fac].kills++;
-    // every death anywhere pays the Choir essence — friend or foe.
-    // Scaled by enemy count: more players = more corpses, not more income.
+    // every death anywhere pays the Choir essence — friend or foe
     const choirP = game.players.choir;
     if (choirP) {
-      const g = (ECON.choirDeathFlat + t.hpMax * ECON.choirDeathPct) / Math.max(1, game.facs.length - 1);
+      const g = ECON.choirDeathFlat + t.hpMax * ECON.choirDeathPct;
       choirP.res += g; choirP.gainAccum += g;
     }
     // syndicate collects a bounty on its kills
     if (attacker && attacker.fac === 'syndicate' && t.fac !== 'syndicate' && game.players.syndicate) {
       const g = ECON.synBountyFlat + t.hpMax * ECON.synBountyPct;
       game.players.syndicate.res += g; game.players.syndicate.gainAccum += g;
-    }
-    // plundering a wild hoard pays whoever lands the kill
-    if (t.def.bounty && attacker && game.players[attacker.fac]) {
-      const ap = game.players[attacker.fac];
-      ap.res += t.def.bounty; ap.gainAccum += t.def.bounty;
-      localMsg(attacker.fac, 'Hoard plundered: +' + t.def.bounty + ' ' + FACTIONS[attacker.fac].res);
     }
     addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.6, ttl: 0.5, max: 0.5, color: FACTIONS[t.fac].color });
   }
@@ -412,16 +359,6 @@ function updateUnit(e, dt) {
   e.blinkCd = Math.max(0, e.blinkCd - dt);
   const o = e.order;
 
-  // wild guards are leashed to their camp and heal when they go home
-  if (e.fac === 'wild') {
-    const dHome = Math.hypot(e.x - e.home.x, e.y - e.home.y);
-    if ((o.type === 'attack' || o.type === 'amove') && dHome > 340)
-      e.order = { type: 'move', x: e.home.x, y: e.home.y };
-    else if (o.type === 'idle' && dHome > 30)
-      e.order = { type: 'move', x: e.home.x, y: e.home.y };
-    if (e.order.type !== 'attack') e.hp = Math.min(e.hpMax, e.hp + 6 * dt);
-  }
-
   // the Ark fires on its own while doing anything
   if (d.stationary && d.dmg) {
     e.scanT -= dt;
@@ -468,13 +405,6 @@ function updateUnit(e, dt) {
       break;
     }
     case 'harvest': harvestStep(e, dt); break;
-    case 'attune': { // pilgrim: walk to a crystal node and anchor on it to siphon
-      const n = game.nodes.find(n => n.id === o.nodeId);
-      if (!n || n.amount <= 0) { e.order = { type: 'idle' }; e.deployed = false; break; }
-      if (dist(e, n) <= n.r + e.size + 10) e.deployed = true;
-      else moveToward(e, n.x, n.y, dt);
-      break;
-    }
     case 'build': {
       const site = byId(o.id);
       if (!site || !site.constructing) { e.order = { type: 'idle' }; break; }
@@ -588,7 +518,7 @@ function tickQueue(e, dt) {
 // route an error message to whichever human owns this faction (local or remote)
 function localMsg(fac, text) {
   if (fac === game.localFac) floatMsg(text);
-  else if (game.mode === 'host' && !game.players[fac].isAI) sendToFac(fac, { t: 'msg', text });
+  else if (game.mode === 'host' && !game.players[fac].isAI) netSend({ t: 'msg', text });
 }
 
 function enqueue(e, type) {
@@ -614,18 +544,12 @@ function placeValid(type, fac, x, y) {
       && !e.constructing && !e.growing && Math.hypot(e.x - x, e.y - y) < ECON.choirLattice);
     if (!ok) return false;
   }
-  if (fac === 'syndicate') { // drop pods can't land in defended enemy ground
-    const tooClose = game.entities.some(e => !e.dead && e.fac !== fac && e.fac !== 'wild'
-      && (e.def.kind === 'building' || e.def.core) && Math.hypot(e.x - x, e.y - y) < ECON.synDropKeepout);
-    if (tooClose) return false;
-  }
   return true;
 }
 
 function placeErr(fac) {
   return fac === 'myriad' ? 'Must grow on your creep'
     : fac === 'choir' ? 'Must build within the lattice — near another Choir structure'
-    : fac === 'syndicate' ? 'Too close to enemy structures — drop pods need clear ground'
     : 'Cannot build there';
 }
 
@@ -689,11 +613,6 @@ function tickEconomy(dt) {
           ark.siphonNode = n.id;
         } else ark.siphonNode = 0;
       }
-      // attuned pilgrims siphon their nodes
-      for (const pg of ents(e => e.fac === fac && e.def.siphon && e.deployed)) {
-        const n = game.nodes.find(n => n.amount > 0 && dist(pg, n) < pg.size + n.r + 14);
-        if (n) { const s = Math.min(pg.def.siphon * dt, n.amount); n.amount -= s; gain += pg.def.siphon; }
-      }
     } else if (fac === 'choir') {
       const conduits = ents(e => e.fac === fac && e.type === 'conduit' && !e.growing).length;
       gain = ECON.choirBase + conduits * ECON.choirConduit;
@@ -702,30 +621,8 @@ function tickEconomy(dt) {
       const cap = ECON.synCapBase + houses * ECON.synCapPer;
       gain = ECON.synBase + houses * ECON.synHouseFlat + ECON.synInterest * Math.min(p.res, cap);
     }
-    for (const ob of game.obelisks) if (ob.owner === fac) gain += ECON.obelisk;
     p.res += gain * dt;
     p.gainAccum += gain * dt;
-  }
-}
-
-// obelisks: hold the ground around one (alone) to capture it; each pays +income
-function tickObelisks(dt) {
-  for (const ob of game.obelisks) {
-    const present = new Set();
-    for (const e of game.entities)
-      if (!e.dead && e.def.kind === 'unit' && e.fac !== 'wild' && dist(e, ob) < ECON.obeliskR)
-        present.add(e.fac);
-    if (present.size === 1) {
-      const f = present.values().next().value;
-      if (ob.owner === f) { ob.prog = 0; ob.progFac = null; continue; }
-      if (ob.progFac !== f) { ob.progFac = f; ob.prog = 0; }
-      ob.prog += dt;
-      if (ob.prog >= ECON.obeliskTime) {
-        ob.owner = f; ob.prog = 0; ob.progFac = null;
-        addFx({ kind: 'ping', x: ob.x, y: ob.y, ttl: 0.6, max: 0.6, color: FACTIONS[f].color });
-        localMsg(f, 'Obelisk captured: +' + ECON.obelisk + '/s');
-      }
-    } else ob.prog = Math.max(0, ob.prog - dt);
   }
 }
 
@@ -735,8 +632,8 @@ function tickRegen(dt) {
     if (e.dead) continue;
     if (e.fac === 'myriad' && e.hp < e.hpMax && onCreep(e.fac, e.x, e.y) && !e.constructing && !e.growing)
       e.hp = Math.min(e.hpMax, e.hp + 4 * dt);
-    if (e.fac === 'exodus' && e.shieldMax > 0 && game.t - e.lastHurt > 2.0)
-      e.shield = Math.min(e.shieldMax, e.shield + 11 * dt);
+    if (e.fac === 'exodus' && e.shieldMax > 0 && game.t - e.lastHurt > 2.5)
+      e.shield = Math.min(e.shieldMax, e.shield + 8 * dt);
     if (e.fac === 'choir' && e.def.kind === 'unit') {
       // the lattice sustains spirits; in the field they fade (never below a remnant)
       const home = game.entities.some(b => !b.dead && b.fac === 'choir'
@@ -829,12 +726,10 @@ function tickProjectiles(dt) {
 // ---------------- AI ----------------
 function aiTick(fac) {
   const p = game.players[fac];
+  const enemyFac = fac === game.localFac ? game.aiFac : game.localFac;
+  const enemyCore = ents(e => e.fac === enemyFac && e.def.core)[0];
   const myCore = ents(e => e.fac === fac && e.def.core)[0];
-  if (!myCore) return;
-  // FFA: pressure the nearest surviving enemy
-  const enemyCore = ents(e => e.def.core && e.fac !== fac && e.fac !== 'wild')
-    .sort((a, b) => dist(a, myCore) - dist(b, myCore))[0];
-  if (!enemyCore) return;
+  if (!myCore || !enemyCore) return;
   const army = armyOf(fac);
   const underAttack = p.lastAttack && game.t - p.lastAttack.t < 6;
 
@@ -843,33 +738,21 @@ function aiTick(fac) {
   if (defendPt && Math.hypot(defendPt.x - myCore.x, defendPt.y - myCore.y) < 700) {
     for (const u of army) if (u.order.type === 'idle' || u.order.type === 'amove')
       u.order = { type: 'amove', x: defendPt.x, y: defendPt.y };
-  } else if (fac !== 'exodus' && army.length >= p.waveSize && game.t > 90) {
-    // (exodus marches with the Ark instead — see its branch below)
+  } else if (army.length >= p.waveSize && game.t > 90) {
     for (const u of army) u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
     p.waveSize += 2;
-  } else if (army.length >= 5 && Math.random() < 0.2) {
-    // send a small squad to grab the nearest unowned obelisk
-    const ob = game.obelisks.filter(o => o.owner !== fac)
-      .sort((a, b) => Math.hypot(a.x - myCore.x, a.y - myCore.y) - Math.hypot(b.x - myCore.x, b.y - myCore.y))[0];
-    if (ob) {
-      const squad = army.filter(u => u.order.type === 'idle').slice(0, 3);
-      for (const u of squad)
-        u.order = { type: 'amove', x: ob.x + (Math.random() - 0.5) * 80, y: ob.y + (Math.random() - 0.5) * 80 };
-    }
   }
 
   if (fac === 'vanguard') {
     const workers = ents(e => e.fac === fac && e.type === 'worker');
     const hq = ents(e => e.fac === fac && e.type === 'hq' && !e.constructing)[0];
-    if (hq && workers.length < 11 && p.res >= 50 && !hq.queue.length) enqueue(hq, 'worker');
+    if (hq && workers.length < 9 && p.res >= 50 && !hq.queue.length) enqueue(hq, 'worker');
     const rax = ents(e => e.fac === fac && e.type === 'barracks');
     const fact = ents(e => e.fac === fac && e.type === 'factory');
     const air = ents(e => e.fac === fac && e.type === 'airfield');
     const turrets = ents(e => e.fac === fac && e.type === 'turret');
     if (rax.length < 2 && p.res >= 150) aiPlace(fac, 'barracks', p.base);
     else if (rax.length >= 1 && fact.length < 1 && p.res >= 250) aiPlace(fac, 'factory', p.base);
-    else if (rax.length < 3 && fact.length >= 1 && p.res >= 220 && game.t > 200) aiPlace(fac, 'barracks', p.base);
-    else if (fact.length < 2 && rax.length >= 3 && p.res >= 300 && game.t > 260) aiPlace(fac, 'factory', p.base);
     else if (fact.length >= 1 && air.length < 1 && p.res >= 300 && game.t > 200) aiPlace(fac, 'airfield', p.base);
     else if (turrets.length < 3 && p.res >= 220 && game.t > 150) aiPlace(fac, 'turret', p.base);
     for (const b of rax) if (!b.constructing && !b.queue.length && p.res >= 60) {
@@ -909,7 +792,6 @@ function aiTick(fac) {
 
   else if (fac === 'exodus') {
     const ark = myCore;
-    const pilgrims = ents(e => e.fac === fac && e.type === 'pilgrim');
     // production mix
     if (!ark.queue.length) {
       const seekers = ents(e => e.fac === fac && e.type === 'seeker').length;
@@ -917,41 +799,19 @@ function aiTick(fac) {
       const guards = ents(e => e.fac === fac && e.type === 'guardian').length;
       const phoenixes = ents(e => e.fac === fac && e.type === 'phoenix').length;
       const templars = ents(e => e.fac === fac && e.type === 'templar').length;
-      if (pilgrims.length < 2 && p.res >= 70) enqueue(ark, 'pilgrim');
-      else if (guards < 1 && lancers >= 1 && p.res >= 160) enqueue(ark, 'guardian');
-      else if (lancers <= seekers / 2 && p.res >= 190) enqueue(ark, 'lancer');
-      else if (pilgrims.length < 4 && p.res >= 180 && game.t > 120) enqueue(ark, 'pilgrim');
-      else if (phoenixes < 2 && p.res >= 130 && game.t > 150) enqueue(ark, 'phoenix');
-      else if (templars < 1 && guards >= 1 && p.res >= 230 && game.t > 240) enqueue(ark, 'templar');
-      else if (p.res >= 100) enqueue(ark, 'seeker');
+      if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
+      else if (lancers <= seekers / 2 && p.res >= 220) enqueue(ark, 'lancer');
+      else if (phoenixes < 2 && p.res >= 150 && game.t > 150) enqueue(ark, 'phoenix');
+      else if (templars < 1 && guards >= 1 && p.res >= 260 && game.t > 240) enqueue(ark, 'templar');
+      else if (p.res >= 120) enqueue(ark, 'seeker');
     }
-    // send loose pilgrims to attune the nearest live node
-    for (const pg of pilgrims) {
-      if (pg.deployed || pg.order.type === 'attune') continue;
-      if (pg.order.type !== 'idle' && pg.order.type !== 'move') continue;
-      const n = nearestNode(pg.x, pg.y);
-      if (n) pg.order = { type: 'attune', nodeId: n.id };
-    }
-    // the pilgrimage of war: when the host is strong, the Ark itself marches
-    const arkHurt = (ark.hp + ark.shield) / (ark.hpMax + ark.shieldMax) < 0.35;
+    // siphon management
+    const arkHurt = (ark.hp + ark.shield) / (ark.hpMax + ark.shieldMax) < 0.45;
     if (arkHurt) {
-      p.marching = false;
       ark.deployed = false;
       ark.order = { type: 'move', x: p.base.x, y: p.base.y };
       for (const u of army) u.order = { type: 'amove', x: ark.x, y: ark.y };
-    } else if (army.length >= p.waveSize && game.t > 120) {
-      p.marching = true;
-    }
-    if (p.marching && !arkHurt) {
-      ark.deployed = false;
-      if (ark.order.type !== 'move' || Math.random() < 0.3)
-        ark.order = { type: 'move', x: enemyCore.x, y: enemyCore.y };
-      // escorts fight just ahead of the Ark
-      const ahead = { x: ark.x + (enemyCore.x - ark.x) * 0.10, y: ark.y + (enemyCore.y - ark.y) * 0.10 };
-      for (const u of army) if (u.order.type === 'idle' || u.order.type === 'amove')
-        u.order = { type: 'amove', x: ahead.x, y: ahead.y };
-    } else if (!arkHurt) {
-      // siphon management
+    } else {
       const n = nearestNode(ark.x, ark.y);
       if (n) {
         if (dist(ark, n) < ark.size + n.r + 24) { ark.deployed = true; ark.order = { type: 'idle' }; }
@@ -1026,7 +886,6 @@ function update(dt) {
   if (game.creepTimer <= 0) { game.creepTimer = 0.5; recomputeCreep(); }
 
   tickEconomy(dt);
-  tickObelisks(dt);
   tickRegen(dt);
 
   for (const e of game.entities) {
@@ -1045,19 +904,15 @@ function update(dt) {
     if (p.incomeT >= 1) { p.income = p.gainAccum / p.incomeT; p.gainAccum = 0; p.incomeT = 0; }
   }
 
-  // AI factions (single-player opponents, lobby bots, dropped players)
-  if (game.mode !== 'guest') {
+  if (game.mode === 'sp') {
     game.aiTimer -= dt;
-    if (game.aiTimer <= 0) {
-      game.aiTimer = 1.0;
-      for (const f of game.ais) if (!game.players[f].eliminated) aiTick(f);
-    }
+    if (game.aiTimer <= 0) { game.aiTimer = 1.0; aiTick(game.aiFac); }
   }
 
-  // host: stream a state snapshot to all guests ~10×/s
+  // host: stream a state snapshot to the guest ~10×/s
   if (game.mode === 'host') {
     game.netTimer -= dt;
-    if (game.netTimer <= 0) { game.netTimer = 0.1; netCast(buildSnap()); game.netFx.length = 0; }
+    if (game.netTimer <= 0) { game.netTimer = 0.1; netSend(buildSnap()); game.netFx.length = 0; }
   }
 
   // sweep the dead
@@ -1067,24 +922,18 @@ function update(dt) {
   }
   game.nodes = game.nodes.filter(n => n.amount > 0);
 
-  // elimination & victory (free-for-all: last core standing)
-  for (const fac of game.facs) {
-    const p = game.players[fac];
-    if (!p.eliminated && !ents(e => e.fac === fac && e.def.core).length) {
-      p.eliminated = true;
-      for (const e of game.entities) if (e.fac === fac) e.dead = true; // the army dies with the core
-      if (game.mode === 'host') netCast({ t: 'elim', fac });
-      floatMsg(fac === game.localFac ? 'Your core has fallen — spectating…'
-        : FACTIONS[fac].name + ' has been eliminated');
+  // victory check
+  for (const fac of [game.localFac, game.aiFac]) {
+    if (!ents(e => e.fac === fac && e.def.core).length) {
+      endGame(fac === game.localFac ? game.aiFac : game.localFac);
+      return;
     }
   }
-  const alive = game.facs.filter(f => !game.players[f].eliminated);
-  if (alive.length <= 1) { endGame(alive[0] || game.localFac); return; }
 }
 
 function endGame(winner) {
   game.over = true;
-  if (game.mode === 'host') netCast({ t: 'end', winner });
+  if (game.mode === 'host') netSend({ t: 'end', winner });
   const won = winner === game.localFac;
   const t = document.getElementById('endTitle');
   t.textContent = won ? 'VICTORY' : 'DEFEAT';
@@ -1105,32 +954,13 @@ function backToMenu() {
 }
 
 // ---------------- input ----------------
-const mouse = { x: 0, y: 0, wx: 0, wy: 0, dragging: false, dx0: 0, dy0: 0, inWindow: true };
+const mouse = { x: 0, y: 0, wx: 0, wy: 0, dragging: false, dx0: 0, dy0: 0 };
 const keys = {};
-document.addEventListener('mouseleave', () => { mouse.inWindow = false; }); // stop edge pan when the cursor leaves
-document.addEventListener('mouseenter', () => { mouse.inWindow = true; });
-
-const minZoom = () => Math.max(canvas.width / WORLD_W, canvas.height / WORLD_H);
-const viewW = () => canvas.width / game.cam.z;
-const viewH = () => canvas.height / game.cam.z;
 
 canvas.addEventListener('mousemove', ev => {
   mouse.x = ev.clientX; mouse.y = ev.clientY;
-  if (game) { mouse.wx = game.cam.x + mouse.x / game.cam.z; mouse.wy = game.cam.y + mouse.y / game.cam.z; }
+  if (game) { mouse.wx = mouse.x + game.cam.x; mouse.wy = mouse.y + game.cam.y; }
 });
-
-// mouse-wheel zoom (toward the cursor)
-canvas.addEventListener('wheel', ev => {
-  if (!game) return;
-  ev.preventDefault();
-  const z0 = game.cam.z;
-  const z1 = clamp(z0 * (ev.deltaY > 0 ? 0.85 : 1.18), minZoom(), ZOOM_MAX);
-  if (z1 === z0) return;
-  game.cam.x = clamp(game.cam.x + mouse.x / z0 - mouse.x / z1, 0, WORLD_W - canvas.width / z1);
-  game.cam.y = clamp(game.cam.y + mouse.y / z0 - mouse.y / z1, 0, WORLD_H - canvas.height / z1);
-  game.cam.z = z1;
-  mouse.wx = game.cam.x + mouse.x / z1; mouse.wy = game.cam.y + mouse.y / z1;
-}, { passive: false });
 
 canvas.addEventListener('mousedown', ev => {
   if (!game || game.over) return;
@@ -1155,9 +985,8 @@ canvas.addEventListener('mousedown', ev => {
 addEventListener('mouseup', ev => {
   if (ev.button !== 0 || !mouse.dragging || !game || game.over) { mouse.dragging = false; return; }
   mouse.dragging = false;
-  const z = game.cam.z;
-  const x0 = Math.min(mouse.dx0, mouse.x) / z + game.cam.x, x1 = Math.max(mouse.dx0, mouse.x) / z + game.cam.x;
-  const y0 = Math.min(mouse.dy0, mouse.y) / z + game.cam.y, y1 = Math.max(mouse.dy0, mouse.y) / z + game.cam.y;
+  const x0 = Math.min(mouse.dx0, mouse.x) + game.cam.x, x1 = Math.max(mouse.dx0, mouse.x) + game.cam.x;
+  const y0 = Math.min(mouse.dy0, mouse.y) + game.cam.y, y1 = Math.max(mouse.dy0, mouse.y) + game.cam.y;
   const isClick = (x1 - x0) < 6 && (y1 - y0) < 6;
   let picked = [];
   if (isClick) {
@@ -1205,13 +1034,11 @@ function applyOrder(fac, selEnts, wx, wy) {
       }
       continue;
     }
-    if (d.siphon) e.deployed = false; // any new order un-anchors a pilgrim
     if (target) {
-      // units that can't shoot (medic, guardian, pilgrim) escort to the target instead
+      // units that can't shoot (medic, guardian) escort to the target instead
       e.order = d.dmg ? { type: 'attack', id: target.id } : { type: 'move', x: target.x, y: target.y };
       acted = true;
     }
-    else if (node && d.siphon) { e.order = { type: 'attune', nodeId: node.id }; acted = true; }
     else if (node && d.harvester) { e.order = { type: 'harvest', nodeId: node.id, phase: 'go', timer: 0, carry: 0 }; acted = true; }
     else if (d.harvester || !d.dmg) { e.order = { type: 'move', x: wx, y: wy }; acted = true; }
     else { e.order = { type: 'amove', x: wx, y: wy }; acted = true; }
@@ -1221,14 +1048,13 @@ function applyOrder(fac, selEnts, wx, wy) {
 
 addEventListener('keydown', ev => {
   keys[ev.key.toLowerCase()] = true;
-  keys[ev.code] = true; // physical key — works on any keyboard layout
   if (!game || game.over) return;
   const k = ev.key.toLowerCase();
   if (k === 'escape') { game.placing = null; game.sel = []; refreshCard(); }
   if (k === ' ') {
     ev.preventDefault();
     const core = ents(e => e.fac === game.localFac && e.def.core)[0];
-    if (core) { game.cam.x = clamp(core.x - viewW() / 2, 0, WORLD_W - viewW()); game.cam.y = clamp(core.y - viewH() / 2, 0, WORLD_H - viewH()); }
+    if (core) { game.cam.x = clamp(core.x - canvas.width / 2, 0, WORLD_W - canvas.width); game.cam.y = clamp(core.y - canvas.height / 2, 0, WORLD_H - canvas.height); }
   }
   if (k === 'f') { // select all combat units
     game.sel = armyOf(game.localFac);
@@ -1240,8 +1066,7 @@ addEventListener('keydown', ev => {
   const i = hot.indexOf(k);
   if (i >= 0 && card[i] && card[i].enabled) card[i].onClick();
 });
-addEventListener('keyup', ev => { keys[ev.key.toLowerCase()] = false; keys[ev.code] = false; });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; }); // no stuck keys on alt-tab
+addEventListener('keyup', ev => { keys[ev.key.toLowerCase()] = false; });
 
 // minimap navigation
 let mmDown = false;
@@ -1253,26 +1078,24 @@ function mmNav(ev) {
   const r = mmCanvas.getBoundingClientRect();
   const wx = (ev.clientX - r.left) / mmCanvas.width * WORLD_W;
   const wy = (ev.clientY - r.top) / mmCanvas.height * WORLD_H;
-  game.cam.x = clamp(wx - viewW() / 2, 0, WORLD_W - viewW());
-  game.cam.y = clamp(wy - viewH() / 2, 0, WORLD_H - viewH());
+  game.cam.x = clamp(wx - canvas.width / 2, 0, WORLD_W - canvas.width);
+  game.cam.y = clamp(wy - canvas.height / 2, 0, WORLD_H - canvas.height);
 }
 
 function panCamera(dt) {
-  const sp = 620 * dt / game.cam.z; // constant screen speed at any zoom
+  const sp = 620 * dt;
   let dx = 0, dy = 0;
-  if (keys['arrowleft'] || keys['a'] || keys['KeyA']) dx -= sp;
-  if (keys['arrowright'] || keys['d'] || keys['KeyD']) dx += sp;
-  if (keys['arrowup'] || keys['w'] || keys['KeyW']) dy -= sp;
-  if (keys['arrowdown'] || keys['s'] || keys['KeyS']) dy += sp;
-  // edge pan only on an axis the keyboard isn't steering — otherwise a cursor
-  // parked at the screen edge silently cancels the opposite WASD key
+  if (keys['arrowleft'] || keys['a']) dx -= sp;
+  if (keys['arrowright'] || keys['d']) dx += sp;
+  if (keys['arrowup'] || keys['w']) dy -= sp;
+  if (keys['arrowdown'] || keys['s']) dy += sp;
   const M = 18;
-  if (dx === 0 && mouse.inWindow) { if (mouse.x < M) dx -= sp; if (mouse.x > innerWidth - M) dx += sp; }
-  if (dy === 0 && mouse.inWindow) { if (mouse.y < M) dy -= sp; if (mouse.y > innerHeight - M) dy += sp; }
-  game.cam.z = clamp(game.cam.z, minZoom(), ZOOM_MAX); // re-clamp after window resizes
-  game.cam.x = clamp(game.cam.x + dx, 0, WORLD_W - viewW());
-  game.cam.y = clamp(game.cam.y + dy, 0, WORLD_H - viewH());
-  mouse.wx = game.cam.x + mouse.x / game.cam.z; mouse.wy = game.cam.y + mouse.y / game.cam.z;
+  if (mouse.x < M) dx -= sp; if (mouse.x > innerWidth - M) dx += sp;
+  if (mouse.y < M) dy -= sp; if (mouse.y > innerHeight - M) dy += sp;
+  game.cam.x = clamp(game.cam.x + dx, 0, WORLD_W - canvas.width);
+  // allow panning past the world's bottom edge so it clears the bottom HUD bar
+  game.cam.y = clamp(game.cam.y + dy, 0, WORLD_H - canvas.height + HUD_BOTTOM);
+  mouse.wx = mouse.x + game.cam.x; mouse.wy = mouse.y + game.cam.y;
 }
 
 // ---------------- command card ----------------
@@ -1373,7 +1196,6 @@ function updateHUD() {
     if (e.type === 'hive') s += '\nRight-click to set the swarm rally';
     if (e.type === 'ark' && e.deployed) s += '\nDEPLOYED — siphoning' + (e.siphonNode ? ' crystal' : '… (no node in reach)');
     if (e.type === 'haven') s += '\nTreasury earns interest — Countinghouses raise the cap';
-    if (e.type === 'pilgrim') s += e.deployed ? '\nATTUNED — siphoning crystal' : '\nRight-click a crystal node to attune';
     if (e.fac === 'choir' && e.def.kind === 'unit') s += '\nFades away from the lattice — heals by dealing damage';
     si.textContent = s;
   } else {
@@ -1397,7 +1219,6 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!game) return;
   ctx.save();
-  ctx.scale(game.cam.z, game.cam.z);
   ctx.translate(-game.cam.x, -game.cam.y);
 
   // grid
@@ -1438,36 +1259,13 @@ function draw() {
     ctx.restore();
   }
 
-  // obelisks (under entities)
-  for (const ob of game.obelisks) {
-    const col = ob.owner ? FACTIONS[ob.owner].color : '#6d7f9c';
-    // capture zone
-    ctx.strokeStyle = col; ctx.globalAlpha = 0.18; ctx.lineWidth = 2; ctx.setLineDash([8, 10]);
-    ctx.beginPath(); ctx.arc(ob.x, ob.y, ECON.obeliskR, 0, Math.PI * 2); ctx.stroke();
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
-    // pillar
-    ctx.fillStyle = '#11151f'; ctx.strokeStyle = col; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(ob.x, ob.y - 30); ctx.lineTo(ob.x + 11, ob.y - 6); ctx.lineTo(ob.x + 7, ob.y + 16);
-    ctx.lineTo(ob.x - 7, ob.y + 16); ctx.lineTo(ob.x - 11, ob.y - 6); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = col;
-    ctx.globalAlpha = ob.owner ? 0.6 + 0.4 * Math.sin(game.t * 3) : 0.5;
-    ctx.beginPath(); ctx.arc(ob.x, ob.y - 8, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-    // capture progress ring
-    if (ob.prog > 0 && ob.progFac) {
-      ctx.strokeStyle = FACTIONS[ob.progFac].color; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(ob.x, ob.y, 24, -Math.PI / 2, -Math.PI / 2 + ob.prog / ECON.obeliskTime * Math.PI * 2); ctx.stroke();
-    }
-  }
-
   // entities (buildings first, then units, sorted by y)
   const sorted = [...game.entities].sort((a, b) =>
     (a.def.kind === 'building' ? 0 : 1) - (b.def.kind === 'building' ? 0 : 1) || a.y - b.y);
   for (const e of sorted) drawEnt(e);
 
   // siphon tether (derived from proximity so it renders identically on guest)
-  for (const e of ents(o => (o.type === 'ark' || o.def.siphon) && o.deployed)) {
+  for (const e of ents(o => o.type === 'ark' && o.deployed)) {
     const n = game.nodes.find(n => n.amount > 0 && dist(e, n) < e.size + n.r + 30);
     if (n) {
       ctx.strokeStyle = 'rgba(110,231,255,' + (0.4 + 0.3 * Math.sin(game.t * 6)) + ')';
@@ -1708,26 +1506,6 @@ function drawEnt(e) {
     }
   }
 
-  else if (e.fac === 'wild') {
-    if (e.type === 'hoard') {
-      ctx.fillStyle = '#2c3344'; ctx.strokeStyle = '#d8b75a'; ctx.lineWidth = 2;
-      roundRect(x - s, y - s * 0.7, s * 2, s * 1.4, 4); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#d8b75a';
-      ctx.globalAlpha = 0.7 + 0.3 * Math.sin(game.t * 2.5);
-      ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
-    } else { // ravager: spiky neutral beast
-      ctx.fillStyle = '#3a4252'; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = col;
-      for (let i = 0; i < 5; i++) {
-        const a = game.t * 0.7 + i * Math.PI * 2 / 5;
-        ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.7, y + Math.sin(a) * s * 0.7);
-        ctx.lineTo(x + Math.cos(a) * (s + 5), y + Math.sin(a) * (s + 5)); ctx.stroke();
-      }
-    }
-  }
-
   else { // exodus: diamonds
     ctx.fillStyle = e.type === 'ark' ? '#4a3a14' : '#705a1e';
     ctx.strokeStyle = col; ctx.lineWidth = e.type === 'ark' ? 2.5 : 1.5;
@@ -1749,13 +1527,6 @@ function drawEnt(e) {
     } else if (e.type === 'phoenix') {
       ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x - s * 0.9, y + s * 0.3); ctx.lineTo(x, y - s * 0.4); ctx.lineTo(x + s * 0.9, y + s * 0.3); ctx.stroke();
-    } else if (e.type === 'pilgrim') {
-      ctx.fillStyle = '#6ee7ff';
-      ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.fill();
-      if (e.deployed) {
-        ctx.strokeStyle = 'rgba(110,231,255,' + (0.4 + 0.3 * Math.sin(game.t * 4)) + ')';
-        ctx.beginPath(); ctx.arc(x, y, s + 6, 0, Math.PI * 2); ctx.stroke();
-      }
     }
     // shield arc
     if (e.shield > 1) {
@@ -1811,12 +1582,6 @@ function drawMinimap() {
   // nodes
   mmCtx.fillStyle = '#6ee7ff';
   for (const n of game.nodes) mmCtx.fillRect(n.x * sx - 1.5, n.y * sy - 1.5, 3, 3);
-  // obelisks
-  for (const ob of game.obelisks) {
-    mmCtx.strokeStyle = ob.owner ? FACTIONS[ob.owner].color : '#6d7f9c';
-    mmCtx.lineWidth = 1;
-    mmCtx.strokeRect(ob.x * sx - 2.5, ob.y * sy - 2.5, 5, 5);
-  }
   // entities
   for (const e of game.entities) {
     if (e.dead) continue;
@@ -1826,7 +1591,7 @@ function drawMinimap() {
   }
   // camera
   mmCtx.strokeStyle = '#cdd6e4'; mmCtx.lineWidth = 1;
-  mmCtx.strokeRect(game.cam.x * sx, game.cam.y * sy, viewW() * sx, viewH() * sy);
+  mmCtx.strokeRect(game.cam.x * sx, game.cam.y * sy, canvas.width * sx, canvas.height * sy);
 }
 
 // ---------------- main loop ----------------
@@ -1908,8 +1673,6 @@ function buildSnap() {
   return {
     t: 'snap', gt: +game.t.toFixed(2), players, units,
     nodes: game.nodes.map(n => [n.id, n.x, n.y, Math.round(n.amount), n.max]),
-    obs: game.obelisks.map(o => [o.id, o.owner ? facIdx(o.owner) : 0,
-      Math.round(o.prog * 10), o.progFac ? facIdx(o.progFac) : 0]),
     creep: rle(game.creep),
     proj: game.proj.map(p => [Math.round(p.x), Math.round(p.y), p.r, p.color]),
     fx: game.netFx.map(f => ({ ...f })),
@@ -1923,11 +1686,6 @@ function applySnap(m) {
     if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3]; }
   }
   game.nodes = m.nodes.map(a => ({ id: a[0], x: a[1], y: a[2], amount: a[3], max: a[4], r: 20 }));
-  const facKeys = Object.keys(FACTIONS);
-  for (const a of m.obs || []) {
-    const ob = game.obelisks.find(o => o.id === a[0]);
-    if (ob) { ob.owner = a[1] ? facKeys[a[1] - 1] : null; ob.prog = a[2] / 10; ob.progFac = a[3] ? facKeys[a[3] - 1] : null; }
-  }
   unrle(m.creep, game.creep);
   game.proj = m.proj.map(a => ({ x: a[0], y: a[1], r: a[2], color: a[3] }));
   for (const f of m.fx) addFx(f);
@@ -1969,85 +1727,35 @@ function guestTick(dt) {
 }
 
 // ---------------- connection plumbing ----------------
-// Host keeps one peer connection per guest (up to 3); guests keep one to the host.
-const net = { role: null, myFac: null, bots: 0,
-  peers: [], pending: null,        // host side
-  pc: null, dc: null,              // guest side
-  lobbyFacs: null, lobbyBots: 0 }; // guest's view of the lobby
+const net = { pc: null, dc: null, role: null, myFac: null, theirFac: null };
 
-function netConnected() {
-  if (net.role === 'host') return net.peers.some(p => p.dc.readyState === 'open');
-  return !!(net.dc && net.dc.readyState === 'open');
-}
-function netSend(o) { // guest → host
-  if (net.dc && net.dc.readyState === 'open') net.dc.send(JSON.stringify(o));
-}
-function netCast(o) { // host → every guest
-  const s = JSON.stringify(o);
-  for (const p of net.peers) if (p.dc.readyState === 'open') p.dc.send(s);
-}
-function sendToFac(fac, o) { // host → the guest playing fac
-  const p = net.peers.find(p => p.fac === fac);
-  if (p && p.dc.readyState === 'open') p.dc.send(JSON.stringify(o));
-}
-function humanSeatCount() { return 1 + net.peers.length; }
+function netConnected() { return !!(net.dc && net.dc.readyState === 'open'); }
+function netSend(o) { if (netConnected()) net.dc.send(JSON.stringify(o)); }
 
-function wireDC() { // guest side
+function wireDC() {
   net.dc.onopen = () => showLobby();
-  net.dc.onmessage = ev => handleNet(JSON.parse(ev.data), null);
+  net.dc.onmessage = ev => handleNet(JSON.parse(ev.data));
   net.dc.onclose = () => onDisconnect();
   net.dc.onerror = () => onDisconnect();
 }
 
-function wirePeer(peer) { // host side
-  peer.dc.onopen = () => {
-    if (game && !game.over) { peer.pc.close(); return; } // no joining a running match
-    net.peers.push(peer);
-    if (net.pending === peer) net.pending = null;
-    net.bots = Math.min(net.bots, 4 - humanSeatCount());
-    showLobby(); castLobby();
-  };
-  peer.dc.onmessage = ev => handleNet(JSON.parse(ev.data), peer);
-  peer.dc.onclose = () => dropPeer(peer);
-  peer.dc.onerror = () => dropPeer(peer);
-}
-
-function dropPeer(peer) {
-  const i = net.peers.indexOf(peer);
-  if (i < 0) return;
-  net.peers.splice(i, 1);
-  if (game && game.mode === 'host' && !game.over && peer.fac
-      && game.players[peer.fac] && !game.players[peer.fac].eliminated) {
-    // hand the empty seat to an AI so the match can continue
-    game.players[peer.fac].isAI = true;
-    if (!game.ais.includes(peer.fac)) game.ais.push(peer.fac);
-    const text = FACTIONS[peer.fac].name + ' disconnected — an AI takes over';
-    floatMsg(text); netCast({ t: 'msg', text });
-  } else if (!game || game.over) { castLobby(); updateLobby(); }
-}
-
-function handleNet(m, peer) {
+function handleNet(m) {
   switch (m.t) {
-    case 'fac': if (peer) { peer.fac = m.fac; castLobby(); updateLobby(); } break;
-    case 'lobby': net.lobbyFacs = m.facs; net.lobbyBots = m.bots; updateLobby(); break;
+    case 'fac': net.theirFac = m.fac; updateLobby(); break;
     case 'start':
-      net.myFac = m.you;
-      buildMatch(m.seats, 'guest', m.you);
+      net.theirFac = m.a; net.myFac = m.b;
+      buildMatch(m.a, m.b, 'guest', m.b);
       break;
     case 'snap': if (game && game.mode === 'guest' && !game.over) applySnap(m); break;
-    case 'cmd': if (game && game.mode === 'host' && !game.over && peer && peer.fac) handleCmd(m, peer.fac); break;
+    case 'cmd': if (game && game.mode === 'host' && !game.over) handleCmd(m); break;
     case 'msg': floatMsg(m.text); break;
-    case 'elim':
-      if (game && game.mode === 'guest' && !game.over)
-        floatMsg(m.fac === game.localFac ? 'Your core has fallen — spectating…'
-          : FACTIONS[m.fac].name + ' has been eliminated');
-      break;
     case 'end': if (game && game.mode === 'guest' && !game.over) endGame(m.winner); break;
   }
 }
 
-// host: execute a guest command (validated against that guest's faction)
-function handleCmd(m, fac) {
+// host: execute a guest command (validated against the guest's faction)
+function handleCmd(m) {
+  const fac = game.facB;
   if (m.kind === 'order') {
     const sel = (m.ids || []).map(byId).filter(e => e && e.fac === fac);
     if (sel.length) applyOrder(fac, sel, m.x, m.y);
@@ -2065,29 +1773,22 @@ function handleCmd(m, fac) {
   }
 }
 
-function onDisconnect() { // guest lost the host — the match cannot continue
-  if (game && game.mode === 'guest' && !game.over) {
+function onDisconnect() {
+  if (game && game.mode !== 'sp' && !game.over) {
     game.over = true;
     document.getElementById('endTitle').textContent = 'CONNECTION LOST';
     document.getElementById('endTitle').style.color = '#e0b84d';
-    document.getElementById('endDetail').textContent = 'The link to the host dropped.';
+    document.getElementById('endDetail').textContent = 'The link to your opponent dropped.';
     document.getElementById('endscreen').style.display = 'flex';
   }
-  net.pc = null; net.dc = null; net.role = null; net.myFac = null;
-  net.lobbyFacs = null; net.lobbyBots = 0; net.bots = 0;
+  net.pc = null; net.dc = null; net.role = null; net.theirFac = null; net.myFac = null;
   document.getElementById('mpLobby').style.display = 'none';
   document.getElementById('mpPanel').style.display = 'none';
   for (const c of document.querySelectorAll('#cards .card')) c.classList.remove('picked');
 }
 
 // ---------------- manual WebRTC signaling ----------------
-// Pure peer-to-peer: no relay, no account, no server of ours. The only
-// outside contact is a public STUN lookup ("what is my address?") so the
-// codes carry routable addresses; all game traffic flows browser-to-browser.
-// On the same LAN it connects even with STUN unreachable.
-const RTC_CFG = { iceServers: [
-  { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
-] };
+const RTC_CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 let mpState = null;
 
 function iceDone(pc) {
@@ -2099,120 +1800,44 @@ function iceDone(pc) {
     });
   });
 }
+const sdpEncode = d => btoa(JSON.stringify(d));
+const sdpDecode = s => JSON.parse(atob(s.trim()));
 
-// invite codes: the browser's complete SDP, untouched — exactly what is
-// proven to connect — deflate-compressed into base64 so it still fits in
-// one Discord message. Tolerant of the whitespace/line breaks messengers
-// like to add.
-async function sdpEncode(d) {
-  const raw = new TextEncoder().encode(JSON.stringify(d));
-  if (typeof CompressionStream !== 'undefined') {
-    const cs = new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'));
-    const bytes = new Uint8Array(await new Response(cs).arrayBuffer());
-    let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
-    return '1' + btoa(bin);
-  }
-  let bin = ''; for (const b of raw) bin += String.fromCharCode(b);
-  return '0' + btoa(bin);
-}
-async function sdpDecode(s) {
-  s = s.replace(/\s+/g, '');
-  const tag = s[0], body = s.slice(1);
-  if (tag === '1') {
-    const bytes = Uint8Array.from(atob(body), c => c.charCodeAt(0));
-    const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-    return JSON.parse(await new Response(ds).text());
-  }
-  if (tag === '0') return JSON.parse(atob(body));
-  return JSON.parse(atob(s)); // legacy untagged code
-}
-
-// surface connection progress/failure instead of failing silently
-function wirePCStatus(pc) {
-  pc.onconnectionstatechange = () => {
-    const st = pc.connectionState;
-    if (st === 'connecting') mpUI({ status: 'Codes accepted — connecting…' });
-    else if (st === 'failed') mpUI({ status: 'Connection FAILED. Both players: refresh and exchange FRESH codes. If it keeps failing, your two networks may not allow a direct link — have one player try a different network (e.g. a phone hotspot).' });
-  };
-}
-
-// Manual signaling is slow: a human ferries the reply code through a chat
-// app, while the joiner's browser starts its connection attempt the moment
-// that code is created — and would give up after ~15 s of silence (the
-// host's NAT drops everything until the host pastes the reply). Trickling
-// extra remote candidates in keeps the attempt — and our NAT mappings —
-// alive for up to 5 minutes, so the host can paste whenever the code lands.
-function keepProbing(pc, offerSdp) {
-  const cands = [...offerSdp.matchAll(/a=(candidate:\S+ 1 (?:udp|UDP) \d+ (\S+) (\d+) typ \w+[^\r\n]*)/g)]
-    .map(m => ({ line: m[1], ip: m[2], port: +m[3] }));
-  let tick = 0;
-  const iv = setInterval(() => {
-    if (net.pc !== pc || netConnected() || pc.connectionState === 'closed') { clearInterval(iv); return; }
-    if (++tick > 60) { // ~5 minutes — the codes have gone stale
-      clearInterval(iv);
-      mpUI({ status: 'No connection after 5 minutes — both players refresh and exchange fresh codes.' });
-      return;
-    }
-    for (const c of cands) {
-      pc.addIceCandidate({ candidate: c.line, sdpMLineIndex: 0 }).catch(() => {});
-      if (!c.ip.endsWith('.local')) { // nearby-port guesses also help with symmetric NATs
-        const p = 1024 + (c.port - 1024 + tick) % 64512;
-        pc.addIceCandidate({ candidate: 'candidate:probe' + tick + ' 1 udp 2 ' + c.ip + ' ' + p + ' typ host', sdpMLineIndex: 0 }).catch(() => {});
-      }
-    }
-  }, 5000);
-}
-
-// host: one invite round per joining friend (call again from the lobby to add more)
-async function startHostInvite() {
+async function startHost() {
   net.role = 'host';
-  const pc = new RTCPeerConnection(RTC_CFG);
-  const peer = { pc, dc: pc.createDataChannel('game'), fac: null };
-  net.pending = peer;
-  wirePCStatus(pc);
-  wirePeer(peer);
-  await pc.setLocalDescription(await pc.createOffer());
-  await iceDone(pc);
+  net.pc = new RTCPeerConnection(RTC_CFG);
+  net.dc = net.pc.createDataChannel('game');
+  wireDC();
+  await net.pc.setLocalDescription(await net.pc.createOffer());
+  await iceDone(net.pc);
   mpState = 'host-wait-answer';
-  const nth = humanSeatCount(); // 1 = first invite
   mpUI({
-    step: '1. Send this INVITE code to ' + (nth > 1 ? 'the NEXT player' : 'your friend')
-      + ' (Discord, WhatsApp, anything).\n2. Paste their REPLY code below and press CONNECT.'
-      + (nth > 1 ? '\n(Players connected so far: ' + nth + ')' : ''),
-    out: await sdpEncode(pc.localDescription), status: '',
+    step: '1. Send this INVITE code to your friend (Discord, WhatsApp, anything).\n2. Paste their REPLY code below and press CONNECT.',
+    out: sdpEncode(net.pc.localDescription), status: '',
   });
 }
 
 async function hostAccept(answerText) {
-  if (!net.pending) { mpUI({ status: 'No open invite — press INVITE PLAYER first.' }); return; }
   try {
-    await net.pending.pc.setRemoteDescription(new RTCSessionDescription(await sdpDecode(answerText)));
+    await net.pc.setRemoteDescription(new RTCSessionDescription(sdpDecode(answerText)));
     mpUI({ status: 'Connecting…' });
-  } catch (e) { mpUI({ status: 'That reply code is invalid or incomplete — make sure the WHOLE code was copied (long messages can get cut off).' }); }
+  } catch (e) { mpUI({ status: 'That reply code is invalid — paste the whole thing.' }); }
 }
 
 async function joinWithOffer(offerText) {
   try {
     net.role = 'guest';
     net.pc = new RTCPeerConnection(RTC_CFG);
-    wirePCStatus(net.pc);
     net.pc.ondatachannel = ev => { net.dc = ev.channel; wireDC(); };
-    const offer = await sdpDecode(offerText);
-    await net.pc.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await net.pc.createAnswer();
-    // take the passive DTLS role: wait silently for the host to reach out
-    // instead of running our handshake timer against a host that may not
-    // paste the reply code for another minute
-    answer.sdp = answer.sdp.replace(/a=setup:active/, 'a=setup:passive');
-    await net.pc.setLocalDescription(answer);
+    await net.pc.setRemoteDescription(new RTCSessionDescription(sdpDecode(offerText)));
+    await net.pc.setLocalDescription(await net.pc.createAnswer());
     await iceDone(net.pc);
     mpUI({
       step: 'Send this REPLY code back to the host.',
-      out: await sdpEncode(net.pc.localDescription),
+      out: sdpEncode(net.pc.localDescription),
       status: 'Waiting for the host to connect…',
     });
-    keepProbing(net.pc, offer.sdp);
-  } catch (e) { mpUI({ status: 'That invite code is invalid or incomplete — make sure the WHOLE code was copied (long messages can get cut off).' }); }
+  } catch (e) { mpUI({ status: 'That invite code is invalid — paste the whole thing.' }); }
 }
 
 // ---------------- lobby ----------------
@@ -2232,16 +1857,8 @@ function showLobby() {
 
 function pickFaction(f) {
   net.myFac = f;
-  if (net.role === 'guest') netSend({ t: 'fac', fac: f });
-  else castLobby();
+  netSend({ t: 'fac', fac: f });
   updateLobby();
-}
-
-function lobbyFacs() { // host's authoritative seat list (humans only)
-  return [net.myFac, ...net.peers.map(p => p.fac)];
-}
-function castLobby() {
-  if (net.role === 'host') netCast({ t: 'lobby', facs: lobbyFacs(), bots: net.bots });
 }
 
 function updateLobby() {
@@ -2250,31 +1867,17 @@ function updateLobby() {
   for (const c of document.querySelectorAll('#cards .card'))
     c.classList.toggle('picked', c.dataset.fac === net.myFac);
   const nameOf = f => f ? FACTIONS[f].name : '—';
-  // host knows the truth; guests render the last lobby broadcast
-  const facs = net.role === 'host' ? lobbyFacs() : (net.lobbyFacs || [net.myFac]);
-  const bots = net.role === 'host' ? net.bots : net.lobbyBots;
-  const picked = facs.filter(Boolean);
-  const clash = new Set(picked).size !== picked.length;
-  const myIdx = facs.indexOf(net.myFac);
-  const others = facs.filter((f, i) => i !== myIdx);
-  let txt = facs.length + ' player' + (facs.length > 1 ? 's' : '')
-    + (bots ? ' + ' + bots + ' bot' + (bots > 1 ? 's' : '') : '')
-    + ' · pick a faction card · You: ' + nameOf(net.myFac)
-    + (others.length ? ' · Friends: ' + others.map(nameOf).join(', ') : '');
-  if (clash) txt += '  (everyone must pick a DIFFERENT faction!)';
+  let txt = 'CONNECTED · click a faction card to pick · You: ' + nameOf(net.myFac)
+    + ' · Friend: ' + nameOf(net.theirFac);
+  const clash = net.myFac && net.myFac === net.theirFac;
+  if (clash) txt += '  (pick different factions!)';
   document.getElementById('lobbyText').textContent = txt;
   const startBtn = document.getElementById('mpStart');
-  const inviteBtn = document.getElementById('mpInvite');
-  const botBtn = document.getElementById('mpBot');
   if (net.role === 'host') {
     startBtn.style.display = 'inline-block';
-    startBtn.disabled = !(picked.length === facs.length && !clash && facs.length + bots >= 2);
-    inviteBtn.style.display = botBtn.style.display = 'inline-block';
-    inviteBtn.disabled = humanSeatCount() + net.bots >= 4;
-    botBtn.textContent = 'BOTS: ' + net.bots;
+    startBtn.disabled = !(net.myFac && net.theirFac && !clash);
   } else {
     startBtn.style.display = 'none';
-    inviteBtn.style.display = botBtn.style.display = 'none';
   }
 }
 
@@ -2287,24 +1890,14 @@ for (const card of document.querySelectorAll('#cards .card')) {
 }
 
 document.getElementById('mpHostBtn').addEventListener('click', () => {
-  if (net.role || net.pc) return;
+  if (net.pc) return;
   mpUI({ step: 'Creating invite code…', out: '', status: '' });
-  startHostInvite();
+  startHost();
 });
 document.getElementById('mpJoinBtn').addEventListener('click', () => {
-  if (net.role || net.pc) return;
+  if (net.pc) return;
   mpState = 'join-enter-offer';
   mpUI({ step: 'Paste the host\'s INVITE code below and press CONNECT.', out: '', status: '' });
-});
-document.getElementById('mpInvite').addEventListener('click', () => {
-  if (net.role !== 'host' || humanSeatCount() + net.bots >= 4 || net.pending) return;
-  mpUI({ step: 'Creating invite code…', out: '', status: '' });
-  startHostInvite();
-});
-document.getElementById('mpBot').addEventListener('click', () => {
-  if (net.role !== 'host') return;
-  net.bots = (net.bots + 1) % (4 - humanSeatCount() + 1);
-  castLobby(); updateLobby();
 });
 document.getElementById('mpGo').addEventListener('click', () => {
   const text = document.getElementById('mpIn').value;
@@ -2319,18 +1912,7 @@ document.getElementById('mpCopy').addEventListener('click', () => {
   mpUI({ status: 'Copied to clipboard.' });
 });
 document.getElementById('mpStart').addEventListener('click', () => {
-  if (net.role !== 'host') return;
-  const humans = lobbyFacs();
-  if (humans.some(f => !f) || new Set(humans).size !== humans.length) return;
-  // bots fill the remaining seats with random unused factions
-  const seats = humans.map((f, i) => ({ fac: f, ai: false }));
-  const pool = PLAYABLE.filter(f => !humans.includes(f));
-  for (let i = 0; i < net.bots && seats.length < 4 && pool.length; i++) {
-    const k = Math.floor(Math.random() * pool.length);
-    seats.push({ fac: pool.splice(k, 1)[0], ai: true });
-  }
-  if (seats.length < 2) return;
-  if (net.pending) { try { net.pending.pc.close(); } catch (e) {} net.pending = null; }
-  for (const p of net.peers) sendToFac(p.fac, { t: 'start', seats, you: p.fac });
-  buildMatch(seats, 'host', net.myFac);
+  if (net.role !== 'host' || !net.myFac || !net.theirFac || net.myFac === net.theirFac) return;
+  netSend({ t: 'start', a: net.myFac, b: net.theirFac });
+  buildMatch(net.myFac, net.theirFac, 'host', net.myFac);
 });
