@@ -160,6 +160,106 @@ const DEFS = {
   hoard:         { fac:'neutral', kind:'building', name:'Ancient Hoard', hp:1500, size:30, dmg:16, range:215, cd:1.0, aggro:240, shot:'shell', splash:34, bounty:550 },
 };
 
+// Per-thing flavour + tech tree. `desc` shows on hover; `req` is a building that
+// must be finished before this can be built/produced (the faction's tech gate).
+const META = {
+  // IRON VANGUARD
+  hq:        { desc: 'Your core. Workers drop off crystal here, and it trains more Workers. Lose it and you lose.' },
+  worker:    { desc: 'Cheap harvester and builder. Auto-mines crystal; select one to construct buildings.' },
+  barracks:  { desc: 'Infantry school — trains Marines, Snipers and Medics.' },
+  factory:   { desc: 'Heavy vehicle bay. Builds Siege Tanks.', req: 'barracks' },
+  airfield:  { desc: 'Aircraft hangar. Builds Gunships.', req: 'factory' },
+  turret:    { desc: 'Static defensive gun. Cheap base protection.' },
+  marine:    { desc: 'Cheap, reliable rifle infantry. The backbone of any push.' },
+  sniper:    { desc: 'Fragile long-range specialist with heavy single-target damage.' },
+  medic:     { desc: 'Non-combat support; continuously heals nearby friendly units.' },
+  tank:      { desc: 'Slow siege vehicle with a splashing cannon. Anti-armour and anti-clump.' },
+  gunship:   { desc: 'Fast flyer with rapid fire. Excellent for raids and mop-up.' },
+  // MYRIAD SWARM
+  hive:      { desc: 'Your core. Spreads creep, spawns free Drones, and grows every structure.' },
+  tumor:     { desc: 'Cheap creep spreader; extends your economy and where you can build.' },
+  spawnpit:  { desc: 'Breeds Drones endlessly, for free.' },
+  spittermound:{ desc: 'Breeds ranged Spitters endlessly, for free.', req: 'spawnpit' },
+  hunterden: { desc: 'Breeds fast Hunters endlessly, for free.', req: 'spawnpit' },
+  spine:     { desc: 'Static acid turret. Creep defence.' },
+  drone:     { desc: 'Free melee swarm unit. Weak alone, lethal in numbers. Heals on creep.' },
+  spitter:   { desc: 'Free ranged unit that spits acid.' },
+  hunter:    { desc: 'Free fast melee striker that runs units down.' },
+  broodmother:{ desc: 'Elite splashing bruiser bred from the Hive.', req: 'hunterden' },
+  // SOLARI EXODUS
+  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. Deploy on a crystal node to siphon.' },
+  collector: { desc: 'Harvester that mines crystal and hauls it back to the Ark. Build more to scale your economy.' },
+  seeker:    { desc: 'Cheap shielded skirmisher that blinks onto its target.' },
+  lancer:    { desc: 'Long-range beam unit; fragile but deals heavy damage.' },
+  guardian:  { desc: 'Support unit; projects a shield-and-heal aura over nearby allies.' },
+  phoenix:   { desc: 'Fast shielded flyer with rapid fire.' },
+  templar:   { desc: 'Elite shielded warrior with a splashing siege shell.' },
+  // ASHEN CHOIR
+  ossuary:   { desc: 'Your core. Raises Wraiths and Banshees and anchors the lattice.' },
+  conduit:   { desc: 'Extends your lattice (build range) and trickles Essence.' },
+  reliquary: { desc: 'Raises elite Revenants.' },
+  spire:     { desc: 'Static beam tower. Lattice defence.', req: 'conduit' },
+  wraith:    { desc: 'Cheap fast melee spirit. Fades away from the lattice — heals by dealing damage.' },
+  banshee:   { desc: 'Ranged spirit with a piercing beam.' },
+  revenant:  { desc: 'Elite splashing melee horror raised in the Reliquary.' },
+  // GILDED SYNDICATE
+  haven:     { desc: 'Your core and treasury. Earns compound interest and hires mercenaries instantly.' },
+  watchpost: { desc: 'Air-dropped static gun. Project control across the map — but not into enemy territory.' },
+  countinghouse:{ desc: 'Raises your interest cap and pays rent. Bank more gold, earn faster.' },
+  enforcer:  { desc: 'Cheap instant mercenary with a sidearm.' },
+  arbalest:  { desc: 'Long-range marksman merc with heavy damage.', req: 'countinghouse' },
+  juggernaut:{ desc: 'Heavy splashing mercenary bruiser.', req: 'countinghouse' },
+  // WARDEN COVENANT
+  keep:      { desc: 'Your core fortress. Trains Sentinels & Guards and erects all structures. Income scales with your buildings’ total HP.' },
+  rampart:   { desc: 'Dirt-cheap, enormously tough wall. Seals your hold and fattens your income.' },
+  bastion:   { desc: 'Armoured defensive gun tower.', req: 'rampart' },
+  foundry_w: { desc: 'Builds heavy Bombard artillery.', req: 'bastion' },
+  sentinel:  { desc: 'Tough, slow melee line-holder.' },
+  warden_g:  { desc: 'Armoured ranged trooper.', req: 'bastion' },
+  bombard:   { desc: 'Slow long-range siege artillery with splash.' },
+  // EMBER NOMADS
+  pyre:      { desc: 'Your core. Musters the whole warband. Plunder from combat funds it.' },
+  warcamp:   { desc: 'Forward muster point; trains Raiders and Slingers and unlocks heavier warriors.' },
+  totem:     { desc: 'Static fire turret. Cheap defence.' },
+  raider:    { desc: 'Dirt-cheap, very fast melee raider.' },
+  slinger:   { desc: 'Fast ranged skirmisher.' },
+  firebrand: { desc: 'Splashing molotov thrower.', req: 'warcamp' },
+  warbeast:  { desc: 'Fast heavy charger that bowls through lines.', req: 'warcamp' },
+  // VERDANT BLOOM
+  heart:     { desc: 'Your core. Spawns free Saplings forever and grows the garden.' },
+  bloom:     { desc: 'Economy plant. Each mature Bloom pays Sap — the more you grow, the richer you get.' },
+  grove:     { desc: 'Breeds free Saplings, forever.', req: 'bloom' },
+  bramble:   { desc: 'Static thorn turret.', req: 'bloom' },
+  sapling:   { desc: 'Free, weak melee swarm creature.' },
+  thornling: { desc: 'Ranged thorn-spitter.' },
+  treant:    { desc: 'Towering splashing bruiser.', req: 'grove' },
+  // STORMFORGE DYNASTY
+  reactor:   { desc: 'Your core. Assembles machines. Income ramps with elapsed time — Dynamos accelerate it.' },
+  dynamo:    { desc: 'Accelerates your escalating income. Build several early.' },
+  tesla:     { desc: 'Static beam tower. Defence.', req: 'dynamo' },
+  foundry_s: { desc: 'Assembles the towering Colossus.', req: 'dynamo' },
+  arclight:  { desc: 'Fast shielded skirmisher with rapid fire.' },
+  voltaic:   { desc: 'Long-range shielded beam platform.', req: 'dynamo' },
+  colossus:  { desc: 'Huge shielded walker with a splashing siege cannon.' },
+  // OBSIDIAN PACT
+  altar:     { desc: 'Your core. Summons Thralls, Zealots and Behemoths. Your fallen units pay Blood.' },
+  shrine:    { desc: 'Spawns free Thralls and lets the Altar raise greater horrors.' },
+  spike:     { desc: 'Static blood turret. Cheap defence.' },
+  thrall:    { desc: 'Dirt-cheap, expendable melee body. Its death spills Blood.' },
+  zealot:    { desc: 'Tougher melee fanatic.', req: 'shrine' },
+  behemoth:  { desc: 'Massive splashing horror raised from spilled Blood.', req: 'shrine' },
+  // NEUTRAL
+  obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
+  hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
+};
+const meta = t => META[t] || {};
+// has this faction met the tech requirement (a finished prerequisite building) for `type`?
+function techMet(fac, type) {
+  const r = meta(type).req;
+  if (!r) return true;
+  return game.entities.some(e => !e.dead && e.fac === fac && e.type === r && !e.constructing && !e.growing);
+}
+
 // economy tuning
 const ECON = {
   workerCarry: 10, workerMine: 2.0,
@@ -658,6 +758,7 @@ function localMsg(fac, text) {
 function enqueue(e, type) {
   const d = DEFS[type], p = game.players[e.fac];
   if (e.queue.length >= 5) { localMsg(e.fac, 'Queue is full'); return false; }
+  if (!techMet(e.fac, type)) { localMsg(e.fac, 'Requires ' + DEFS[meta(type).req].name); return false; }
   if (p.res < d.cost) { localMsg(e.fac, 'Not enough ' + FACTIONS[e.fac].res); return false; }
   p.res -= d.cost;
   e.queue.push({ type, t: d.time, total: d.time });
@@ -698,6 +799,7 @@ function placeErr(fac) { return placeErrMsg; }
 
 function placeBuilding(fac, type, x, y) {
   const d = DEFS[type], p = game.players[fac];
+  if (!techMet(fac, type)) { localMsg(fac, 'Requires ' + DEFS[meta(type).req].name); return false; }
   if (p.res < d.cost) { localMsg(fac, 'Not enough ' + FACTIONS[fac].res); return false; }
   if (!placeValid(type, fac, x, y)) { localMsg(fac, placeErr(fac)); return false; }
   if (fac === 'vanguard') {
@@ -970,7 +1072,7 @@ function aiTick(fac) {
     else if (mounds.length < 2 && pits.length >= 1 && p.res >= 200) aiPlace(fac, 'spittermound', p.base);
     else if (dens.length < 2 && pits.length >= 2 && p.res >= 250) aiPlace(fac, 'hunterden', p.base);
     else if (spines.length < 3 && p.res >= 120 && game.t > 150) aiPlace(fac, 'spine', p.base);
-    else if (hive && !hive.queue.length && p.res >= 300 && game.t > 180) enqueue(hive, 'broodmother');
+    else if (hive && !hive.queue.length && p.res >= 300 && game.t > 180 && techMet(fac, 'broodmother')) enqueue(hive, 'broodmother');
     // swarm rally drifts toward the enemy as the game goes on
     p.swarmRally = underAttack && defendPt ? { x: defendPt.x, y: defendPt.y }
       : { x: p.base.x + (enemyCore.x - p.base.x) * 0.3, y: p.base.y + (enemyCore.y - p.base.y) * 0.3 };
@@ -1043,8 +1145,8 @@ function aiTick(fac) {
       const enf = ents(e => e.fac === fac && e.type === 'enforcer').length;
       const arb = ents(e => e.fac === fac && e.type === 'arbalest').length;
       const jug = ents(e => e.fac === fac && e.type === 'juggernaut').length;
-      if (jug < Math.floor(enf / 5) && p.res >= 650) enqueue(haven, 'juggernaut');
-      else if (arb < enf / 2 && p.res >= 520) enqueue(haven, 'arbalest');
+      if (jug < Math.floor(enf / 5) && p.res >= 650 && techMet(fac, 'juggernaut')) enqueue(haven, 'juggernaut');
+      else if (arb < enf / 2 && p.res >= 520 && techMet(fac, 'arbalest')) enqueue(haven, 'arbalest');
       else enqueue(haven, 'enforcer');
     }
   }
@@ -1061,7 +1163,7 @@ function aiTick(fac) {
     if (keep && !keep.queue.length && p.res >= 90) {
       const guards = ents(e => e.fac === fac && e.type === 'warden_g').length;
       const sents = ents(e => e.fac === fac && e.type === 'sentinel').length;
-      enqueue(keep, (guards < sents / 2 && p.res >= 120) ? 'warden_g' : 'sentinel');
+      enqueue(keep, (guards < sents / 2 && p.res >= 120 && techMet(fac, 'warden_g')) ? 'warden_g' : 'sentinel');
     }
     for (const f of ents(e => e.fac === fac && e.type === 'foundry_w' && !e.growing))
       if (!f.queue.length && p.res >= 240) enqueue(f, 'bombard');
@@ -1077,8 +1179,8 @@ function aiTick(fac) {
       if (!e || e.queue.length || e.growing) return;
       const beasts = ents(o => o.fac === fac && o.type === 'warbeast').length;
       const brands = ents(o => o.fac === fac && o.type === 'firebrand').length;
-      if (beasts < 3 && p.res >= 280) enqueue(e, 'warbeast');
-      else if (brands < 5 && p.res >= 150) enqueue(e, 'firebrand');
+      if (beasts < 3 && p.res >= 280 && techMet(fac, 'warbeast')) enqueue(e, 'warbeast');
+      else if (brands < 5 && p.res >= 150 && techMet(fac, 'firebrand')) enqueue(e, 'firebrand');
       else if (p.res >= 80 && Math.random() < 0.5) enqueue(e, 'slinger');
       else if (p.res >= 45) enqueue(e, 'raider');
     };
@@ -1100,7 +1202,7 @@ function aiTick(fac) {
     else if (blooms < 12 && p.res >= 300) aiPlace(fac, 'bloom', p.base);
     if (heart && !heart.queue.length && p.res >= 90) {
       const treants = ents(e => e.fac === fac && e.type === 'treant').length;
-      enqueue(heart, (treants < 3 && p.res >= 300 && game.t > 150) ? 'treant' : 'thornling');
+      enqueue(heart, (treants < 3 && p.res >= 300 && game.t > 150 && techMet(fac, 'treant')) ? 'treant' : 'thornling');
     }
   }
 
@@ -1115,7 +1217,7 @@ function aiTick(fac) {
     if (reactor && !reactor.queue.length && p.res >= 110) {
       const volts = ents(e => e.fac === fac && e.type === 'voltaic').length;
       const arcs = ents(e => e.fac === fac && e.type === 'arclight').length;
-      enqueue(reactor, (volts < arcs / 2 && p.res >= 210) ? 'voltaic' : 'arclight');
+      enqueue(reactor, (volts < arcs / 2 && p.res >= 210 && techMet(fac, 'voltaic')) ? 'voltaic' : 'arclight');
     }
     for (const f of ents(e => e.fac === fac && e.type === 'foundry_s' && !e.growing))
       if (!f.queue.length && p.res >= 420) enqueue(f, 'colossus');
@@ -1130,8 +1232,8 @@ function aiTick(fac) {
     if (altar && !altar.queue.length && p.res >= 30) {
       const behes = ents(e => e.fac === fac && e.type === 'behemoth').length;
       const zeals = ents(e => e.fac === fac && e.type === 'zealot').length;
-      if (behes < 3 && p.res >= 340 && game.t > 150) enqueue(altar, 'behemoth');
-      else if (zeals < 6 && p.res >= 110) enqueue(altar, 'zealot');
+      if (behes < 3 && p.res >= 340 && game.t > 150 && techMet(fac, 'behemoth')) enqueue(altar, 'behemoth');
+      else if (zeals < 6 && p.res >= 110 && techMet(fac, 'zealot')) enqueue(altar, 'zealot');
       else if (p.res >= 30) enqueue(altar, 'thrall');
     }
   }
@@ -1421,9 +1523,10 @@ function currentCommands() {
   const types = new Set(game.sel.map(e => e.type));
 
   const prodBtn = (host, type) => {
-    const d = DEFS[type];
+    const d = DEFS[type], tech = techMet(fac, type);
     cmds.push({
-      label: d.name, cost: d.cost, enabled: p.res >= d.cost && !host.constructing && !host.growing,
+      type, label: d.name, cost: d.cost,
+      enabled: tech && p.res >= d.cost && !host.constructing && !host.growing,
       onClick: () => {
         if (game.mode === 'guest') netSend({ t: 'cmd', kind: 'enq', id: host.id, type });
         else enqueue(host, type);
@@ -1432,10 +1535,10 @@ function currentCommands() {
     });
   };
   const buildBtn = type => {
-    const d = DEFS[type];
+    const d = DEFS[type], tech = techMet(fac, type);
     cmds.push({
-      label: (BUILD_VERB[fac] || 'Build ') + d.name,
-      cost: d.cost, enabled: p.res >= d.cost,
+      type, label: (BUILD_VERB[fac] || 'Build ') + d.name,
+      cost: d.cost, enabled: tech && p.res >= d.cost,
       onClick: () => { game.placing = type; },
     });
   };
@@ -1450,6 +1553,7 @@ function currentCommands() {
       cmds.push({
         label: sel0.deployed ? 'Undeploy Ark' : 'Deploy Ark', cost: 0, enabled: true,
         sub: 'Siphon energy from a crystal node',
+        desc: 'Anchor the Ark on a crystal node to siphon Energy quickly. Undeploy to move again.',
         onClick: () => {
           if (game.mode === 'guest') netSend({ t: 'cmd', kind: 'deploy', id: sel0.id, on: !sel0.deployed });
           else { sel0.deployed = !sel0.deployed; if (sel0.deployed) sel0.order = { type: 'idle' }; }
@@ -1461,9 +1565,40 @@ function currentCommands() {
   return cmds.slice(0, 7);
 }
 
+// compact stat readout for a definition, shown in the build tooltip
+function statLine(d) {
+  const parts = ['HP ' + d.hp];
+  if (d.shield) parts.push('Shield ' + d.shield);
+  if (d.dmg) parts.push('DMG ' + d.dmg + (d.splash ? ' splash' : ''));
+  if (d.range > 30) parts.push('Range ' + d.range);
+  if (d.speed) parts.push('Speed ' + d.speed);
+  if (d.aura) parts.push('Aura ' + d.aura + (d.heal ? ' heal' : ' shield'));
+  return parts.join(' · ');
+}
+
+function showTip(c) {
+  const tip = document.getElementById('tooltip');
+  if (!c || (!c.type && !c.desc)) { tip.style.display = 'none'; return; }
+  const d = c.type ? DEFS[c.type] : null;
+  const res = FACTIONS[game.localFac].res;
+  let html = '<div class="tipname">' + (d ? d.name : c.label)
+    + (c.cost ? '<span class="tipcost">' + c.cost + ' ' + res + '</span>' : '') + '</div>';
+  html += '<div class="tipdesc">' + (c.desc || (c.type ? meta(c.type).desc : '') || '') + '</div>';
+  if (d) html += '<div class="tipstat">' + statLine(d) + '</div>';
+  const req = c.type && meta(c.type).req;
+  if (req) {
+    const have = techMet(game.localFac, c.type);
+    html += '<div class="tipreq" style="color:' + (have ? '#7dd87d' : '#e0843d') + '">'
+      + (have ? '✓ ' : '✗ Requires ') + DEFS[req].name + '</div>';
+  }
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+}
+
 function refreshCard() {
   const card = document.getElementById('cmdcard');
   card.innerHTML = '';
+  document.getElementById('tooltip').style.display = 'none';
   if (!game) return;
   const cmds = currentCommands();
   const hot = ['1', '2', '3', '4', '5', '6', '7'];
@@ -1473,6 +1608,8 @@ function refreshCard() {
     b.innerHTML = '<span class="k">' + hot[i] + '</span>' + c.label
       + (c.cost ? '<span class="c">' + c.cost + ' ' + FACTIONS[game.localFac].res + '</span>' : (c.sub ? '<span class="c">' + c.sub + '</span>' : ''));
     b.onclick = () => { if (c.enabled) c.onClick(); };
+    b.addEventListener('mouseenter', () => showTip(c));
+    b.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
     card.appendChild(b);
   });
 }
@@ -1503,6 +1640,8 @@ function updateHUD() {
     if (e.type === 'ark' && e.deployed) s += '\nDEPLOYED — siphoning' + (e.siphonNode ? ' crystal' : '… (no node in reach)');
     if (e.type === 'haven') s += '\nTreasury earns interest — Countinghouses raise the cap';
     if (e.fac === 'choir' && e.def.kind === 'unit') s += '\nFades away from the lattice — heals by dealing damage';
+    const desc = meta(e.type).desc;
+    if (desc) s += '\n' + desc;
     si.textContent = s;
   } else {
     const counts = {};
