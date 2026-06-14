@@ -26,6 +26,17 @@ const server = http.createServer((req, res) => {
   });
 });
 
+server.on('error', err => {
+  if (err.code === 'EADDRINUSE') {
+    console.log('\n  Port ' + PORT + ' is already in use.');
+    console.log('  The game is probably already running — open http://localhost:' + PORT + ' in your browser.');
+    console.log('  (Or close the other server window, then run start.bat / start.sh again.)\n');
+  } else {
+    console.log('\n  Could not start the server: ' + err.message + '\n');
+  }
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   console.log('\n  ============================================');
   console.log('   TRIFOLD RTS  —  running');
