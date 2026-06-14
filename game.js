@@ -33,9 +33,9 @@ const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 const HINTS = {
   vanguard: 'Workers harvest crystal automatically. Select a Worker to BUILD (Barracks → Marines/Snipers/Medics, Factory → Tanks, Airfield → Gunships, Turrets to defend). Destroy the enemy core; protect your Headquarters.',
   myriad: 'Your creep IS your economy — every covered tile feeds you biomass. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. With the Hive selected, right-click to set the swarm rally. The swarm heals on creep.',
-  exodus: 'You have no base and never will. Move the Ark onto a crystal node and DEPLOY to siphon energy fast (it trickles in slowly anyway). Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
+  exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
-  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped ANYWHERE on the map. Hoard or hire — and guard the Haven.',
+  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
 };
 
 // ---------------- unit / building definitions ----------------
@@ -68,7 +68,8 @@ const DEFS = {
   broodmother: { fac:'myriad', kind:'unit', name:'Broodmother', hp:420, size:16, speed:55, cost:300, time:20, dmg:22, range:26, cd:1.4, aggro:185, shot:'melee', splash:38 },
 
   // ----- SOLARI EXODUS -----
-  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', produces:['seeker','lancer','guardian','phoenix','templar'] },
+  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, produces:['collector','seeker','lancer','guardian','phoenix','templar'] },
+  collector:{ fac:'exodus', kind:'unit', name:'Collector', hp:70, shield:30, size:8, speed:84, cost:60, time:6, aggro:0, harvester:true },
   seeker:   { fac:'exodus', kind:'unit', name:'Seeker', hp:65, shield:45, size:8, speed:112, cost:120, time:9, dmg:10, range:55, cd:0.6, aggro:205, shot:'melee', blink:true },
   lancer:   { fac:'exodus', kind:'unit', name:'Lancer', hp:70, shield:55, size:9, speed:60, cost:220, time:14, dmg:30, range:235, cd:2.1, aggro:250, shot:'beam' },
   guardian: { fac:'exodus', kind:'unit', name:'Guardian', hp:120, shield:90, size:11, speed:72, cost:180, time:12, aggro:0, aura:150 },
@@ -110,7 +111,7 @@ const ECON = {
   choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.7, choirLattice: 270,
   // syndicate: compound interest on the banked treasury, bounties on kills
   synBase: 2.5, synInterest: 0.011, synCapBase: 1200, synCapPer: 500,
-  synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06,
+  synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06, synDropKeepout: 340,
   // neutral capture points pay their holder a steady income
   obeliskIncome: 1.4,
 };
@@ -233,6 +234,7 @@ function setupFaction(fac, base, isAI) {
     p.res = 200;
     spawnEnt('ark', fac, base.x, base.y);
     for (let i = 0; i < 2; i++) spawnEnt('seeker', fac, base.x - 40 + i * 80, base.y + 65);
+    for (let i = 0; i < 3; i++) spawnEnt('collector', fac, base.x - 60 + i * 40, base.y - 70);
     p.waveSize = 6;
   } else if (fac === 'choir') {
     p.res = 250;
@@ -558,27 +560,36 @@ function enqueue(e, type) {
 }
 
 // ---------------- placement ----------------
+let placeErrMsg = 'Cannot build there';
 function placeValid(type, fac, x, y) {
   const d = DEFS[type];
-  if (x < d.size + 8 || y < d.size + 8 || x > WORLD_W - d.size - 8 || y > WORLD_H - d.size - 8) return false;
+  if (x < d.size + 8 || y < d.size + 8 || x > WORLD_W - d.size - 8 || y > WORLD_H - d.size - 8) {
+    placeErrMsg = 'Cannot build there'; return false;
+  }
   for (const o of game.entities)
-    if (!o.dead && o.def.kind === 'building' && Math.hypot(o.x - x, o.y - y) < o.size + d.size + 10) return false;
+    if (!o.dead && o.def.kind === 'building' && Math.hypot(o.x - x, o.y - y) < o.size + d.size + 10) {
+      placeErrMsg = 'Too close to another building'; return false;
+    }
   for (const n of game.nodes)
-    if (n.amount > 0 && Math.hypot(n.x - x, n.y - y) < n.r + d.size + 10) return false;
-  if (fac === 'myriad' && !onCreep(fac, x, y)) return false;
+    if (n.amount > 0 && Math.hypot(n.x - x, n.y - y) < n.r + d.size + 10) {
+      placeErrMsg = 'Too close to a crystal node'; return false;
+    }
+  if (fac === 'myriad' && !onCreep(fac, x, y)) { placeErrMsg = 'Must grow on your creep'; return false; }
   if (fac === 'choir') { // lattice rule: must be near an existing finished Choir structure
     const ok = game.entities.some(e => !e.dead && e.fac === fac && e.def.kind === 'building'
       && !e.constructing && !e.growing && Math.hypot(e.x - x, e.y - y) < ECON.choirLattice);
-    if (!ok) return false;
+    if (!ok) { placeErrMsg = 'Must build within the lattice — near another Choir structure'; return false; }
+  }
+  // syndicate air-drops can't be planted in enemy-held territory (no turret-rushing the base)
+  if (fac === 'syndicate') {
+    const enemyNear = game.entities.some(o => !o.dead && o.fac !== fac && o.fac !== 'neutral'
+      && o.def.kind === 'building' && Math.hypot(o.x - x, o.y - y) < ECON.synDropKeepout);
+    if (enemyNear) { placeErrMsg = 'Too close to enemy territory'; return false; }
   }
   return true;
 }
 
-function placeErr(fac) {
-  return fac === 'myriad' ? 'Must grow on your creep'
-    : fac === 'choir' ? 'Must build within the lattice — near another Choir structure'
-    : 'Cannot build there';
-}
+function placeErr(fac) { return placeErrMsg; }
 
 function placeBuilding(fac, type, x, y) {
   const d = DEFS[type], p = game.players[fac];
@@ -848,12 +859,14 @@ function aiTick(fac) {
     const ark = myCore;
     // production mix
     if (!ark.queue.length) {
+      const collectors = ents(e => e.fac === fac && e.type === 'collector').length;
       const seekers = ents(e => e.fac === fac && e.type === 'seeker').length;
       const lancers = ents(e => e.fac === fac && e.type === 'lancer').length;
       const guards = ents(e => e.fac === fac && e.type === 'guardian').length;
       const phoenixes = ents(e => e.fac === fac && e.type === 'phoenix').length;
       const templars = ents(e => e.fac === fac && e.type === 'templar').length;
-      if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
+      if (collectors < 5 && p.res >= 60) enqueue(ark, 'collector');
+      else if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
       else if (lancers <= seekers / 2 && p.res >= 220) enqueue(ark, 'lancer');
       else if (phoenixes < 2 && p.res >= 150 && game.t > 150) enqueue(ark, 'phoenix');
       else if (templars < 1 && guards >= 1 && p.res >= 260 && game.t > 240) enqueue(ark, 'templar');
@@ -1623,11 +1636,15 @@ function drawEnt(e) {
   }
 
   else { // exodus: diamonds
-    ctx.fillStyle = e.type === 'ark' ? '#4a3a14' : '#705a1e';
+    ctx.fillStyle = e.type === 'ark' ? '#4a3a14' : e.type === 'collector' ? '#2e5a52' : '#705a1e';
     ctx.strokeStyle = col; ctx.lineWidth = e.type === 'ark' ? 2.5 : 1.5;
     ctx.beginPath(); ctx.moveTo(x, y - s - 2); ctx.lineTo(x + s + 2, y); ctx.lineTo(x, y + s + 2); ctx.lineTo(x - s - 2, y); ctx.closePath();
     ctx.fill(); ctx.stroke();
-    if (e.type === 'ark') {
+    if (e.type === 'collector') {
+      // glows cyan while hauling crystal back to the Ark
+      ctx.fillStyle = e.order.type === 'harvest' && e.order.carry > 0 ? '#6ee7ff' : '#9ff0e2';
+      ctx.beginPath(); ctx.arc(x, y, s * 0.4, 0, Math.PI * 2); ctx.fill();
+    } else if (e.type === 'ark') {
       ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x, y - s * 0.5); ctx.lineTo(x + s * 0.5, y); ctx.lineTo(x, y + s * 0.5); ctx.lineTo(x - s * 0.5, y); ctx.closePath(); ctx.stroke();
       if (e.deployed) {
