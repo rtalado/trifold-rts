@@ -276,6 +276,87 @@ function techMet(fac, type) {
   return game.entities.some(e => !e.dead && e.fac === fac && e.type === r && !e.constructing && !e.growing);
 }
 
+// ---------------- research / upgrades ----------------
+// Each faction has its own three-step upgrade line, researched at its core. They
+// permanently buff that faction's units: two attack tiers and one defence tier.
+// Effects are multipliers; `req` gates the second attack tier behind the first.
+const RESEARCH = {};
+const RESEARCH_BY_FAC = {};
+(function () {
+  // [attack I, defence, attack II] flavour names per faction
+  const SPEC = {
+    vanguard:  ['Hardened Rounds', 'Composite Armor', 'Depleted Slugs'],
+    myriad:    ['Sharpened Claws', 'Chitin Plating', 'Corrosive Enzymes'],
+    exodus:    ['Focused Lenses', 'Aegis Matrix', 'Solar Overcharge'],
+    choir:     ['Wailing Edge', 'Bound Essence', 'Grave Hunger'],
+    syndicate: ['Premium Munitions', 'Reinforced Plating', 'Black-Market Ordnance'],
+    warden:    ['Tempered Blades', 'Forged Bulwark', 'Siege Doctrine'],
+    ember:     ['Whetted Steel', 'Boiled Leather', 'Wildfire Oil'],
+    verdant:   ['Barbed Thorns', 'Ironbark', 'Toxic Sap'],
+    stormforge:['Overclocked Coils', 'Plated Chassis', 'Arc Capacitors'],
+    pact:      ['Cruel Edges', 'Bone Wards', 'Bloodlust'],
+  };
+  const SHIELDED = { exodus: true, stormforge: true };
+  for (const fac in SPEC) {
+    const [n1, n2, n3] = SPEC[fac];
+    const a1 = fac + '_atk1', d1 = fac + '_def1', a2 = fac + '_atk2';
+    RESEARCH[a1] = { fac, name: n1, desc: '+25% attack damage for all your combat units.', cost: 150, time: 30, dmg: 1.25 };
+    RESEARCH[d1] = { fac, name: n2, cost: 175, time: 35, hp: 1.2,
+      desc: SHIELDED[fac] ? '+20% max HP and +25% shields for all your units.' : '+20% max HP for all your units.',
+      shield: SHIELDED[fac] ? 1.25 : undefined };
+    RESEARCH[a2] = { fac, name: n3, desc: '+30% more attack damage. Requires ' + n1 + '.', cost: 320, time: 45, dmg: 1.3, req: a1 };
+    RESEARCH_BY_FAC[fac] = [a1, d1, a2];
+  }
+})();
+
+// derive a player's stat multipliers from the set of upgrades they've researched
+function recalcMul(p) {
+  p.dmgMul = 1; p.hpBonusMul = 1; p.shBonusMul = 1;
+  for (const rid of p.research) {
+    const r = RESEARCH[rid]; if (!r) continue;
+    if (r.dmg) p.dmgMul *= r.dmg;
+    if (r.hp) p.hpBonusMul *= r.hp;
+    if (r.shield) p.shBonusMul *= r.shield;
+  }
+}
+// effective attack damage of an entity, with its owner's attack upgrades applied
+function dmgOf(e) {
+  const p = e.def.kind === 'unit' && game.players[e.fac];
+  return e.def.dmg * (p ? p.dmgMul : 1);
+}
+function researchQueued(fac, rid) {
+  return game.entities.some(e => !e.dead && e.fac === fac && e.queue && e.queue.some(q => q.research && q.rid === rid));
+}
+// apply a finished research: record it, refresh multipliers, and retroactively
+// rescale existing units so the buff is immediate (preserving their health %).
+function applyResearch(fac, rid) {
+  const p = game.players[fac], r = RESEARCH[rid];
+  if (!p || !r || p.research.has(rid)) return;
+  p.research.add(rid);
+  recalcMul(p);
+  for (const e of game.entities) {
+    if (e.dead || e.fac !== fac || e.def.kind !== 'unit') continue;
+    const hpFrac = e.hpMax > 0 ? e.hp / e.hpMax : 1;
+    e.hpMax = e.def.hp * p.hpBonusMul; e.hp = e.hpMax * hpFrac;
+    const shMax = (e.def.shield || 0) * p.shBonusMul;
+    const shFrac = e.shieldMax > 0 ? e.shield / e.shieldMax : 0;
+    e.shieldMax = shMax; e.shield = shMax * shFrac;
+  }
+  localMsg(fac, 'Researched ' + r.name);
+}
+function enqueueResearch(e, rid) {
+  const r = RESEARCH[rid], p = game.players[e.fac];
+  if (!r || r.fac !== e.fac || !e.def.core) return false;
+  if (p.research.has(rid)) { localMsg(e.fac, 'Already researched'); return false; }
+  if (researchQueued(e.fac, rid)) { localMsg(e.fac, 'Already researching ' + r.name); return false; }
+  if (r.req && !p.research.has(r.req)) { localMsg(e.fac, 'Requires ' + RESEARCH[r.req].name); return false; }
+  if (e.queue.length >= 5) { localMsg(e.fac, 'Queue is full'); return false; }
+  if (p.res < r.cost) { localMsg(e.fac, 'Not enough ' + FACTIONS[e.fac].res); return false; }
+  p.res -= r.cost;
+  e.queue.push({ research: true, rid, type: 'research', t: r.time, total: r.time });
+  return true;
+}
+
 // economy tuning
 const ECON = {
   workerCarry: 10, workerMine: 2.0,
@@ -429,6 +510,7 @@ function setupFaction(fac, base, isAI) {
     gainAccum: 0, income: 0,
     swarmRally: towardCenter(0.18),
     lastAttack: null, waveSize: 0,
+    research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1,
   };
   game.players[fac] = p;
 
@@ -489,11 +571,15 @@ function setupFaction(fac, base, isAI) {
 
 function spawnEnt(type, fac, x, y, opts = {}) {
   const d = DEFS[type];
+  // units inherit their owner's researched HP/shield upgrades
+  const p = game.players[fac];
+  const hpMul = (d.kind === 'unit' && p) ? p.hpBonusMul : 1;
+  const shMul = (d.kind === 'unit' && p) ? p.shBonusMul : 1;
   const e = {
     id: nextId++, type, def: d, fac,
     x: clamp(x, 20, WORLD_W - 20), y: clamp(y, 20, WORLD_H - 20),
-    hp: d.hp, hpMax: d.hp, size: d.size,
-    shield: d.shield || 0, shieldMax: d.shield || 0, lastHurt: -99,
+    hp: d.hp * hpMul, hpMax: d.hp * hpMul, size: d.size,
+    shield: (d.shield || 0) * shMul, shieldMax: (d.shield || 0) * shMul, lastHurt: -99,
     cd: 0, blinkCd: 0, scanT: Math.random() * 0.25, tgt: 0,
     order: { type: 'idle' }, dead: false,
     queue: [], rally: null, deployed: false,
@@ -575,28 +661,29 @@ function findTarget(e) {
 }
 
 function fireAt(e, t) {
-  const d = e.def;
+  const d = e.def, dmg = dmgOf(e);
   e.cd = d.cd;
   e.tgt = t.id;
   if (d.shot === 'melee') {
-    applyDamage(t, d.dmg, e);
+    applyDamage(t, dmg, e);
     if (d.splash) splash(e, t, d);
     addFx({ kind: 'slash', x: t.x, y: t.y, ttl: 0.15, max: 0.15, color: facColor(e.fac) });
   } else if (d.shot === 'beam') {
-    applyDamage(t, d.dmg, e);
+    applyDamage(t, dmg, e);
     addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: t.x, y2: t.y, ttl: 0.18, max: 0.18, color: facColor(e.fac) });
   } else {
     const speed = d.shot === 'shell' ? 240 : 380;
     game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed,
-      dmg: d.dmg, splash: d.splash || 0, fac: e.fac, attackerId: e.id,
+      dmg, splash: d.splash || 0, fac: e.fac, attackerId: e.id,
       color: d.shot === 'glob' ? '#9fe06a' : facColor(e.fac), r: d.shot === 'shell' ? 4 : 2.5 });
   }
 }
 
 function splash(e, center, d) {
+  const dmg = dmgOf(e);
   for (const o of game.entities) {
     if (o.dead || o.fac === e.fac || o === center) continue;
-    if (dist(center, o) < d.splash + o.size) applyDamage(o, d.dmg * 0.6, e);
+    if (dist(center, o) < d.splash + o.size) applyDamage(o, dmg * 0.6, e);
   }
 }
 
@@ -783,6 +870,7 @@ function tickQueue(e, dt) {
   const item = e.queue[0];
   item.t -= dt;
   if (item.t <= 0) {
+    if (item.research) { e.queue.shift(); applyResearch(e.fac, item.rid); return; }
     if (countUnits(e.fac) >= FACTIONS[e.fac].cap) { item.t = 0; return; } // hold until supply frees
     e.queue.shift();
     const a = Math.random() * Math.PI * 2;
@@ -1055,10 +1143,24 @@ function tickProjectiles(dt) {
 }
 
 // ---------------- AI ----------------
+// AI buys its upgrade line in order, once it has a comfortable surplus and the
+// core isn't busy producing — keeps bots teching up without starving their army.
+function aiResearch(fac, core, p) {
+  if (!core || core.queue.length || game.t < 120) return;
+  for (const rid of RESEARCH_BY_FAC[fac] || []) {
+    const r = RESEARCH[rid];
+    if (p.research.has(rid)) continue;
+    if (r.req && !p.research.has(r.req)) return;
+    if (p.res >= r.cost + 200) enqueueResearch(core, rid);
+    return; // research in order; wait if we can't afford the next one yet
+  }
+}
+
 function aiTick(fac) {
   const p = game.players[fac];
   const myCore = ents(e => e.fac === fac && e.def.core)[0];
   if (!myCore) return;
+  aiResearch(fac, myCore, p);
   // free-for-all: go for the nearest surviving enemy core
   const enemyCore = ents(e => e.def.core && e.fac !== fac && e.fac !== 'neutral')
     .sort((a, b) => dist(myCore, a) - dist(myCore, b))[0];
@@ -1507,7 +1609,7 @@ addEventListener('keydown', ev => {
   }
   // command card hotkeys (digits — letters are reserved for camera pan)
   const card = currentCommands();
-  const hot = ['1', '2', '3', '4', '5', '6', '7'];
+  const hot = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
   const i = hot.indexOf(k);
   if (i >= 0 && card[i] && card[i].enabled) card[i].onClick();
 });
@@ -1593,6 +1695,23 @@ function currentCommands() {
       onClick: () => { game.placing = type; },
     });
   };
+  const researchBtn = (host, rid) => {
+    const r = RESEARCH[rid], have = p.research.has(rid);
+    const inProg = researchQueued(fac, rid);
+    const reqMet = !r.req || p.research.has(r.req);
+    cmds.push({
+      rid, label: (have ? '✓ ' : 'Research ') + r.name,
+      cost: (have || inProg || !reqMet) ? 0 : r.cost,
+      sub: have ? 'Researched' : (inProg ? 'Researching…' : (!reqMet ? 'Requires ' + RESEARCH[r.req].name : null)),
+      desc: r.desc,
+      enabled: !have && !inProg && reqMet && p.res >= r.cost && !host.constructing && !host.growing,
+      onClick: () => {
+        if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'research', id: host.id, rid });
+        else enqueueResearch(host, rid);
+        refreshCard();
+      },
+    });
+  };
 
   if (types.has('worker')) ['barracks', 'factory', 'airfield', 'turret'].forEach(buildBtn);
 
@@ -1600,6 +1719,7 @@ function currentCommands() {
     const d = sel0.def;
     if (d.grows) d.grows.forEach(buildBtn);
     if (d.produces && !sel0.constructing && !sel0.growing) d.produces.forEach(t => prodBtn(sel0, t));
+    if (d.core && RESEARCH_BY_FAC[fac]) RESEARCH_BY_FAC[fac].forEach(rid => researchBtn(sel0, rid));
     if (sel0.type === 'ark') {
       cmds.push({
         label: sel0.deployed ? 'Undeploy Ark' : 'Deploy Ark', cost: 0, enabled: true,
@@ -1613,7 +1733,7 @@ function currentCommands() {
       });
     }
   }
-  return cmds.slice(0, 7);
+  return cmds.slice(0, 10);
 }
 
 // compact stat readout for a definition, shown in the build tooltip
@@ -1652,7 +1772,7 @@ function refreshCard() {
   document.getElementById('tooltip').style.display = 'none';
   if (!game) return;
   const cmds = currentCommands();
-  const hot = ['1', '2', '3', '4', '5', '6', '7'];
+  const hot = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
   cmds.forEach((c, i) => {
     const b = document.createElement('button');
     b.disabled = !c.enabled;
@@ -1688,7 +1808,9 @@ function updateHUD() {
     if (e.growing) s += '\nGrowing ' + Math.floor(e.progress / e.def.time * 100) + '%';
     if (e.queue && e.queue.length) {
       const it = e.queue[0];
-      s += '\nProducing ' + DEFS[it.type].name + ' ' + Math.floor((1 - it.t / it.total) * 100) + '%'
+      const what = it.research ? ('Researching ' + (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'))
+        : ('Producing ' + DEFS[it.type].name);
+      s += '\n' + what + ' ' + Math.floor((1 - it.t / it.total) * 100) + '%'
         + (e.queue.length > 1 ? ' (+' + (e.queue.length - 1) + ' queued)' : '');
     }
     if (e.type === 'hive') s += '\nRight-click to set the swarm rally';
@@ -2317,13 +2439,13 @@ function buildSnap() {
     const q = e.queue && e.queue.length ? e.queue[0] : null;
     return [e.id, TYPE_IDX[e.type], Math.round(e.x), Math.round(e.y),
       Math.ceil(e.hp), Math.ceil(e.shield), fl, prog,
-      q ? TYPE_IDX[q.type] : 0, q ? Math.round((1 - q.t / q.total) * 100) : 0,
-      e.queue ? e.queue.length : 0];
+      q ? (q.research ? -1 : TYPE_IDX[q.type]) : 0, q ? Math.round((1 - q.t / q.total) * 100) : 0,
+      e.queue ? e.queue.length : 0, q && q.research ? q.rid : 0];
   });
   const players = {};
   for (const f in game.players) {
     const p = game.players[f];
-    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0];
+    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research]];
   }
   return {
     t: 'snap', gt: +game.t.toFixed(2), players, units,
@@ -2338,7 +2460,8 @@ function applySnap(m) {
   game.t = m.gt;
   for (const f in m.players) {
     const p = game.players[f], a = m.players[f];
-    if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3]; }
+    if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3];
+      p.research = new Set(a[4] || []); recalcMul(p); }
   }
   game.nodes = m.nodes.map(a => ({ id: a[0], x: a[1], y: a[2], amount: a[3], max: a[4], r: 20 }));
   unrle(m.creep, game.creep);
@@ -2346,7 +2469,7 @@ function applySnap(m) {
   for (const f of m.fx) addFx(f);
   const seen = new Set();
   for (const row of m.units) {
-    const [id, ti, x, y, hp, sh, fl, prog, qt, qp, qn] = row;
+    const [id, ti, x, y, hp, sh, fl, prog, qt, qp, qn, qrid] = row;
     seen.add(id);
     let e = game.entities.find(o => o.id === id);
     if (!e) {
@@ -2356,6 +2479,12 @@ function applySnap(m) {
         deployed: false, lastHurt: -99, cd: 0, tgt: 0 };
       game.entities.push(e);
     }
+    // reflect researched HP/shield upgrades so health bars read correctly
+    if (e.def.kind === 'unit') {
+      const pp = game.players[e.fac];
+      e.hpMax = e.def.hp * (pp ? pp.hpBonusMul : 1);
+      e.shieldMax = (e.def.shield || 0) * (pp ? pp.shBonusMul : 1);
+    }
     e.nx = x; e.ny = y;
     e.hp = hp; e.shield = sh;
     e.deployed = !!(fl & 1); e.constructing = !!(fl & 2); e.growing = !!(fl & 4);
@@ -2363,7 +2492,10 @@ function applySnap(m) {
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };
     e.progress = prog / 100 * e.def.time;
     e.queue = [];
-    for (let i = 0; i < qn; i++) e.queue.push({ type: TYPE_LIST[qt], t: 1 - qp / 100, total: 1 });
+    for (let i = 0; i < qn; i++) {
+      if (qt === -1) e.queue.push({ research: true, rid: qrid, type: 'research', t: 1 - qp / 100, total: 1 });
+      else e.queue.push({ type: TYPE_LIST[qt], t: 1 - qp / 100, total: 1 });
+    }
   }
   game.entities = game.entities.filter(e => seen.has(e.id));
   game.sel = game.sel.filter(e => seen.has(e.id));
@@ -2537,6 +2669,9 @@ function handleCmd(m) {
   } else if (m.kind === 'deploy') {
     const e = byId(m.id);
     if (e && e.fac === fac && e.type === 'ark') { e.deployed = m.on; if (m.on) e.order = { type: 'idle' }; }
+  } else if (m.kind === 'research') {
+    const e = byId(m.id);
+    if (e && e.fac === fac && e.def.core) enqueueResearch(e, m.rid);
   }
 }
 
