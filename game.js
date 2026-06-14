@@ -432,6 +432,17 @@ const ECON = {
   obeliskIncome: 1.4,
 };
 
+// AI difficulty. `incomeMul` is the dominant lever (the bot's whole economy is
+// scaled); `firstWave`/`waveStep` control how soon and how relentlessly it attacks;
+// `react` is how often (seconds) the bot re-plans. Easy is a clear handicap; Brutal
+// out-economies a human and pushes almost immediately.
+const DIFFS = {
+  easy:   { name: 'Easy',   incomeMul: 0.6, firstWave: 165, waveStep: 3, react: 1.5 },
+  normal: { name: 'Normal', incomeMul: 1.0, firstWave: 90,  waveStep: 2, react: 1.0 },
+  hard:   { name: 'Hard',   incomeMul: 1.5, firstWave: 55,  waveStep: 2, react: 0.7 },
+  brutal: { name: 'Brutal', incomeMul: 2.1, firstWave: 35,  waveStep: 1, react: 0.5 },
+};
+
 // ---------------- global state ----------------
 let game = null;
 let nextId = 1;
@@ -461,10 +472,13 @@ function countUnits(fac) { return game.entities.reduce((n, e) => n + (!e.dead &&
 function armyOf(fac) { return ents(e => e.fac === fac && e.def.kind === 'unit' && (e.def.dmg > 0 || e.def.aura) && !e.def.harvester && !e.def.core); }
 
 // ---------------- game setup ----------------
-function newGame(playerFac) { // single player vs one AI
-  const others = Object.keys(FACTIONS).filter(f => f !== playerFac);
-  const aiFac = others[Math.floor(Math.random() * others.length)];
-  buildMatch([{ fac: playerFac, ai: false }, { fac: aiFac, ai: true }], playerFac, 'sp', (Math.random() * 1e9) | 0);
+// single player vs 1–3 AI opponents (distinct random factions) at a chosen difficulty
+function newGame(playerFac, aiCount = 1, diff = 'normal') {
+  const pool = Object.keys(FACTIONS).filter(f => f !== playerFac);
+  for (let i = pool.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const ais = pool.slice(0, Math.max(1, Math.min(3, aiCount)));
+  const roster = [{ fac: playerFac, ai: false }].concat(ais.map(f => ({ fac: f, ai: true, diff })));
+  buildMatch(roster, playerFac, 'sp', (Math.random() * 1e9) | 0);
 }
 
 // up to four spawn corners; with 2 players they sit diagonally opposite
@@ -528,10 +542,14 @@ function buildMatch(roster, localFac, mode, seed) {
     sel: [], placing: null,
     cam: { x: 0, y: 0, z: 1 },
     creepTimer: 0, hudTimer: 0, aiTimer: 0, netTimer: 0, netFx: [],
+    aiInterval: 1.0,
   };
+  // bots re-plan as often as the toughest of them demands
+  const reacts = roster.filter(r => r.ai).map(r => (DIFFS[r.diff] || DIFFS.normal).react);
+  game.aiInterval = reacts.length ? Math.min(...reacts) : 1.0;
 
   const bases = cornerBases(roster.length);
-  roster.forEach((r, i) => { r.base = bases[i]; setupFaction(r.fac, bases[i], r.ai); });
+  roster.forEach((r, i) => { r.base = bases[i]; setupFaction(r.fac, bases[i], r.ai, r.diff); });
   genLayout(rng, bases);
 
   const me = roster.find(r => r.fac === localFac) || roster[0];
@@ -552,14 +570,18 @@ function buildMatch(roster, localFac, mode, seed) {
   refreshCard();
 }
 
-function setupFaction(fac, base, isAI) {
+function setupFaction(fac, base, isAI, diff) {
   const towardCenter = a => ({ x: base.x + (WORLD_W / 2 - base.x) * a, y: base.y + (WORLD_H / 2 - base.y) * a });
+  const D = (isAI && DIFFS[diff]) ? DIFFS[diff] : DIFFS.normal;
   const p = {
     res: 0, isAI, base, kills: 0,
     gainAccum: 0, income: 0,
     swarmRally: towardCenter(0.18),
     lastAttack: null, waveSize: 0,
     research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1,
+    // difficulty handicaps (1 / neutral for humans)
+    diff: isAI ? (diff || 'normal') : null,
+    incomeMul: isAI ? D.incomeMul : 1, firstWave: D.firstWave, waveStep: D.waveStep,
   };
   game.players[fac] = p;
 
@@ -655,7 +677,7 @@ function applyDamage(t, dmg, attacker) {
     attacker.hp = Math.min(attacker.hpMax, attacker.hp + dmg0 * ECON.choirLeech);
   // ember war economy: plunder scales with the damage the warband deals to foes
   if (attacker && attacker.fac === 'ember' && t.fac !== 'ember' && game.players.ember) {
-    const g = dmg0 * ECON.emberLootPerDmg;
+    const g = dmg0 * ECON.emberLootPerDmg * game.players.ember.incomeMul;
     game.players.ember.res += g; game.players.ember.gainAccum += g;
   }
   // retaliate if idle
@@ -669,17 +691,17 @@ function applyDamage(t, dmg, attacker) {
     // every death anywhere pays the Choir essence — friend or foe
     const choirP = game.players.choir;
     if (choirP) {
-      const g = ECON.choirDeathFlat + t.hpMax * ECON.choirDeathPct;
+      const g = (ECON.choirDeathFlat + t.hpMax * ECON.choirDeathPct) * choirP.incomeMul;
       choirP.res += g; choirP.gainAccum += g;
     }
     // syndicate collects a bounty on its kills
     if (attacker && attacker.fac === 'syndicate' && t.fac !== 'syndicate' && game.players.syndicate) {
-      const g = ECON.synBountyFlat + t.hpMax * ECON.synBountyPct;
+      const g = (ECON.synBountyFlat + t.hpMax * ECON.synBountyPct) * game.players.syndicate.incomeMul;
       game.players.syndicate.res += g; game.players.syndicate.gainAccum += g;
     }
     // obsidian pact: each of your own fallen units spills Blood for the next summoning
     if (t.fac === 'pact' && t.def.kind === 'unit' && game.players.pact) {
-      const g = ECON.pactMartyrFlat + t.hpMax * ECON.pactMartyrPct;
+      const g = (ECON.pactMartyrFlat + t.hpMax * ECON.pactMartyrPct) * game.players.pact.incomeMul;
       game.players.pact.res += g; game.players.pact.gainAccum += g;
     }
     // cracking open a neutral Hoard pays its destroyer a one-time bounty
@@ -1062,6 +1084,7 @@ function tickEconomy(dt) {
     }
     // every Obelisk this faction holds adds a steady trickle
     gain += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.obeliskIncome;
+    gain *= p.incomeMul; // AI difficulty handicap (1 for humans)
     p.res += gain * dt;
     p.gainAccum += gain * dt;
   }
@@ -1227,9 +1250,9 @@ function aiTick(fac) {
   if (defendPt && Math.hypot(defendPt.x - myCore.x, defendPt.y - myCore.y) < 700) {
     for (const u of army) if (u.order.type === 'idle' || u.order.type === 'amove')
       u.order = { type: 'amove', x: defendPt.x, y: defendPt.y };
-  } else if (army.length >= p.waveSize && game.t > 90) {
+  } else if (army.length >= p.waveSize && game.t > p.firstWave) {
     for (const u of army) u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
-    p.waveSize += 2;
+    p.waveSize += p.waveStep;
   }
 
   if (fac === 'vanguard') {
@@ -1506,7 +1529,7 @@ function update(dt) {
 
   // the simulating side (SP or host) drives every AI faction
   game.aiTimer -= dt;
-  if (game.aiTimer <= 0) { game.aiTimer = 1.0; for (const f of game.aiFacs) aiTick(f); }
+  if (game.aiTimer <= 0) { game.aiTimer = game.aiInterval || 1.0; for (const f of game.aiFacs) aiTick(f); }
 
   // host: stream a state snapshot to all guests ~10×/s
   if (game.mode === 'host') {
@@ -1557,6 +1580,7 @@ function backToMenu() {
   document.getElementById('hud').style.display = 'none';
   document.getElementById('menu').style.display = 'flex';
   if (netConnected()) showLobby(); // still linked — straight back to the rematch lobby
+  else showScreen('home');
 }
 
 // ---------------- input ----------------
@@ -2725,7 +2749,7 @@ function handleNet(m) {
     case 'start': {
       net.inGame = true;
       const me = m.roster.find(r => r.slot === net.slot) || m.roster[0];
-      buildMatch(m.roster.map(r => ({ fac: r.fac, ai: r.ai })), me.fac, net.host ? 'host' : 'guest', m.seed);
+      buildMatch(m.roster.map(r => ({ fac: r.fac, ai: r.ai, diff: r.diff })), me.fac, net.host ? 'host' : 'guest', m.seed);
       break;
     }
     case 'snap': if (game && game.mode === 'guest' && !game.over) applySnap(m); break;
@@ -2771,13 +2795,16 @@ function onDisconnect() {
   document.getElementById('mpLobby').style.display = 'none';
   document.getElementById('mpPanel').style.display = 'none';
   for (const c of document.querySelectorAll('#cards .card')) c.classList.remove('picked');
+  if (document.getElementById('menu').style.display !== 'none') showScreen('home');
 }
 
 // ---------------- lobby ----------------
 function showLobby() {
   net.inGame = false; // back in the lobby — allow re-picking for a rematch
   document.getElementById('menu').style.display = 'flex';
+  showScreen('mp');
   document.getElementById('mpPanel').style.display = 'none';
+  mountCards('cardsHolderMP');
   document.getElementById('mpLobby').style.display = 'block';
   updateLobby();
 }
@@ -2806,6 +2833,8 @@ function updateLobby() {
 
   document.getElementById('mpAiWrap').style.display = net.host ? 'flex' : 'none';
   document.getElementById('mpAiCount').textContent = 'AI opponents: ' + net.aiCount;
+  document.getElementById('mpDiffWrap').style.display = (net.host && net.aiCount > 0) ? 'flex' : 'none';
+  if (net.host && net.aiCount > 0) renderDiff('mpDiff', net.diff, k => { net.diff = k; updateLobby(); });
   const picks = net.players.map(p => p.fac);
   const allPicked = picks.length > 0 && picks.every(Boolean);
   const distinct = new Set(picks).size === picks.length;
@@ -2831,37 +2860,89 @@ function hostStart() {
   const ai = [];
   for (let i = 0; i < net.aiCount && pool.length; i++) ai.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
   const roster = net.players.map(p => ({ fac: p.fac, ai: false, slot: p.slot }))
-    .concat(ai.map(f => ({ fac: f, ai: true, slot: -1 })));
+    .concat(ai.map(f => ({ fac: f, ai: true, slot: -1, diff: net.diff || 'normal' })));
   if (roster.length < 2 || roster.length > 4) { mpStatus('Need 2–4 players total.'); return; }
   netSend({ t: 'start', roster, seed: (Math.random() * 1e9) | 0 });
 }
 
 // ---------------- menu wiring ----------------
-for (const card of document.querySelectorAll('#cards .card')) {
+const SP = { fac: null, ai: 1, diff: 'normal' }; // single-player setup state
+net.diff = 'normal';                              // host's AI difficulty for multiplayer
+const cardsEl = document.getElementById('cards');
+const $ = id => document.getElementById(id);
+
+function mountCards(holderId) { $(holderId).appendChild(cardsEl); cardsEl.style.display = 'flex'; }
+function showScreen(name) {
+  $('screenHome').style.display = name === 'home' ? 'flex' : 'none';
+  $('screenSP').style.display = name === 'sp' ? 'flex' : 'none';
+  $('screenMP').style.display = name === 'mp' ? 'flex' : 'none';
+  if (name === 'sp') mountCards('cardsHolderSP');
+}
+
+const DIFF_KEYS = ['easy', 'normal', 'hard', 'brutal'];
+function renderDiff(containerId, current, onPick) {
+  const c = $(containerId); c.innerHTML = '';
+  for (const k of DIFF_KEYS) {
+    const b = document.createElement('button');
+    b.className = 'diffbtn' + (k === current ? ' sel' : '');
+    b.textContent = DIFFS[k].name.toUpperCase();
+    b.onclick = () => onPick(k);
+    c.appendChild(b);
+  }
+}
+
+function refreshSP() {
+  $('spAiCount').textContent = SP.ai;
+  $('spStart').disabled = !SP.fac;
+  renderDiff('spDiff', SP.diff, k => { SP.diff = k; refreshSP(); });
+  for (const card of cardsEl.querySelectorAll('.card')) card.classList.toggle('picked', card.dataset.fac === SP.fac);
+}
+function resetMP() {
+  if (net.peer) return; // already hosting/joined — keep current lobby/panel
+  $('mpPanel').style.display = 'none';
+  $('mpLobby').style.display = 'none';
+  mpStatus('');
+}
+
+// faction cards: in the lobby they set your pick; in single player they choose your faction
+for (const card of cardsEl.querySelectorAll('.card')) {
   card.addEventListener('click', () => {
-    if (netConnected()) { if (!net.inGame) pickFaction(card.dataset.fac); }
-    else newGame(card.dataset.fac);
+    if (netConnected() && !net.inGame) pickFaction(card.dataset.fac);
+    else if (!netConnected()) { SP.fac = card.dataset.fac; refreshSP(); }
   });
 }
-document.getElementById('mpHostBtn').addEventListener('click', () => {
+
+$('btnSP').addEventListener('click', () => { showScreen('sp'); refreshSP(); });
+$('btnMP').addEventListener('click', () => { showScreen('mp'); resetMP(); });
+$('spBack').addEventListener('click', () => showScreen('home'));
+$('mpBack').addEventListener('click', () => { if (net.peer) onDisconnect(); showScreen('home'); });
+$('spAiMinus').addEventListener('click', () => { SP.ai = Math.max(1, SP.ai - 1); refreshSP(); });
+$('spAiPlus').addEventListener('click', () => { SP.ai = Math.min(3, SP.ai + 1); refreshSP(); });
+$('spStart').addEventListener('click', () => { if (SP.fac) newGame(SP.fac, SP.ai, SP.diff); });
+
+$('mpHostBtn').addEventListener('click', () => {
   if (net.peer) return;
   mpStatus('Creating a room…');
   hostGame();
 });
-document.getElementById('mpJoinBtn').addEventListener('click', () => {
+$('mpJoinBtn').addEventListener('click', () => {
   if (net.code) return;
-  document.getElementById('mpPanel').style.display = 'block';
+  $('mpPanel').style.display = 'block';
   mpStatus('Enter the host’s 5-letter room code, then press JOIN.');
-  document.getElementById('mpJoinCode').focus();
+  $('mpJoinCode').focus();
 });
-document.getElementById('mpJoinGo').addEventListener('click', () => {
-  const code = (document.getElementById('mpJoinCode').value || '').trim().toUpperCase();
+$('mpJoinGo').addEventListener('click', () => {
+  const code = ($('mpJoinCode').value || '').trim().toUpperCase();
   if (code.length < 4) { mpStatus('Enter the room code.'); return; }
   if (net.peer) return;
   mpStatus('Connecting to room ' + code + '…');
   joinGame(code);
 });
-document.getElementById('mpJoinCode').addEventListener('keydown', ev => { if (ev.key === 'Enter') document.getElementById('mpJoinGo').click(); });
-document.getElementById('mpStart').addEventListener('click', hostStart);
-document.getElementById('mpAiMinus').addEventListener('click', () => { net.aiCount = Math.max(0, net.aiCount - 1); updateLobby(); });
-document.getElementById('mpAiPlus').addEventListener('click', () => { net.aiCount = Math.min(4 - net.players.length, net.aiCount + 1); updateLobby(); });
+$('mpJoinCode').addEventListener('keydown', ev => { if (ev.key === 'Enter') $('mpJoinGo').click(); });
+$('mpStart').addEventListener('click', hostStart);
+$('mpAiMinus').addEventListener('click', () => { net.aiCount = Math.max(0, net.aiCount - 1); updateLobby(); });
+$('mpAiPlus').addEventListener('click', () => { net.aiCount = Math.min(4 - net.players.length, net.aiCount + 1); updateLobby(); });
+
+// boot: cards live in the single-player holder; start on the home screen
+mountCards('cardsHolderSP');
+showScreen('home');

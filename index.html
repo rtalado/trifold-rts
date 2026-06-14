@@ -54,8 +54,44 @@
   .card.verdant .play   { background:#16401a; color:#bff0ac; }
   .card.stormforge .play{ background:#4a1338; color:#ffbcdd; }
   .card.pact .play      { background:#3a0e12; color:#ffb3b8; }
-  #menu .foot { margin-top:26px; font-size:12px; color:#5d6b82; }
+  #menu .foot { margin-top:26px; font-size:12px; color:#5d6b82; text-align:center; }
   .card.picked { border-color:#7dffa8 !important; box-shadow:0 0 30px #7dffa833 !important; }
+
+  /* ---------- menu screens ---------- */
+  .screen { display:flex; flex-direction:column; align-items:center; }
+  .homebtns { display:flex; gap:22px; flex-wrap:wrap; justify-content:center; margin-top:20px; }
+  .bigbtn { display:flex; flex-direction:column; align-items:center; gap:8px; width:330px; max-width:86vw;
+    padding:30px 24px; background:#0e131c; border:1px solid #2a3954; border-radius:12px; cursor:pointer;
+    color:#cdd6e4; transition:transform .15s, border-color .15s, box-shadow .15s; }
+  .bigbtn:hover { transform:translateY(-5px); border-color:#4a6494; box-shadow:0 0 34px #4a649433; }
+  .bigbtn .bb-t { font-size:24px; font-weight:600; letter-spacing:3px; }
+  .bigbtn .bb-s { font-size:12.5px; color:#8b9bb4; letter-spacing:.5px; }
+  #btnSP:hover { border-color:#7dffa8; box-shadow:0 0 34px #7dffa833; }
+  #btnSP .bb-t { color:#9fe6b6; }
+  #btnMP:hover { border-color:#7cbfff; box-shadow:0 0 34px #4da6ff33; }
+  #btnMP .bb-t { color:#9fd0ff; }
+  .screenhd { font-size:15px; letter-spacing:2px; color:#9fb0c8; margin:6px 0 16px; text-transform:uppercase; }
+  .screenhd.small { font-size:12px; margin:14px 0 8px; color:#7b8aa3; }
+  .spopts { display:flex; gap:34px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:22px; }
+  .optrow { display:flex; align-items:center; gap:10px; }
+  .optlbl { font-size:12px; letter-spacing:2px; color:#7b8aa3; }
+  .stepbtn { width:30px; height:30px; background:#141c2a; color:#cdd6e4; border:1px solid #2a3954;
+    border-radius:6px; cursor:pointer; font-size:17px; line-height:1; }
+  .stepbtn:hover { background:#1d2a40; border-color:#4a6494; }
+  .stepval { min-width:22px; text-align:center; font-size:18px; font-weight:600; color:#e7edf5; }
+  .diffrow { display:flex; gap:6px; }
+  .diffbtn { padding:7px 14px; background:#141c2a; color:#aab6c9; border:1px solid #2a3954; border-radius:6px;
+    cursor:pointer; font-size:12px; letter-spacing:1px; }
+  .diffbtn:hover { background:#1d2a40; border-color:#4a6494; }
+  .diffbtn.sel { background:#173153; color:#9fd0ff; border-color:#4a6494; font-weight:600; }
+  .navrow { display:flex; gap:14px; margin-top:26px; }
+  .navbtn { padding:11px 26px; background:#141c2a; color:#cdd6e4; border:1px solid #2a3954; border-radius:6px;
+    cursor:pointer; font-size:13px; letter-spacing:2px; }
+  .navbtn:hover:not(:disabled) { background:#1d2a40; border-color:#4a6494; }
+  .navbtn.go { background:#1c4a30; color:#9fe6b6; border-color:#2a6442; font-weight:600; }
+  .navbtn.go:hover:not(:disabled) { background:#235c3b; }
+  .navbtn:disabled { opacity:.4; cursor:default; }
+  #mpDiffWrap { display:none; align-items:center; justify-content:center; gap:10px; margin:6px 0 10px; }
 
   /* ---------- multiplayer panel ---------- */
   #mpzone { margin-top:28px; width:900px; max-width:92vw; }
@@ -133,8 +169,27 @@
 
 <div id="menu">
   <h1>TRIFOLD</h1>
-  <div class="sub">ONE WAR &nbsp;·&nbsp; FIVE WAYS TO WAGE IT</div>
-  <div id="cards">
+  <div class="sub">ONE WAR &nbsp;·&nbsp; TEN WAYS TO WAGE IT</div>
+
+  <div id="screenHome" class="screen">
+    <div class="homebtns">
+      <button class="bigbtn" id="btnSP"><span class="bb-t">SINGLE PLAYER</span><span class="bb-s">Battle 1–3 AI opponents · choose difficulty</span></button>
+      <button class="bigbtn" id="btnMP"><span class="bb-t">MULTIPLAYER</span><span class="bb-s">Play with up to 3 friends across any network</span></button>
+    </div>
+  </div>
+
+  <div id="screenSP" class="screen" style="display:none">
+    <div class="screenhd">Choose your faction</div>
+    <div id="cardsHolderSP"></div>
+    <div class="spopts">
+      <div class="optrow"><span class="optlbl">AI OPPONENTS</span>
+        <button class="stepbtn" id="spAiMinus">–</button><span class="stepval" id="spAiCount">1</span><button class="stepbtn" id="spAiPlus">+</button></div>
+      <div class="optrow"><span class="optlbl">DIFFICULTY</span><div id="spDiff" class="diffrow"></div></div>
+    </div>
+    <div class="navrow"><button class="navbtn" id="spBack">◀ BACK</button><button class="navbtn go" id="spStart" disabled>START BATTLE ▶</button></div>
+  </div>
+
+  <div id="cards" style="display:none">
     <div class="card vanguard" data-fac="vanguard">
       <h2>IRON VANGUARD</h2>
       <div class="tag">The Architects</div>
@@ -247,31 +302,36 @@
       <span class="play">SEAL THE PACT</span>
     </div>
   </div>
-  <div id="mpzone">
-    <div id="mpButtons">
-      <span class="mplabel">PLAY WITH FRIENDS (UP TO 4) — WORKS ACROSS DIFFERENT NETWORKS:</span>
-      <button id="mpHostBtn">HOST GAME</button>
-      <button id="mpJoinBtn">JOIN GAME</button>
-    </div>
-    <div id="mpPanel">
-      <div class="mprow">
-        <input id="mpJoinCode" maxlength="5" placeholder="ROOM CODE" autocomplete="off">
-        <button id="mpJoinGo">JOIN</button>
+  <div id="screenMP" class="screen" style="display:none">
+    <div class="screenhd">Multiplayer — works across any network, no setup</div>
+    <div id="mpzone">
+      <div id="mpButtons">
+        <button id="mpHostBtn">HOST GAME</button>
+        <button id="mpJoinBtn">JOIN GAME</button>
       </div>
-      <div id="mpStatus"></div>
+      <div id="mpPanel">
+        <div class="mprow">
+          <input id="mpJoinCode" maxlength="5" placeholder="ROOM CODE" autocomplete="off">
+          <button id="mpJoinGo">JOIN</button>
+        </div>
+        <div id="mpStatus"></div>
+      </div>
+      <div id="mpLobby">
+        <div id="lobbyCodeWrap">ROOM CODE: <span id="lobbyCode">—</span></div>
+        <div id="lobbyPlayers"></div>
+        <div class="screenhd small">Pick your faction</div>
+        <div id="cardsHolderMP"></div>
+        <div id="mpDiffWrap"><span class="optlbl">AI DIFFICULTY</span><div id="mpDiff" class="diffrow"></div></div>
+        <div id="mpAiWrap"><button class="stepbtn" id="mpAiMinus">–</button><span id="mpAiCount">AI opponents: 0</span><button class="stepbtn" id="mpAiPlus">+</button></div>
+        <div id="lobbyText"></div>
+        <button id="mpStart" disabled>START MATCH</button>
+      </div>
     </div>
-    <div id="mpLobby">
-      <div id="lobbyCodeWrap">ROOM CODE: <span id="lobbyCode">—</span></div>
-      <div id="lobbyPlayers"></div>
-      <div id="mpAiWrap"><button id="mpAiMinus">–</button><span id="mpAiCount">AI opponents: 0</span><button id="mpAiPlus">+</button></div>
-      <div id="lobbyText"></div>
-      <button id="mpStart" disabled>START MATCH</button>
-    </div>
+    <div class="navrow"><button class="navbtn" id="mpBack">◀ BACK</button></div>
   </div>
-  <div class="foot">Single player: click a faction card — your AI opponent will be a different faction, chosen at random.<br>
-    Multiplayer (2–4): you each run <b>start.bat</b> (Windows) or <b>start.sh</b>; one player clicks HOST for a 5-letter code, the other clicks JOIN. Works across different networks — no port forwarding needed.<br>
-    Controls: drag-select · right-click to act · 1–7 command hotkeys · WASD/edges to pan · mouse wheel to zoom<br>
-    Hold units near a neutral <b>Obelisk</b> to capture it (+income) · destroy a guarded <b>Hoard</b> for a one-time bounty</div>
+
+  <div class="foot">Controls: drag-select · right-click to act · 1–0 command hotkeys · WASD/edges to pan · mouse wheel to zoom<br>
+    Capture neutral <b>Obelisks</b> for income · crack a guarded <b>Hoard</b> for a bounty · research upgrades at your faction's research building</div>
 </div>
 
 <canvas id="game"></canvas>
