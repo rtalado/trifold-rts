@@ -61,22 +61,28 @@
   #mpzone { margin-top:28px; width:900px; max-width:92vw; }
   #mpButtons { display:flex; align-items:center; justify-content:center; gap:12px; }
   #mpButtons .mplabel { font-size:12px; letter-spacing:2px; color:#7b8aa3; }
-  #mpButtons button, #mpGo, #mpCopy, #mpStart {
+  #mpButtons button, #mpJoinGo, #mpStart, #mpAiWrap button {
     background:#141c2a; color:#cdd6e4; border:1px solid #2a3954; border-radius:5px;
     padding:8px 18px; cursor:pointer; font-size:12px; letter-spacing:1px; }
-  #mpButtons button:hover, #mpGo:hover, #mpCopy:hover, #mpStart:hover:not(:disabled) {
+  #mpButtons button:hover, #mpJoinGo:hover, #mpStart:hover:not(:disabled), #mpAiWrap button:hover {
     background:#1d2a40; border-color:#4a6494; }
-  #mpStart { background:#173153; color:#9fd0ff; font-weight:600; }
+  #mpStart { background:#173153; color:#9fd0ff; font-weight:600; margin-top:12px; }
   #mpStart:disabled { opacity:.38; cursor:default; }
   #mpPanel { display:none; margin-top:14px; background:#0e131c; border:1px solid #222d40;
     border-radius:8px; padding:14px 16px; }
-  #mpStep { font-size:12.5px; color:#aab6c9; white-space:pre-line; margin-bottom:10px; line-height:1.5; }
-  .mprow { display:flex; gap:8px; margin-bottom:8px; }
-  .mprow textarea { flex:1; height:54px; background:#0a0e15; color:#6d7f9c; border:1px solid #222d40;
-    border-radius:5px; font-size:10px; padding:6px; resize:none; font-family:monospace; }
-  #mpStatus { font-size:12px; color:#ffd97d; min-height:16px; }
-  #mpLobby { display:none; margin-top:14px; align-items:center; justify-content:center; gap:16px;
-    background:#0e131c; border:1px solid #2a5440; border-radius:8px; padding:12px 16px; }
+  .mprow { display:flex; gap:8px; margin-bottom:8px; justify-content:center; }
+  #mpJoinCode { width:160px; background:#0a0e15; color:#e7edf5; border:1px solid #2a3954; border-radius:5px;
+    font-size:18px; letter-spacing:6px; text-align:center; text-transform:uppercase; padding:8px; font-family:monospace; }
+  #mpStatus { font-size:12px; color:#ffd97d; min-height:16px; text-align:center; }
+  #mpLobby { display:none; margin-top:14px; text-align:center;
+    background:#0e131c; border:1px solid #2a5440; border-radius:8px; padding:16px 18px; }
+  #lobbyCodeWrap { font-size:14px; color:#9fd9b4; letter-spacing:2px; margin-bottom:12px; }
+  #lobbyCode { font-size:26px; font-weight:700; color:#7dffa8; letter-spacing:8px; font-family:monospace; }
+  #lobbyPlayers { display:inline-block; text-align:left; margin-bottom:12px; }
+  .lobbyrow { font-size:13px; color:#cdd6e4; line-height:1.7; }
+  #mpAiWrap { display:none; align-items:center; justify-content:center; gap:10px; margin-bottom:10px; }
+  #mpAiWrap button { padding:4px 12px; font-size:14px; }
+  #mpAiCount { font-size:12.5px; color:#aab6c9; min-width:120px; }
   #lobbyText { font-size:12.5px; color:#9fd9b4; letter-spacing:.5px; }
 
   /* ---------- HUD ---------- */
@@ -243,22 +249,27 @@
   </div>
   <div id="mpzone">
     <div id="mpButtons">
-      <span class="mplabel">PLAY WITH A FRIEND — PEER TO PEER, NO SERVER</span>
+      <span class="mplabel">PLAY WITH FRIENDS (UP TO 4) — RUN start.bat / start.sh, THEN:</span>
       <button id="mpHostBtn">HOST GAME</button>
       <button id="mpJoinBtn">JOIN GAME</button>
     </div>
     <div id="mpPanel">
-      <div id="mpStep"></div>
-      <div class="mprow"><textarea id="mpOut" readonly placeholder="your code will appear here"></textarea><button id="mpCopy">COPY</button></div>
-      <div class="mprow"><textarea id="mpIn" placeholder="paste your friend's code here"></textarea><button id="mpGo">CONNECT</button></div>
+      <div class="mprow">
+        <input id="mpJoinCode" maxlength="5" placeholder="ROOM CODE" autocomplete="off">
+        <button id="mpJoinGo">JOIN</button>
+      </div>
       <div id="mpStatus"></div>
     </div>
     <div id="mpLobby">
-      <span id="lobbyText"></span>
+      <div id="lobbyCodeWrap">ROOM CODE: <span id="lobbyCode">—</span></div>
+      <div id="lobbyPlayers"></div>
+      <div id="mpAiWrap"><button id="mpAiMinus">–</button><span id="mpAiCount">AI opponents: 0</span><button id="mpAiPlus">+</button></div>
+      <div id="lobbyText"></div>
       <button id="mpStart" disabled>START MATCH</button>
     </div>
   </div>
   <div class="foot">Single player: click a faction card — your AI opponent will be a different faction, chosen at random.<br>
+    Multiplayer (2–4): run <b>start.bat</b> (Windows) or <b>start.sh</b>, open the address it prints, then HOST to get a 5-letter code.<br>
     Controls: drag-select · right-click to act · 1–7 command hotkeys · WASD/edges to pan · mouse wheel to zoom<br>
     Hold units near a neutral <b>Obelisk</b> to capture it (+income) · destroy a guarded <b>Hoard</b> for a one-time bounty</div>
 </div>
