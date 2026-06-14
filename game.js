@@ -23,6 +23,11 @@ const FACTIONS = {
   exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 18 },
   choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 30 },
   syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 26 },
+  warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 34 },
+  ember:     { name: 'EMBER NOMADS',     color: '#ff8a2a', dark: '#4a2a0e', res: 'Plunder',cap: 44 },
+  verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 56 },
+  stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 24 },
+  pact:      { name: 'OBSIDIAN PACT',    color: '#c0303a', dark: '#3a0e12', res: 'Blood',  cap: 48 },
 };
 
 // neutral entities (Obelisks, Hoards) aren't a playable faction; fall back to grey
@@ -36,6 +41,17 @@ const HINTS = {
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
   syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
+  warden: 'Your fortress IS your economy — income scales with the total mass of your standing buildings. Erect Ramparts (cheap, huge HP) and Bastions everywhere; the bigger you build, the richer you grow. Slow, armoured units that grind forward. Hold the Keep.',
+  ember: 'No mines, no farms — you fund the war by WAGING it. Every point of damage your warband deals to the enemy is paid back as Plunder. Fast, cheap, fragile raiders: keep attacking or starve. Guard the War Pyre.',
+  verdant: 'A slow, unstoppable garden. Plant Blooms — each mature Bloom pays Sap, so the more you grow the faster you snowball. Groves breed free Saplings forever. Patient early, overwhelming late. Protect the Heartwood.',
+  stormforge: 'An engine that only accelerates. Your income RAMPS the longer the game runs, supercharged by Dynamos — time is on your side. Few, expensive, devastating machines. Survive the early game and become unstoppable. Defend the Reactor.',
+  pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Reckless by design. Keep the Altar.',
+};
+
+// verb shown on a faction's build buttons ('Build X' by default)
+const BUILD_VERB = {
+  myriad: 'Grow ', syndicate: 'Drop ', warden: 'Erect ', ember: 'Raise ',
+  verdant: 'Plant ', stormforge: 'Assemble ', pact: 'Summon ',
 };
 
 // ---------------- unit / building definitions ----------------
@@ -93,6 +109,50 @@ const DEFS = {
   arbalest:      { fac:'syndicate', kind:'unit', name:'Arbalest', hp:60, size:8, speed:62, cost:160, time:0.5, dmg:26, range:225, cd:2.0, aggro:240, shot:'beam' },
   juggernaut:    { fac:'syndicate', kind:'unit', name:'Juggernaut', hp:320, size:14, speed:55, cost:320, time:0.5, dmg:30, range:150, cd:2.2, aggro:190, shot:'shell', splash:40 },
 
+  // ----- WARDEN COVENANT (fortress: income from total standing building HP) -----
+  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g'], grows:['rampart','bastion','foundry_w'] },
+  rampart:   { fac:'warden', kind:'building', name:'Rampart', hp:1100, size:15, cost:70, time:6 },
+  bastion:   { fac:'warden', kind:'building', name:'Bastion', hp:640, size:15, cost:150, time:10, dmg:12, range:200, cd:0.7, aggro:210, shot:'bullet' },
+  foundry_w: { fac:'warden', kind:'building', name:'War Foundry', hp:900, size:30, cost:230, time:18, produces:['bombard'] },
+  sentinel:  { fac:'warden', kind:'unit', name:'Sentinel', hp:170, size:10, speed:54, cost:80, time:7, dmg:11, range:24, cd:0.9, aggro:170, shot:'melee' },
+  warden_g:  { fac:'warden', kind:'unit', name:'Warden Guard', hp:120, size:9, speed:50, cost:120, time:9, dmg:16, range:165, cd:1.2, aggro:200, shot:'bullet' },
+  bombard:   { fac:'warden', kind:'unit', name:'Bombard', hp:240, size:14, speed:42, cost:240, time:15, dmg:34, range:200, cd:2.6, aggro:200, shot:'shell', splash:46 },
+
+  // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
+  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast'], grows:['warcamp','totem'] },
+  warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:520, size:24, cost:120, time:9, produces:['raider','slinger'] },
+  totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:340, size:13, cost:110, time:7, dmg:12, range:165, cd:0.8, aggro:190, shot:'glob' },
+  raider:    { fac:'ember', kind:'unit', name:'Raider', hp:70, size:8, speed:128, cost:45, time:4, dmg:9, range:16, cd:0.6, aggro:185, shot:'melee' },
+  slinger:   { fac:'ember', kind:'unit', name:'Slinger', hp:52, size:8, speed:100, cost:80, time:5, dmg:11, range:135, cd:0.9, aggro:195, shot:'glob' },
+  firebrand: { fac:'ember', kind:'unit', name:'Firebrand', hp:95, size:9, speed:92, cost:150, time:8, dmg:18, range:120, cd:1.3, aggro:200, shot:'shell', splash:34 },
+  warbeast:  { fac:'ember', kind:'unit', name:'War Beast', hp:300, size:15, speed:96, cost:280, time:13, dmg:24, range:20, cd:0.9, aggro:185, shot:'melee', splash:26 },
+
+  // ----- VERDANT BLOOM (garden: Sap from mature Blooms; Groves breed free Saplings) -----
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant'], grows:['bloom','grove','bramble'], spawns:'sapling', spawnEvery:8 },
+  bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
+  grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6 },
+  bramble:   { fac:'verdant', kind:'building', name:'Bramble', hp:360, size:13, cost:120, time:9, dmg:11, range:172, cd:0.9, aggro:190, shot:'glob' },
+  sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee' },
+  thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:70, size:8, speed:74, cost:90, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
+  treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:300, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
+
+  // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
+  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','voltaic'], grows:['dynamo','tesla','foundry_s'] },
+  dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
+  tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:16, range:195, cd:1.1, aggro:205, shot:'beam' },
+  foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus'] },
+  arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:90, shield:40, size:9, speed:118, cost:110, time:8, dmg:9, range:115, cd:0.4, aggro:205, shot:'bullet' },
+  voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:80, shield:60, size:9, speed:62, cost:210, time:13, dmg:30, range:230, cd:2.0, aggro:245, shot:'beam' },
+  colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:520, shield:160, size:18, speed:48, cost:420, time:24, dmg:40, range:175, cd:2.4, aggro:200, shot:'shell', splash:55 },
+
+  // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying) -----
+  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth'], grows:['shrine','spike'] },
+  shrine:    { fac:'pact', kind:'building', name:'Bone Shrine', hp:420, size:22, cost:120, time:9, spawns:'thrall', spawnEvery:5 },
+  spike:     { fac:'pact', kind:'building', name:'Blood Spike', hp:340, size:13, cost:110, time:7, dmg:13, range:168, cd:0.85, aggro:190, shot:'glob' },
+  thrall:    { fac:'pact', kind:'unit', name:'Thrall', hp:46, size:7, speed:104, cost:30, time:3, dmg:7, range:14, cd:0.6, aggro:185, shot:'melee' },
+  zealot:    { fac:'pact', kind:'unit', name:'Zealot', hp:110, size:9, speed:88, cost:110, time:6, dmg:15, range:18, cd:0.8, aggro:185, shot:'melee' },
+  behemoth:  { fac:'pact', kind:'unit', name:'Behemoth', hp:560, size:18, speed:50, cost:340, time:18, dmg:34, range:24, cd:1.4, aggro:185, shot:'melee', splash:40 },
+
   // ----- NEUTRAL (capture / fight) -----
   // Obelisk: indestructible capture point — hold ground nearby to claim its income.
   obelisk:       { fac:'neutral', kind:'building', name:'Obelisk', hp:1, size:22, noTarget:true, captureR:140, captureTime:6 },
@@ -112,6 +172,16 @@ const ECON = {
   // syndicate: compound interest on the banked treasury, bounties on kills
   synBase: 2.5, synInterest: 0.011, synCapBase: 1200, synCapPer: 500,
   synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06, synDropKeepout: 340,
+  // warden: income scales with the total HP of standing (finished) buildings
+  wardenBase: 1.0, wardenPerHp: 0.0012,
+  // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle
+  emberBase: 1.2, emberLootPerDmg: 0.32,
+  // verdant: income per mature Bloom (grows slowly, snowballs hard)
+  verdantBase: 1.2, verdantPerBloom: 1.6,
+  // stormforge: income ramps with elapsed game time, accelerated by Dynamos
+  stormBase: 1.6, stormPerDynamo: 1.1, stormRamp: 0.0016,
+  // pact: Blood gained when your OWN units die (flat + a share of their max HP)
+  pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
   // neutral capture points pay their holder a steady income
   obeliskIncome: 1.4,
 };
@@ -241,11 +311,36 @@ function setupFaction(fac, base, isAI) {
     spawnEnt('ossuary', fac, base.x, base.y);
     for (let i = 0; i < 3; i++) spawnEnt('wraith', fac, base.x - 50 + i * 50, base.y + 70);
     p.waveSize = 12;
-  } else { // syndicate
+  } else if (fac === 'syndicate') {
     p.res = 400;
     spawnEnt('haven', fac, base.x, base.y);
     for (let i = 0; i < 2; i++) spawnEnt('enforcer', fac, base.x - 40 + i * 80, base.y + 70);
     p.waveSize = 8;
+  } else if (fac === 'warden') {
+    p.res = 250;
+    spawnEnt('keep', fac, base.x, base.y);
+    for (let i = 0; i < 3; i++) spawnEnt('sentinel', fac, base.x - 50 + i * 50, base.y + 72);
+    p.waveSize = 10;
+  } else if (fac === 'ember') {
+    p.res = 200;
+    spawnEnt('pyre', fac, base.x, base.y);
+    for (let i = 0; i < 4; i++) spawnEnt('raider', fac, base.x - 70 + i * 36, base.y + 70);
+    p.waveSize = 12;
+  } else if (fac === 'verdant') {
+    p.res = 200;
+    spawnEnt('heart', fac, base.x, base.y);
+    for (let i = 0; i < 4; i++) spawnEnt('sapling', fac, base.x - 60 + i * 34, base.y + 72);
+    p.waveSize = 18;
+  } else if (fac === 'stormforge') {
+    p.res = 250;
+    spawnEnt('reactor', fac, base.x, base.y);
+    for (let i = 0; i < 2; i++) spawnEnt('arclight', fac, base.x - 40 + i * 80, base.y + 70);
+    p.waveSize = 7;
+  } else { // pact
+    p.res = 200;
+    spawnEnt('altar', fac, base.x, base.y);
+    for (let i = 0; i < 5; i++) spawnEnt('thrall', fac, base.x - 80 + i * 36, base.y + 72);
+    p.waveSize = 16;
   }
 }
 
@@ -280,6 +375,11 @@ function applyDamage(t, dmg, attacker) {
   // choir lifesteal: spirits feast on the damage they deal
   if (attacker && !attacker.dead && attacker.fac === 'choir' && attacker.def.kind === 'unit')
     attacker.hp = Math.min(attacker.hpMax, attacker.hp + dmg0 * ECON.choirLeech);
+  // ember war economy: plunder scales with the damage the warband deals to foes
+  if (attacker && attacker.fac === 'ember' && t.fac !== 'ember' && game.players.ember) {
+    const g = dmg0 * ECON.emberLootPerDmg;
+    game.players.ember.res += g; game.players.ember.gainAccum += g;
+  }
   // retaliate if idle
   if (attacker && !attacker.dead && t.def.dmg > 0 && !t.def.harvester && t.def.kind === 'unit'
       && !t.def.stationary && t.order.type === 'idle') {
@@ -298,6 +398,11 @@ function applyDamage(t, dmg, attacker) {
     if (attacker && attacker.fac === 'syndicate' && t.fac !== 'syndicate' && game.players.syndicate) {
       const g = ECON.synBountyFlat + t.hpMax * ECON.synBountyPct;
       game.players.syndicate.res += g; game.players.syndicate.gainAccum += g;
+    }
+    // obsidian pact: each of your own fallen units spills Blood for the next summoning
+    if (t.fac === 'pact' && t.def.kind === 'unit' && game.players.pact) {
+      const g = ECON.pactMartyrFlat + t.hpMax * ECON.pactMartyrPct;
+      game.players.pact.res += g; game.players.pact.gainAccum += g;
     }
     // cracking open a neutral Hoard pays its destroyer a one-time bounty
     if (t.def.bounty && attacker && game.players[attacker.fac]) {
@@ -658,6 +763,22 @@ function tickEconomy(dt) {
       const houses = ents(e => e.fac === fac && e.type === 'countinghouse' && !e.growing).length;
       const cap = ECON.synCapBase + houses * ECON.synCapPer;
       gain = ECON.synBase + houses * ECON.synHouseFlat + ECON.synInterest * Math.min(p.res, cap);
+    } else if (fac === 'warden') {
+      // the fortress pays out by its mass: total HP of all finished buildings
+      let hp = 0;
+      for (const e of game.entities)
+        if (!e.dead && e.fac === fac && e.def.kind === 'building' && !e.constructing && !e.growing) hp += e.hp;
+      gain = ECON.wardenBase + hp * ECON.wardenPerHp;
+    } else if (fac === 'ember') {
+      gain = ECON.emberBase; // the rest is plundered through combat (see applyDamage)
+    } else if (fac === 'verdant') {
+      const blooms = ents(e => e.fac === fac && e.type === 'bloom' && !e.growing).length;
+      gain = ECON.verdantBase + blooms * ECON.verdantPerBloom;
+    } else if (fac === 'stormforge') {
+      const dynamos = ents(e => e.fac === fac && e.type === 'dynamo' && !e.growing).length;
+      gain = (ECON.stormBase + dynamos * ECON.stormPerDynamo) * (1 + game.t * ECON.stormRamp);
+    } else if (fac === 'pact') {
+      gain = ECON.pactBase; // the rest is reaped from your own dying (see applyDamage)
     }
     // every Obelisk this faction holds adds a steady trickle
     gain += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.obeliskIncome;
@@ -912,7 +1033,7 @@ function aiTick(fac) {
     for (const b of reliqs) if (!b.growing && !b.queue.length && p.res >= 300) enqueue(b, 'revenant');
   }
 
-  else { // syndicate: bank gold for interest, spend the overflow on mercs
+  else if (fac === 'syndicate') { // bank gold for interest, spend the overflow on mercs
     const haven = myCore;
     const houses = ents(e => e.fac === fac && e.type === 'countinghouse');
     const posts = ents(e => e.fac === fac && e.type === 'watchpost');
@@ -925,6 +1046,93 @@ function aiTick(fac) {
       if (jug < Math.floor(enf / 5) && p.res >= 650) enqueue(haven, 'juggernaut');
       else if (arb < enf / 2 && p.res >= 520) enqueue(haven, 'arbalest');
       else enqueue(haven, 'enforcer');
+    }
+  }
+
+  else if (fac === 'warden') { // turtle: spam cheap Ramparts (mass = income), then grind out
+    const keep = myCore;
+    const ramparts = ents(e => e.fac === fac && e.type === 'rampart').length;
+    const bastions = ents(e => e.fac === fac && e.type === 'bastion').length;
+    const foundries = ents(e => e.fac === fac && e.type === 'foundry_w').length;
+    if (ramparts < 8 && p.res >= 70) aiPlace(fac, 'rampart', p.base);
+    else if (bastions < 3 && p.res >= 150) aiPlace(fac, 'bastion', p.base);
+    else if (foundries < 1 && p.res >= 230 && game.t > 120) aiPlace(fac, 'foundry_w', p.base);
+    else if (ramparts < 16 && p.res >= 400) aiPlace(fac, 'rampart', p.base);
+    if (keep && !keep.queue.length && p.res >= 90) {
+      const guards = ents(e => e.fac === fac && e.type === 'warden_g').length;
+      const sents = ents(e => e.fac === fac && e.type === 'sentinel').length;
+      enqueue(keep, (guards < sents / 2 && p.res >= 120) ? 'warden_g' : 'sentinel');
+    }
+    for (const f of ents(e => e.fac === fac && e.type === 'foundry_w' && !e.growing))
+      if (!f.queue.length && p.res >= 240) enqueue(f, 'bombard');
+  }
+
+  else if (fac === 'ember') { // pure aggression — fund the war by waging it
+    const pyre = myCore;
+    const camps = ents(e => e.fac === fac && e.type === 'warcamp').length;
+    const totems = ents(e => e.fac === fac && e.type === 'totem').length;
+    if (camps < 2 && p.res >= 120) aiPlace(fac, 'warcamp', p.base);
+    else if (totems < 2 && p.res >= 110 && game.t > 60) aiPlace(fac, 'totem', p.base);
+    const prod = e => {
+      if (!e || e.queue.length || e.growing) return;
+      const beasts = ents(o => o.fac === fac && o.type === 'warbeast').length;
+      const brands = ents(o => o.fac === fac && o.type === 'firebrand').length;
+      if (beasts < 3 && p.res >= 280) enqueue(e, 'warbeast');
+      else if (brands < 5 && p.res >= 150) enqueue(e, 'firebrand');
+      else if (p.res >= 80 && Math.random() < 0.5) enqueue(e, 'slinger');
+      else if (p.res >= 45) enqueue(e, 'raider');
+    };
+    prod(pyre);
+    for (const c of ents(e => e.fac === fac && e.type === 'warcamp' && !e.growing)) prod(c);
+    // raiders are restless — keep pushing even below full wave size
+    if (army.length >= 5 && game.t > 60) for (const u of army)
+      if (u.order.type === 'idle') u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
+  }
+
+  else if (fac === 'verdant') { // plant economy, snowball with free saplings
+    const heart = myCore;
+    const blooms = ents(e => e.fac === fac && e.type === 'bloom').length;
+    const groves = ents(e => e.fac === fac && e.type === 'grove').length;
+    const brambles = ents(e => e.fac === fac && e.type === 'bramble').length;
+    if (blooms < 6 && p.res >= 90) aiPlace(fac, 'bloom', p.base);
+    else if (groves < 3 && p.res >= 170) aiPlace(fac, 'grove', p.base);
+    else if (brambles < 3 && p.res >= 120 && game.t > 90) aiPlace(fac, 'bramble', p.base);
+    else if (blooms < 12 && p.res >= 300) aiPlace(fac, 'bloom', p.base);
+    if (heart && !heart.queue.length && p.res >= 90) {
+      const treants = ents(e => e.fac === fac && e.type === 'treant').length;
+      enqueue(heart, (treants < 3 && p.res >= 300 && game.t > 150) ? 'treant' : 'thornling');
+    }
+  }
+
+  else if (fac === 'stormforge') { // ramp the engine, then field a few giants
+    const reactor = myCore;
+    const dynamos = ents(e => e.fac === fac && e.type === 'dynamo').length;
+    const teslas = ents(e => e.fac === fac && e.type === 'tesla').length;
+    const foundries = ents(e => e.fac === fac && e.type === 'foundry_s').length;
+    if (dynamos < 4 && p.res >= 200) aiPlace(fac, 'dynamo', p.base);
+    else if (teslas < 3 && p.res >= 160 && game.t > 80) aiPlace(fac, 'tesla', p.base);
+    else if (foundries < 1 && p.res >= 260 && game.t > 160) aiPlace(fac, 'foundry_s', p.base);
+    if (reactor && !reactor.queue.length && p.res >= 110) {
+      const volts = ents(e => e.fac === fac && e.type === 'voltaic').length;
+      const arcs = ents(e => e.fac === fac && e.type === 'arclight').length;
+      enqueue(reactor, (volts < arcs / 2 && p.res >= 210) ? 'voltaic' : 'arclight');
+    }
+    for (const f of ents(e => e.fac === fac && e.type === 'foundry_s' && !e.growing))
+      if (!f.queue.length && p.res >= 420) enqueue(f, 'colossus');
+  }
+
+  else if (fac === 'pact') { // throw cheap bodies into the grinder, reap Blood, raise giants
+    const altar = myCore;
+    const shrines = ents(e => e.fac === fac && e.type === 'shrine').length;
+    const spikes = ents(e => e.fac === fac && e.type === 'spike').length;
+    if (shrines < 3 && p.res >= 120) aiPlace(fac, 'shrine', p.base);
+    else if (spikes < 2 && p.res >= 110 && game.t > 80) aiPlace(fac, 'spike', p.base);
+    if (altar && !altar.queue.length && p.res >= 30) {
+      const behes = ents(e => e.fac === fac && e.type === 'behemoth').length;
+      const zeals = ents(e => e.fac === fac && e.type === 'zealot').length;
+      if (behes < 3 && p.res >= 340 && game.t > 150) enqueue(altar, 'behemoth');
+      else if (zeals < 6 && p.res >= 110) enqueue(altar, 'zealot');
+      else if (p.res >= 30) enqueue(altar, 'thrall');
     }
   }
 }
@@ -1226,7 +1434,7 @@ function currentCommands() {
   const buildBtn = type => {
     const d = DEFS[type];
     cmds.push({
-      label: (fac === 'myriad' ? 'Grow ' : fac === 'syndicate' ? 'Drop ' : 'Build ') + d.name,
+      label: (BUILD_VERB[fac] || 'Build ') + d.name,
       cost: d.cost, enabled: p.res >= d.cost,
       onClick: () => { game.placing = type; },
     });
@@ -1632,6 +1840,125 @@ function drawEnt(e) {
         ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 3.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
       }
+    }
+  }
+
+  else if (e.fac === 'warden') { // steel hexagons & armoured blocks
+    if (e.def.kind === 'building') {
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 3 : 2;
+      poly(x, y, s, 6, 0); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1; poly(x, y, s * 0.6, 6, 0); ctx.stroke();
+      if (e.type === 'bastion' || e.type === 'keep') {
+        const t = e.tgt ? byId(e.tgt) : null;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 2;
+      roundRect(x - s, y - s, s * 2, s * 2, 3); ctx.fill(); ctx.stroke();
+      if (e.type === 'bombard' || e.type === 'warden_g') {
+        const t = e.tgt ? byId(e.tgt) : null;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : 0;
+        ctx.lineWidth = e.type === 'bombard' ? 3 : 2;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 7), y + Math.sin(a) * (s + 7)); ctx.stroke();
+      } else { ctx.fillStyle = col; ctx.fillRect(x - s * 0.4, y - s * 0.4, s * 0.8, s * 0.8); }
+    }
+  }
+
+  else if (e.fac === 'ember') { // burning triangles & chevron raiders
+    if (e.def.kind === 'building') {
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 2.5 : 1.8;
+      poly(x, y, s, 3, -Math.PI / 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffd27a';
+      const fl = s * (0.28 + 0.12 * Math.sin(game.t * 8 + e.id));
+      ctx.beginPath(); ctx.arc(x, y - s * 0.1, fl, 0, Math.PI * 2); ctx.fill();
+      if (e.type === 'totem') {
+        const t = e.tgt ? byId(e.tgt) : null;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : game.t;
+        ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = e.type === 'warbeast' ? '#7a3410' : col;
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y - s); ctx.lineTo(x + s, y + s); ctx.lineTo(x, y + s * 0.4); ctx.lineTo(x - s, y + s);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  else if (e.fac === 'verdant') { // organic blooms & leaf creatures
+    if (e.def.kind === 'building') {
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 2.5 : 1.8;
+      ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      if (e.type === 'bloom') {
+        ctx.fillStyle = '#b8f0a0';
+        for (let i = 0; i < 6; i++) {
+          const a = game.t * 0.3 + i * Math.PI / 3;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.6, y + Math.sin(a) * s * 0.6, s * 0.26, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'heart' || e.type === 'grove') {
+        ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.6, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'bramble') {
+        const t = e.tgt ? byId(e.tgt) : null;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.6;
+        ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = e.type === 'treant' ? '#2f6b2a' : col;
+      ctx.strokeStyle = '#2f6b2a'; ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(x, y - s - 1); ctx.quadraticCurveTo(x + s, y, x, y + s + 1); ctx.quadraticCurveTo(x - s, y, x, y - s - 1);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  else if (e.fac === 'stormforge') { // octagonal machines & energised diamonds
+    if (e.def.kind === 'building') {
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 2.5 : 1.8;
+      poly(x, y, s, 8, Math.PI / 8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffb3d9';
+      ctx.beginPath(); ctx.arc(x, y, s * (0.24 + 0.08 * Math.sin(game.t * 5 + e.id)), 0, Math.PI * 2); ctx.fill();
+      if (e.type === 'dynamo') {
+        ctx.strokeStyle = '#ffb3d9'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.62, game.t % (Math.PI * 2), game.t % (Math.PI * 2) + Math.PI * 1.3); ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = e.type === 'colossus' ? '#5a153f' : dark;
+      ctx.strokeStyle = col; ctx.lineWidth = e.type === 'colossus' ? 2.5 : 1.5;
+      ctx.beginPath(); ctx.moveTo(x, y - s - 2); ctx.lineTo(x + s, y); ctx.lineTo(x, y + s + 2); ctx.lineTo(x - s, y); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffb3d9'; ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.fill();
+      if (e.shield > 1) {
+        const frac = e.shield / e.shieldMax;
+        ctx.strokeStyle = '#ff9ccb'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, s + 5, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); ctx.stroke();
+      }
+    }
+  }
+
+  else if (e.fac === 'pact') { // dark pentagons & gaunt crimson triangles
+    if (e.def.kind === 'building') {
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 2.5 : 1.8;
+      poly(x, y, s, 5, -Math.PI / 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#ff6b73'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(x, y, s * 0.55, 0, Math.PI * 2); ctx.stroke();
+      if (e.type === 'altar' || e.type === 'spike') {
+        const t = e.tgt ? byId(e.tgt) : null;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = e.type === 'behemoth' ? '#5a0e14' : col;
+      ctx.strokeStyle = '#ff6b73'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x, y - s - 1); ctx.lineTo(x + s, y + s); ctx.lineTo(x - s, y + s); ctx.closePath();
+      ctx.fill(); ctx.stroke();
     }
   }
 
