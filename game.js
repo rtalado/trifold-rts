@@ -12,9 +12,10 @@
    ============================================================ */
 
 // ---------------- constants ----------------
-const TILE = 32, GW = 80, GH = 52;
+const TILE = 32, GW = 160, GH = 104;
 const WORLD_W = GW * TILE, WORLD_H = GH * TILE;
 const HUD_BOTTOM = 158; // height of #bottombar that overlaps the canvas bottom
+const ZMIN = 0.32, ZMAX = 1.8;  // camera zoom range (out / in)
 
 const FACTIONS = {
   vanguard:  { name: 'IRON VANGUARD',   color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 36 },
@@ -23,6 +24,11 @@ const FACTIONS = {
   choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 30 },
   syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 26 },
 };
+
+// neutral entities (Obelisks, Hoards) aren't a playable faction; fall back to grey
+const NEUTRAL = { color: '#9aa6b8', dark: '#2a3340' };
+const facColor = f => (FACTIONS[f] || NEUTRAL).color;
+const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 
 const HINTS = {
   vanguard: 'Workers harvest crystal automatically. Select a Worker to BUILD (Barracks → Marines/Snipers/Medics, Factory → Tanks, Airfield → Gunships, Turrets to defend). Destroy the enemy core; protect your Headquarters.',
@@ -85,6 +91,12 @@ const DEFS = {
   enforcer:      { fac:'syndicate', kind:'unit', name:'Enforcer', hp:90, size:8, speed:80, cost:90, time:0.5, dmg:9, range:105, cd:0.75, aggro:180, shot:'bullet' },
   arbalest:      { fac:'syndicate', kind:'unit', name:'Arbalest', hp:60, size:8, speed:62, cost:160, time:0.5, dmg:26, range:225, cd:2.0, aggro:240, shot:'beam' },
   juggernaut:    { fac:'syndicate', kind:'unit', name:'Juggernaut', hp:320, size:14, speed:55, cost:320, time:0.5, dmg:30, range:150, cd:2.2, aggro:190, shot:'shell', splash:40 },
+
+  // ----- NEUTRAL (capture / fight) -----
+  // Obelisk: indestructible capture point — hold ground nearby to claim its income.
+  obelisk:       { fac:'neutral', kind:'building', name:'Obelisk', hp:1, size:22, noTarget:true, captureR:140, captureTime:6 },
+  // Hoard: a guarded treasure tower that shoots intruders; destroy it for a bounty.
+  hoard:         { fac:'neutral', kind:'building', name:'Ancient Hoard', hp:1500, size:30, dmg:16, range:215, cd:1.0, aggro:240, shot:'shell', splash:34, bounty:550 },
 };
 
 // economy tuning
@@ -99,6 +111,8 @@ const ECON = {
   // syndicate: compound interest on the banked treasury, bounties on kills
   synBase: 2.5, synInterest: 0.011, synCapBase: 1200, synCapPer: 500,
   synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06,
+  // neutral capture points pay their holder a steady income
+  obeliskIncome: 1.4,
 };
 
 // ---------------- global state ----------------
@@ -145,16 +159,17 @@ function buildMatch(facA, facB, mode, localFac) {
     creep: new Uint8Array(GW * GH),
     facA, facB, aiFac: facB, localFac, mode, players: {},
     sel: [], placing: null,
-    cam: { x: 0, y: 0 },
+    cam: { x: 0, y: 0, z: 1 },
     creepTimer: 0, hudTimer: 0, aiTimer: 0, netTimer: 0, netFx: [],
   };
 
-  // crystal nodes (point-symmetric map)
+  // crystal nodes (point-symmetric map) — a resource trail from each base toward the center
   const mirror = p => ({ x: WORLD_W - p.x, y: WORLD_H - p.y });
   const half = [
-    { x: 560, y: 1255, amt: 1600 }, { x: 410, y: 1080, amt: 1600 },   // near base
-    { x: 840, y: 1010, amt: 2000 }, { x: 340, y: 700, amt: 2000 },    // expansions
-    { x: 1010, y: 830, amt: 2500 },                                    // toward center
+    { x: 640, y: 2730, amt: 1600 }, { x: 500, y: 2560, amt: 1600 },   // near base
+    { x: 940, y: 2520, amt: 2000 }, { x: 700, y: 2180, amt: 2000 },   // expansions
+    { x: 1220, y: 2300, amt: 2500 }, { x: 1560, y: 1900, amt: 2500 }, // mid
+    { x: 1980, y: 1480, amt: 3000 },                                  // toward center
   ];
   let nid = 1;
   for (const n of half) {
@@ -163,14 +178,20 @@ function buildMatch(facA, facB, mode, localFac) {
     game.nodes.push({ id: nid++, x: m.x, y: m.y, amount: n.amt, max: n.amt, r: 20 });
   }
 
-  const bases = { a: { x: 380, y: 1300 }, b: { x: WORLD_W - 380, y: WORLD_H - 1300 } };
+  const bases = { a: { x: 440, y: WORLD_H - 440 }, b: { x: WORLD_W - 440, y: 440 } };
   setupFaction(facA, bases.a, false);
   setupFaction(facB, bases.b, mode === 'sp');
 
+  // neutral sites to capture/fight over — point-symmetric so neither side is favoured
+  spawnEnt('obelisk', 'neutral', WORLD_W / 2, WORLD_H / 2);  // contested centre
+  const obHalf = [{ x: 1700, y: 1300 }, { x: 1300, y: 2050 }];
+  const hoHalf = [{ x: 2150, y: 950 }, { x: 1050, y: 1664 }];
+  for (const o of obHalf) { spawnEnt('obelisk', 'neutral', o.x, o.y); const m = mirror(o); spawnEnt('obelisk', 'neutral', m.x, m.y); }
+  for (const o of hoHalf) { spawnEnt('hoard', 'neutral', o.x, o.y); const m = mirror(o); spawnEnt('hoard', 'neutral', m.x, m.y); }
+
   const myBase = localFac === facA ? bases.a : bases.b;
   const enemyFac = localFac === facA ? facB : facA;
-  game.cam.x = clamp(myBase.x - canvas.width / 2, 0, WORLD_W - canvas.width);
-  game.cam.y = clamp(myBase.y - canvas.height / 2, 0, WORLD_H - canvas.height);
+  centerCam(myBase.x, myBase.y);
 
   document.getElementById('menu').style.display = 'none';
   document.getElementById('endscreen').style.display = 'none';
@@ -247,7 +268,7 @@ function spawnEnt(type, fac, x, y, opts = {}) {
 
 // ---------------- damage / death ----------------
 function applyDamage(t, dmg, attacker) {
-  if (t.dead) return;
+  if (t.dead || t.def.noTarget) return;  // Obelisks are captured, never destroyed
   const dmg0 = dmg;
   t.lastHurt = game.t;
   const p = game.players[t.fac];
@@ -276,7 +297,13 @@ function applyDamage(t, dmg, attacker) {
       const g = ECON.synBountyFlat + t.hpMax * ECON.synBountyPct;
       game.players.syndicate.res += g; game.players.syndicate.gainAccum += g;
     }
-    addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.6, ttl: 0.5, max: 0.5, color: FACTIONS[t.fac].color });
+    // cracking open a neutral Hoard pays its destroyer a one-time bounty
+    if (t.def.bounty && attacker && game.players[attacker.fac]) {
+      const p = game.players[attacker.fac];
+      p.res += t.def.bounty; p.gainAccum += t.def.bounty;
+      localMsg(attacker.fac, 'Hoard plundered: +' + t.def.bounty + ' ' + FACTIONS[attacker.fac].res);
+    }
+    addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.6, ttl: 0.5, max: 0.5, color: facColor(t.fac) });
   }
 }
 
@@ -290,7 +317,7 @@ function findTarget(e) {
   const d = e.def;
   let best = null, bd = d.aggro;
   for (const o of game.entities) {
-    if (o.dead || o.fac === e.fac) continue;
+    if (o.dead || o.fac === e.fac || o.def.noTarget) continue;
     const dd = dist(e, o) - o.size;
     if (dd < bd) { bd = dd; best = o; }
   }
@@ -304,15 +331,15 @@ function fireAt(e, t) {
   if (d.shot === 'melee') {
     applyDamage(t, d.dmg, e);
     if (d.splash) splash(e, t, d);
-    addFx({ kind: 'slash', x: t.x, y: t.y, ttl: 0.15, max: 0.15, color: FACTIONS[e.fac].color });
+    addFx({ kind: 'slash', x: t.x, y: t.y, ttl: 0.15, max: 0.15, color: facColor(e.fac) });
   } else if (d.shot === 'beam') {
     applyDamage(t, d.dmg, e);
-    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: t.x, y2: t.y, ttl: 0.18, max: 0.18, color: FACTIONS[e.fac].color });
+    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: t.x, y2: t.y, ttl: 0.18, max: 0.18, color: facColor(e.fac) });
   } else {
     const speed = d.shot === 'shell' ? 240 : 380;
     game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed,
       dmg: d.dmg, splash: d.splash || 0, fac: e.fac, attackerId: e.id,
-      color: d.shot === 'glob' ? '#9fe06a' : FACTIONS[e.fac].color, r: d.shot === 'shell' ? 4 : 2.5 });
+      color: d.shot === 'glob' ? '#9fe06a' : facColor(e.fac), r: d.shot === 'shell' ? 4 : 2.5 });
   }
 }
 
@@ -621,8 +648,35 @@ function tickEconomy(dt) {
       const cap = ECON.synCapBase + houses * ECON.synCapPer;
       gain = ECON.synBase + houses * ECON.synHouseFlat + ECON.synInterest * Math.min(p.res, cap);
     }
+    // every Obelisk this faction holds adds a steady trickle
+    gain += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.obeliskIncome;
     p.res += gain * dt;
     p.gainAccum += gain * dt;
+  }
+}
+
+// Obelisks are captured by holding ground: stand units nearby with no enemy
+// units contesting, and the capture meter fills toward your faction.
+function tickCapture(dt) {
+  for (const e of game.entities) {
+    if (e.dead || e.type !== 'obelisk') continue;
+    const counts = {};
+    for (const o of game.entities) {
+      if (o.dead || o.def.kind !== 'unit' || o.fac === 'neutral') continue;
+      if (dist(e, o) <= e.def.captureR) counts[o.fac] = (counts[o.fac] || 0) + 1;
+    }
+    const facs = Object.keys(counts);
+    if (facs.length === 1 && facs[0] !== e.owner) {
+      const fac = facs[0];
+      if (e.capFac !== fac) { e.capFac = fac; e.capProg = 0; }
+      e.capProg = (e.capProg || 0) + dt;
+      if (e.capProg >= e.def.captureTime) { e.owner = fac; e.capProg = 0; e.capFac = null; }
+    } else if (facs.length === 0) {
+      // uncontested and empty: the meter slowly bleeds back
+      e.capProg = Math.max(0, (e.capProg || 0) - dt * 0.5);
+      if (e.capProg === 0) e.capFac = null;
+    }
+    // contested by two+ factions: freeze the meter
   }
 }
 
@@ -887,6 +941,7 @@ function update(dt) {
 
   tickEconomy(dt);
   tickRegen(dt);
+  tickCapture(dt);
 
   for (const e of game.entities) {
     if (e.dead) continue;
@@ -959,7 +1014,7 @@ const keys = {};
 
 canvas.addEventListener('mousemove', ev => {
   mouse.x = ev.clientX; mouse.y = ev.clientY;
-  if (game) { mouse.wx = mouse.x + game.cam.x; mouse.wy = mouse.y + game.cam.y; }
+  if (game) { const w = screenToWorld(mouse.x, mouse.y); mouse.wx = w.x; mouse.wy = w.y; }
 });
 
 canvas.addEventListener('mousedown', ev => {
@@ -985,8 +1040,9 @@ canvas.addEventListener('mousedown', ev => {
 addEventListener('mouseup', ev => {
   if (ev.button !== 0 || !mouse.dragging || !game || game.over) { mouse.dragging = false; return; }
   mouse.dragging = false;
-  const x0 = Math.min(mouse.dx0, mouse.x) + game.cam.x, x1 = Math.max(mouse.dx0, mouse.x) + game.cam.x;
-  const y0 = Math.min(mouse.dy0, mouse.y) + game.cam.y, y1 = Math.max(mouse.dy0, mouse.y) + game.cam.y;
+  const a0 = screenToWorld(Math.min(mouse.dx0, mouse.x), Math.min(mouse.dy0, mouse.y));
+  const a1 = screenToWorld(Math.max(mouse.dx0, mouse.x), Math.max(mouse.dy0, mouse.y));
+  const x0 = a0.x, y0 = a0.y, x1 = a1.x, y1 = a1.y;
   const isClick = (x1 - x0) < 6 && (y1 - y0) < 6;
   let picked = [];
   if (isClick) {
@@ -1005,6 +1061,21 @@ addEventListener('mouseup', ev => {
 
 canvas.addEventListener('contextmenu', ev => ev.preventDefault());
 
+// mouse-wheel zoom, anchored on the cursor so the point under it stays put
+canvas.addEventListener('wheel', ev => {
+  if (!game) return;
+  ev.preventDefault();
+  const z0 = game.cam.z;
+  const z1 = clamp(z0 * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ZMIN, ZMAX);
+  if (z1 === z0) return;
+  const before = screenToWorld(mouse.x, mouse.y);
+  game.cam.z = z1;
+  game.cam.x = before.x - mouse.x / z1;
+  game.cam.y = before.y - mouse.y / z1;
+  clampCam();
+  const w = screenToWorld(mouse.x, mouse.y); mouse.wx = w.x; mouse.wy = w.y;
+}, { passive: false });
+
 function issueOrder(wx, wy) { // local right-click
   if (!game.sel.length) return;
   if (game.mode === 'guest') {
@@ -1017,7 +1088,7 @@ function issueOrder(wx, wy) { // local right-click
 
 // runs on the simulating side (SP or host) for either faction
 function applyOrder(fac, selEnts, wx, wy) {
-  const target = ents(o => o.fac !== fac && dist(o, { x: wx, y: wy }) <= o.size + 5)[0];
+  const target = ents(o => o.fac !== fac && !o.def.noTarget && dist(o, { x: wx, y: wy }) <= o.size + 5)[0];
   const node = game.nodes.find(n => n.amount > 0 && Math.hypot(n.x - wx, n.y - wy) <= n.r + 6);
   let acted = false;
 
@@ -1054,7 +1125,7 @@ addEventListener('keydown', ev => {
   if (k === ' ') {
     ev.preventDefault();
     const core = ents(e => e.fac === game.localFac && e.def.core)[0];
-    if (core) { game.cam.x = clamp(core.x - canvas.width / 2, 0, WORLD_W - canvas.width); game.cam.y = clamp(core.y - canvas.height / 2, 0, WORLD_H - canvas.height); }
+    if (core) centerCam(core.x, core.y);
   }
   if (k === 'f') { // select all combat units
     game.sel = armyOf(game.localFac);
@@ -1078,12 +1149,27 @@ function mmNav(ev) {
   const r = mmCanvas.getBoundingClientRect();
   const wx = (ev.clientX - r.left) / mmCanvas.width * WORLD_W;
   const wy = (ev.clientY - r.top) / mmCanvas.height * WORLD_H;
-  game.cam.x = clamp(wx - canvas.width / 2, 0, WORLD_W - canvas.width);
-  game.cam.y = clamp(wy - canvas.height / 2, 0, WORLD_H - canvas.height);
+  centerCam(wx, wy);
 }
 
+// the world region currently visible, in world units (shrinks as you zoom in)
+function viewW() { return canvas.width / game.cam.z; }
+function viewH() { return canvas.height / game.cam.z; }
+// keep the camera inside the world; allow a little extra at the bottom so the
+// map's edge can rise clear of the bottom HUD bar
+function clampCam() {
+  const vw = viewW(), vh = viewH();
+  // when zoomed out far enough that the whole map fits, centre it; else keep it in bounds
+  game.cam.x = vw >= WORLD_W ? (WORLD_W - vw) / 2 : clamp(game.cam.x, 0, WORLD_W - vw);
+  game.cam.y = vh >= WORLD_H ? (WORLD_H - vh) / 2
+    : clamp(game.cam.y, 0, WORLD_H - vh + HUD_BOTTOM / game.cam.z);
+}
+function centerCam(x, y) { game.cam.x = x - viewW() / 2; game.cam.y = y - viewH() / 2; clampCam(); }
+// screen pixel -> world coordinate (accounts for pan + zoom)
+function screenToWorld(sx, sy) { return { x: sx / game.cam.z + game.cam.x, y: sy / game.cam.z + game.cam.y }; }
+
 function panCamera(dt) {
-  const sp = 620 * dt;
+  const sp = 620 * dt / game.cam.z;  // constant on-screen speed regardless of zoom
   let dx = 0, dy = 0;
   if (keys['arrowleft'] || keys['a']) dx -= sp;
   if (keys['arrowright'] || keys['d']) dx += sp;
@@ -1092,10 +1178,9 @@ function panCamera(dt) {
   const M = 18;
   if (mouse.x < M) dx -= sp; if (mouse.x > innerWidth - M) dx += sp;
   if (mouse.y < M) dy -= sp; if (mouse.y > innerHeight - M) dy += sp;
-  game.cam.x = clamp(game.cam.x + dx, 0, WORLD_W - canvas.width);
-  // allow panning past the world's bottom edge so it clears the bottom HUD bar
-  game.cam.y = clamp(game.cam.y + dy, 0, WORLD_H - canvas.height + HUD_BOTTOM);
-  mouse.wx = mouse.x + game.cam.x; mouse.wy = mouse.y + game.cam.y;
+  game.cam.x += dx; game.cam.y += dy;
+  clampCam();
+  const w = screenToWorld(mouse.x, mouse.y); mouse.wx = w.x; mouse.wy = w.y;
 }
 
 // ---------------- command card ----------------
@@ -1219,6 +1304,7 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!game) return;
   ctx.save();
+  ctx.scale(game.cam.z, game.cam.z);
   ctx.translate(-game.cam.x, -game.cam.y);
 
   // grid
@@ -1329,7 +1415,7 @@ function draw() {
 }
 
 function drawEnt(e) {
-  const col = FACTIONS[e.fac].color, dark = FACTIONS[e.fac].dark;
+  const col = facColor(e.fac), dark = facDark(e.fac);
   const sel = game.sel.includes(e);
   const x = e.x, y = e.y, s = e.size;
   ctx.save();
@@ -1506,6 +1592,36 @@ function drawEnt(e) {
     }
   }
 
+  else if (e.fac === 'neutral') {
+    if (e.type === 'obelisk') {
+      const oc = e.owner ? facColor(e.owner) : '#9aa6b8';
+      ctx.fillStyle = e.owner ? facDark(e.owner) : '#1d2533';
+      ctx.strokeStyle = oc; ctx.lineWidth = 2.5;
+      poly(x, y, s, 6, -Math.PI / 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = oc;
+      ctx.beginPath(); ctx.arc(x, y, s * 0.32 * (1 + 0.12 * Math.sin(game.t * 2)), 0, Math.PI * 2); ctx.fill();
+      // capture-radius ring + progress arc (sim side only)
+      ctx.strokeStyle = 'rgba(154,166,184,0.18)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, e.def.captureR, 0, Math.PI * 2); ctx.stroke();
+      if (e.capFac && e.capProg > 0) {
+        const f = clamp(e.capProg / e.def.captureTime, 0, 1);
+        ctx.strokeStyle = facColor(e.capFac); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(x, y, s + 7, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); ctx.stroke();
+      }
+    } else { // hoard: a fortified treasure tower
+      ctx.fillStyle = '#2a2014'; ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 2.5;
+      poly(x, y, s, 5, -Math.PI / 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e8c75e';
+      ctx.beginPath(); ctx.arc(x, y, s * 0.42, 0, Math.PI * 2); ctx.fill();
+      const t = e.tgt ? byId(e.tgt) : null;
+      if (t) {
+        const a = Math.atan2(t.y - y, t.x - x);
+        ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
+      }
+    }
+  }
+
   else { // exodus: diamonds
     ctx.fillStyle = e.type === 'ark' ? '#4a3a14' : '#705a1e';
     ctx.strokeStyle = col; ctx.lineWidth = e.type === 'ark' ? 2.5 : 1.5;
@@ -1582,16 +1698,16 @@ function drawMinimap() {
   // nodes
   mmCtx.fillStyle = '#6ee7ff';
   for (const n of game.nodes) mmCtx.fillRect(n.x * sx - 1.5, n.y * sy - 1.5, 3, 3);
-  // entities
+  // entities (Obelisks show their captor's colour)
   for (const e of game.entities) {
     if (e.dead) continue;
-    mmCtx.fillStyle = FACTIONS[e.fac].color;
+    mmCtx.fillStyle = facColor(e.owner || e.fac);
     const r = e.def.core ? 3 : e.def.kind === 'building' ? 2 : 1.2;
     mmCtx.fillRect(e.x * sx - r, e.y * sy - r, r * 2, r * 2);
   }
   // camera
   mmCtx.strokeStyle = '#cdd6e4'; mmCtx.lineWidth = 1;
-  mmCtx.strokeRect(game.cam.x * sx, game.cam.y * sy, canvas.width * sx, canvas.height * sy);
+  mmCtx.strokeRect(game.cam.x * sx, game.cam.y * sy, viewW() * sx, viewH() * sy);
 }
 
 // ---------------- main loop ----------------
@@ -1658,6 +1774,7 @@ function buildSnap() {
     if (e.constructing) fl |= 2;
     if (e.growing) fl |= 4;
     if (e.order && e.order.type === 'harvest' && e.order.carry > 0) fl |= 8;
+    if (e.owner) fl |= facIdx(e.owner) << 4;  // Obelisk captor (bits 4-7)
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
     return [e.id, TYPE_IDX[e.type], Math.round(e.x), Math.round(e.y),
@@ -1704,6 +1821,7 @@ function applySnap(m) {
     e.nx = x; e.ny = y;
     e.hp = hp; e.shield = sh;
     e.deployed = !!(fl & 1); e.constructing = !!(fl & 2); e.growing = !!(fl & 4);
+    const ownIdx = (fl >> 4) & 15; e.owner = ownIdx ? Object.keys(FACTIONS)[ownIdx - 1] : null;
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };
     e.progress = prog / 100 * e.def.time;
     e.queue = [];
