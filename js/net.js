@@ -64,10 +64,15 @@ function applySnap(m) {
   game.proj = m.proj.map(a => ({ x: a[0], y: a[1], r: a[2], color: a[3] }));
   for (const f of m.fx) addFx(f);
   const seen = new Set();
+  // index existing entities by id so reconciling a snapshot is O(n), not O(n²)
+  // — with hundreds of units late-game the old per-unit .find() was the single
+  // biggest cost on the guest and is what froze the joiner in long matches.
+  const byIdMap = new Map();
+  for (const o of game.entities) byIdMap.set(o.id, o);
   for (const row of m.units) {
     const [id, ti, x, y, hp, sh, fl, prog, qt, qp, qn, qrid] = row;
     seen.add(id);
-    let e = game.entities.find(o => o.id === id);
+    let e = byIdMap.get(id);
     if (!e) {
       const type = TYPE_LIST[ti], d = DEFS[type];
       e = { id, type, def: d, fac: d.fac, x, y, size: d.size, hpMax: d.hp,
@@ -126,6 +131,22 @@ const net = { peer: null, hostConn: null, connected: false, slot: -1, code: '', 
 let room = null; // host only: { started, members:[{ pid, conn, slot, fac, host }] }
 
 function netConnected() { return net.connected; }
+
+// host: is any guest's data channel backed up? Each snapshot is the full state
+// of the world, so when a guest can't keep up the right move is to DROP the next
+// snapshot rather than queue it — a growing backlog is what freezes the joiner in
+// long matches (PeerJS overflow-buffers above 8 MB and the guest never catches up).
+const SNAP_BUFFER_LIMIT = 256 * 1024; // bytes already queued on the RTCDataChannel
+function snapBacklogged() {
+  if (!room) return false;
+  for (const m of room.members) {
+    if (m.pid === 'HOST' || !m.conn || !m.conn.open) continue;
+    if (m.conn.bufferSize > 0) return true; // PeerJS already overflow-buffering
+    const dc = m.conn.dataChannel;
+    if (dc && dc.bufferedAmount > SNAP_BUFFER_LIMIT) return true;
+  }
+  return false;
+}
 function mpStatus(s) { document.getElementById('mpStatus').textContent = s || ''; }
 
 // Unified send. Host loops messages through its own room logic (it IS the authority);

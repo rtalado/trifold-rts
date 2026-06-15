@@ -34,16 +34,16 @@ const HUD_BOTTOM = 158; // height of #bottombar that overlaps the canvas bottom
 const ZMIN = 0.28, ZMAX = 1.8;  // camera zoom range (out / in)
 
 const FACTIONS = {
-  vanguard:  { name: 'IRON VANGUARD',   color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 36 },
-  myriad:    { name: 'MYRIAD SWARM',    color: '#c75cff', dark: '#3a1d52', res: 'Biomass', cap: 60 },
-  exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 18 },
-  choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 30 },
-  syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 26 },
-  warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 40, res2: 'Iron' },
-  ember:     { name: 'EMBER NOMADS',     color: '#ff8a2a', dark: '#4a2a0e', res: 'Plunder',cap: 44 },
-  verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 56 },
-  stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 24 },
-  pact:      { name: 'OBSIDIAN PACT',    color: '#c0303a', dark: '#3a0e12', res: 'Blood',  cap: 48 },
+  vanguard:  { name: 'IRON VANGUARD',   color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 54 },
+  myriad:    { name: 'MYRIAD SWARM',    color: '#c75cff', dark: '#3a1d52', res: 'Biomass', cap: 90 },
+  exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 28 },
+  choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 45 },
+  syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 40 },
+  warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 60, res2: 'Iron' },
+  ember:     { name: 'EMBER NOMADS',     color: '#ff8a2a', dark: '#4a2a0e', res: 'Plunder',cap: 66 },
+  verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 84 },
+  stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 36 },
+  pact:      { name: 'OBSIDIAN PACT',    color: '#c0303a', dark: '#3a0e12', res: 'Blood',  cap: 72 },
 };
 
 // neutral entities (Obelisks, Hoards) aren't a playable faction; fall back to grey

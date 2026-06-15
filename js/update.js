@@ -33,10 +33,17 @@ function update(dt) {
   game.aiTimer -= dt;
   if (game.aiTimer <= 0) { game.aiTimer = game.aiInterval || 1.0; for (const f of game.aiFacs) aiTick(f); }
 
-  // host: stream a state snapshot to all guests ~10×/s
+  // host: stream a state snapshot to all guests ~10×/s. If a guest's channel is
+  // backed up, skip this snapshot (only the latest matters) and retry sooner —
+  // this is what keeps a slow joiner from drowning in a snapshot backlog and
+  // freezing late-game. We still clear netFx so cosmetic events don't pile up.
   if (game.mode === 'host') {
     game.netTimer -= dt;
-    if (game.netTimer <= 0) { game.netTimer = 0.1; netSend(buildSnap()); game.netFx.length = 0; }
+    if (game.netTimer <= 0) {
+      if (snapBacklogged()) { game.netTimer = 0.05; }
+      else { game.netTimer = 0.1; netSend(buildSnap()); }
+      game.netFx.length = 0;
+    }
   }
 
   // sweep the dead
