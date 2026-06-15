@@ -1,0 +1,491 @@
+'use strict';
+/* ============================================================
+   TRIFOLD — an asymmetric 5-faction RTS
+   vanguard  : classic base-building macro faction
+   myriad    : creep/territory economy, free auto-spawning swarm
+   exodus    : no buildings, one mobile Ark + shielded elites
+   choir     : death economy — every kill anywhere pays Essence,
+               units decay but lifesteal, lattice-bound building
+   syndicate : banking economy — treasury earns compound interest,
+               kills pay bounties, mercs arrive instantly,
+               buildings air-drop anywhere on the map
+   ============================================================ */
+
+// ---------------- constants ----------------
+const TILE = 32;
+// map size grows with the player count; set per match in buildMatch
+let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
+function setMapSize(players) {
+  GW = 140 + 30 * players;   // 2p:200  3p:230  4p:260 tiles wide
+  GH = 92 + 20 * players;    // 2p:132  3p:152  4p:172 tiles tall
+  WORLD_W = GW * TILE; WORLD_H = GH * TILE;
+}
+// small deterministic PRNG (mulberry32) so every peer builds the same random map
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const HUD_BOTTOM = 158; // height of #bottombar that overlaps the canvas bottom
+const ZMIN = 0.28, ZMAX = 1.8;  // camera zoom range (out / in)
+
+const FACTIONS = {
+  vanguard:  { name: 'IRON VANGUARD',   color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 36 },
+  myriad:    { name: 'MYRIAD SWARM',    color: '#c75cff', dark: '#3a1d52', res: 'Biomass', cap: 60 },
+  exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 18 },
+  choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 30 },
+  syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 26 },
+  warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 40, res2: 'Iron' },
+  ember:     { name: 'EMBER NOMADS',     color: '#ff8a2a', dark: '#4a2a0e', res: 'Plunder',cap: 44 },
+  verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 56 },
+  stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 24 },
+  pact:      { name: 'OBSIDIAN PACT',    color: '#c0303a', dark: '#3a0e12', res: 'Blood',  cap: 48 },
+};
+
+// neutral entities (Obelisks, Hoards) aren't a playable faction; fall back to grey
+const NEUTRAL = { color: '#9aa6b8', dark: '#2a3340' };
+const facColor = f => (FACTIONS[f] || NEUTRAL).color;
+const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
+
+const HINTS = {
+  vanguard: 'Workers harvest crystal automatically. Select a Worker to BUILD (Barracks → Marines/Snipers/Medics, Factory → Tanks, Airfield → Gunships, Turrets to defend). Destroy the enemy core; protect your Headquarters.',
+  myriad: 'Your creep IS your economy — every covered tile feeds you biomass. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. With the Hive selected, right-click to set the swarm rally. The swarm heals on creep.',
+  exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
+  choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
+  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
+  warden: 'You run on TWO resources. Stone flows from the total mass of your standing buildings — so Erect Ramparts (cheap, huge HP) and Bastions everywhere. Iron is minted only by Iron Forges, and it pays for your Tier-2 and Tier-3 war machines. Tier up: Forges → War Foundry (Ironclads) → Grand Arsenal (Castellans) → the doomsday Bulwark. Slow, armoured, unstoppable. Hold the Keep.',
+  ember: 'No mines, no farms — you fund the war by WAGING it. Every point of damage your warband deals to the enemy is paid back as Plunder. Fast, cheap, fragile raiders: keep attacking or starve. Guard the War Pyre.',
+  verdant: 'A slow, unstoppable garden. Plant Blooms — each mature Bloom pays Sap, so the more you grow the faster you snowball. Groves breed free Saplings forever. Patient early, overwhelming late. Protect the Heartwood.',
+  stormforge: 'An engine that only accelerates. Your income RAMPS the longer the game runs, supercharged by Dynamos — time is on your side. Few, expensive, devastating machines. Survive the early game and become unstoppable. Defend the Reactor.',
+  pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Reckless by design. Keep the Altar.',
+};
+
+// verb shown on a faction's build buttons ('Build X' by default)
+const BUILD_VERB = {
+  myriad: 'Grow ', syndicate: 'Drop ', warden: 'Erect ', ember: 'Raise ',
+  verdant: 'Plant ', stormforge: 'Assemble ', pact: 'Summon ',
+};
+
+// ---------------- unit / building definitions ----------------
+// kind: 'unit' | 'building'
+// shot: 'melee' | 'bullet' | 'beam' | 'glob' | 'shell'
+const DEFS = {
+  // ----- IRON VANGUARD -----
+  hq:       { fac:'vanguard', kind:'building', name:'Headquarters', hp:1600, size:42, core:true, produces:['worker'], dropoff:true },
+  worker:   { fac:'vanguard', kind:'unit', name:'Worker', hp:45, size:8, speed:75, cost:50, time:6, dmg:3, range:12, cd:1, aggro:0, shot:'melee', harvester:true, builder:true },
+  barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','sniper','medic'] },
+  factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['tank','flametank','goliath'] },
+  airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship'] },
+  turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:420, size:14, cost:100, time:12, dmg:9, range:195, cd:0.65, aggro:215, shot:'bullet' },
+  techlab:  { fac:'vanguard', kind:'building', name:'Tech Lab', hp:600, size:24, cost:150, time:14, researchLab:true },
+  marine:   { fac:'vanguard', kind:'unit', name:'Marine', hp:75, size:8, speed:82, cost:60, time:5, dmg:8, range:95, cd:0.8, aggro:170, shot:'bullet' },
+  sniper:   { fac:'vanguard', kind:'unit', name:'Sniper', hp:50, size:8, speed:65, cost:110, time:8, dmg:30, range:215, cd:2.2, aggro:235, shot:'beam' },
+  medic:    { fac:'vanguard', kind:'unit', name:'Medic', hp:60, size:8, speed:80, cost:75, time:6, aggro:0, aura:110, heal:6 },
+  tank:     { fac:'vanguard', kind:'unit', name:'Siege Tank', hp:280, size:14, speed:52, cost:200, time:12, dmg:34, range:165, cd:2.4, aggro:195, shot:'shell', splash:42 },
+  gunship:  { fac:'vanguard', kind:'unit', name:'Gunship', hp:140, size:10, speed:120, cost:180, time:11, dmg:7, range:120, cd:0.35, aggro:200, shot:'bullet' },
+  flametank:{ fac:'vanguard', kind:'unit', name:'Hellhound', hp:210, size:13, speed:74, cost:170, time:11, dmg:14, range:82, cd:0.5, aggro:150, shot:'glob', splash:34 },
+  goliath:  { fac:'vanguard', kind:'unit', name:'Goliath', hp:380, size:15, speed:48, cost:270, time:15, dmg:26, range:185, cd:1.4, aggro:200, shot:'bullet' },
+
+  // ----- MYRIAD SWARM -----
+  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother','ravager'], grows:['tumor','spawnpit','spittermound','hunterden','spine','evochamber'], spawns:'drone', spawnEvery:7 },
+  tumor:       { fac:'myriad', kind:'building', name:'Creep Tumor', hp:130, size:10, cost:50,  time:8,  creepR:6.5 },
+  spawnpit:    { fac:'myriad', kind:'building', name:'Spawn Pit', hp:350, size:21, cost:150, time:14, spawns:'drone',   spawnEvery:5 },
+  spittermound:{ fac:'myriad', kind:'building', name:'Spitter Mound', hp:380, size:21, cost:200, time:16, spawns:'spitter', spawnEvery:8.5 },
+  hunterden:   { fac:'myriad', kind:'building', name:'Hunter Den', hp:400, size:21, cost:250, time:18, spawns:'hunter', spawnEvery:11 },
+  spine:       { fac:'myriad', kind:'building', name:'Acid Spine', hp:360, size:13, cost:120, time:10, dmg:11, range:170, cd:0.9, aggro:190, shot:'glob' },
+  drone:       { fac:'myriad', kind:'unit', name:'Drone', hp:48, size:7, speed:98, dmg:6, range:14, cd:0.7, aggro:175, shot:'melee' },
+  spitter:     { fac:'myriad', kind:'unit', name:'Spitter', hp:60, size:8, speed:78, dmg:9, range:115, cd:1.1, aggro:180, shot:'glob' },
+  hunter:      { fac:'myriad', kind:'unit', name:'Hunter', hp:110, size:9, speed:115, dmg:13, range:16, cd:0.8, aggro:195, shot:'melee' },
+  broodmother: { fac:'myriad', kind:'unit', name:'Broodmother', hp:420, size:16, speed:55, cost:300, time:20, dmg:22, range:26, cd:1.4, aggro:185, shot:'melee', splash:38 },
+  evochamber:  { fac:'myriad', kind:'building', name:'Evolution Chamber', hp:480, size:22, cost:150, time:14, researchLab:true },
+  ravager:     { fac:'myriad', kind:'unit', name:'Ravager', hp:170, size:11, speed:84, cost:200, time:13, dmg:20, range:150, cd:1.2, aggro:195, shot:'glob', splash:24 },
+
+  // ----- SOLARI EXODUS -----
+  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true, produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis'] },
+  collector:{ fac:'exodus', kind:'unit', name:'Collector', hp:70, shield:30, size:8, speed:84, cost:60, time:6, aggro:0, harvester:true },
+  seeker:   { fac:'exodus', kind:'unit', name:'Seeker', hp:65, shield:45, size:8, speed:112, cost:120, time:9, dmg:10, range:55, cd:0.6, aggro:205, shot:'melee', blink:true },
+  lancer:   { fac:'exodus', kind:'unit', name:'Lancer', hp:70, shield:55, size:9, speed:60, cost:220, time:14, dmg:30, range:235, cd:2.1, aggro:250, shot:'beam' },
+  guardian: { fac:'exodus', kind:'unit', name:'Guardian', hp:120, shield:90, size:11, speed:72, cost:180, time:12, aggro:0, aura:150 },
+  phoenix:  { fac:'exodus', kind:'unit', name:'Phoenix', hp:70, shield:50, size:9, speed:125, cost:150, time:10, dmg:8, range:110, cd:0.5, aggro:210, shot:'bullet' },
+  templar:  { fac:'exodus', kind:'unit', name:'Templar', hp:80, shield:70, size:10, speed:65, cost:260, time:15, dmg:24, range:140, cd:2.4, aggro:200, shot:'shell', splash:55 },
+  aegis:    { fac:'exodus', kind:'unit', name:'Aegis', hp:240, shield:180, size:14, speed:50, cost:300, time:16, dmg:26, range:60, cd:0.9, aggro:190, shot:'melee', splash:30 },
+
+  // ----- ASHEN CHOIR -----
+  ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'], grows:['conduit','reliquary','spire','oracle'] },
+  conduit:   { fac:'choir', kind:'building', name:'Soul Conduit', hp:160, size:11, cost:60, time:7 },
+  reliquary: { fac:'choir', kind:'building', name:'Reliquary', hp:600, size:26, cost:180, time:16, produces:['revenant'] },
+  spire:     { fac:'choir', kind:'building', name:'Mourning Spire', hp:450, size:14, cost:130, time:12, dmg:12, range:185, cd:1.0, aggro:205, shot:'beam' },
+  wraith:    { fac:'choir', kind:'unit', name:'Wraith', hp:95, size:8, speed:105, cost:50, time:4, dmg:9, range:16, cd:0.55, aggro:185, shot:'melee' },
+  banshee:   { fac:'choir', kind:'unit', name:'Banshee', hp:75, size:8, speed:70, cost:130, time:9, dmg:15, range:150, cd:1.3, aggro:195, shot:'beam' },
+  revenant:  { fac:'choir', kind:'unit', name:'Revenant', hp:380, size:14, speed:58, cost:300, time:18, dmg:30, range:30, cd:1.6, aggro:190, shot:'melee', splash:40 },
+  oracle:    { fac:'choir', kind:'building', name:'Bone Oracle', hp:480, size:22, cost:150, time:13, researchLab:true },
+  lich:      { fac:'choir', kind:'unit', name:'Lich', hp:120, size:10, speed:64, cost:180, time:12, dmg:24, range:175, cd:1.6, aggro:210, shot:'beam' },
+
+  // ----- GILDED SYNDICATE -----
+  haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut','marauder'], grows:['watchpost','countinghouse','blackmarket'] },
+  watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet' },
+  countinghouse: { fac:'syndicate', kind:'building', name:'Countinghouse', hp:500, size:24, cost:200, time:8 },
+  enforcer:      { fac:'syndicate', kind:'unit', name:'Enforcer', hp:90, size:8, speed:80, cost:90, time:0.5, dmg:9, range:105, cd:0.75, aggro:180, shot:'bullet' },
+  arbalest:      { fac:'syndicate', kind:'unit', name:'Arbalest', hp:60, size:8, speed:62, cost:160, time:0.5, dmg:26, range:225, cd:2.0, aggro:240, shot:'beam' },
+  juggernaut:    { fac:'syndicate', kind:'unit', name:'Juggernaut', hp:320, size:14, speed:55, cost:320, time:0.5, dmg:30, range:150, cd:2.2, aggro:190, shot:'shell', splash:40 },
+  blackmarket:   { fac:'syndicate', kind:'building', name:'Black Market', hp:520, size:24, cost:150, time:6, researchLab:true },
+  marauder:      { fac:'syndicate', kind:'unit', name:'Marauder', hp:180, size:11, speed:74, cost:150, time:0.5, dmg:14, range:120, cd:0.9, aggro:185, shot:'glob', splash:20 },
+
+  // ----- WARDEN COVENANT (fortress: Stone from building mass + Iron from Forges) -----
+  // A deep three-tier tech tree. Tier 1 runs on Stone alone; Tier 2 & 3 also burn
+  // Iron, which only Iron Forges produce — so you must invest in economy to unlock
+  // your heavy machines and the doomsday Bulwark.
+  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g','pikeman'], grows:['rampart','bastion','forge','foundry_w','college','bunker','redoubt','arsenal','citadel'] },
+  // -- Tier 1: Stone only --
+  rampart:   { fac:'warden', kind:'building', name:'Rampart', hp:1100, size:15, cost:70, time:6 },
+  bastion:   { fac:'warden', kind:'building', name:'Bastion', hp:640, size:15, cost:150, time:10, dmg:12, range:200, cd:0.7, aggro:210, shot:'bullet' },
+  forge:     { fac:'warden', kind:'building', name:'Iron Forge', hp:760, size:18, cost:130, time:11, ironPerSec:1.0 },
+  sentinel:  { fac:'warden', kind:'unit', name:'Sentinel', hp:170, size:10, speed:54, cost:80, time:7, dmg:11, range:24, cd:0.9, aggro:170, shot:'melee' },
+  warden_g:  { fac:'warden', kind:'unit', name:'Warden Guard', hp:120, size:9, speed:50, cost:120, time:9, dmg:16, range:165, cd:1.2, aggro:200, shot:'bullet' },
+  pikeman:   { fac:'warden', kind:'unit', name:'Pikeman', hp:210, size:11, speed:52, cost:110, cost2:10, time:9, dmg:24, range:34, cd:1.3, aggro:175, shot:'melee' },
+  // -- Tier 2: Stone + Iron (needs the Forge economy) --
+  foundry_w: { fac:'warden', kind:'building', name:'War Foundry', hp:900, size:30, cost:230, cost2:30, time:18, produces:['bombard','ironclad'] },
+  college:   { fac:'warden', kind:'building', name:'War College', hp:700, size:24, cost:150, time:14, researchLab:true },
+  bunker:    { fac:'warden', kind:'building', name:'Bunker', hp:1400, size:18, cost:170, time:12, dmg:10, range:185, cd:0.5, aggro:205, shot:'bullet' },
+  redoubt:   { fac:'warden', kind:'building', name:'Redoubt', hp:820, size:18, cost:220, cost2:20, time:16, dmg:30, range:235, cd:2.2, aggro:235, shot:'shell', splash:42 },
+  bombard:   { fac:'warden', kind:'unit', name:'Bombard', hp:240, size:14, speed:42, cost:240, cost2:25, time:15, dmg:34, range:200, cd:2.6, aggro:200, shot:'shell', splash:46 },
+  ironclad:  { fac:'warden', kind:'unit', name:'Ironclad', hp:560, size:15, speed:46, cost:200, cost2:50, time:18, dmg:30, range:26, cd:1.3, aggro:185, shot:'melee', splash:30 },
+  // -- Tier 3: heavy Iron investment --
+  arsenal:   { fac:'warden', kind:'building', name:'Grand Arsenal', hp:1100, size:30, cost:320, cost2:90, time:24, produces:['castellan'] },
+  castellan: { fac:'warden', kind:'unit', name:'Castellan', hp:940, size:20, speed:38, cost:380, cost2:130, time:26, dmg:46, range:215, cd:2.4, aggro:210, shot:'shell', splash:62 },
+  citadel:   { fac:'warden', kind:'building', name:'The Bulwark', hp:7200, size:56, cost:2400, cost2:450, time:80,
+               dmg:175, range:445, cd:4.6, aggro:475, shot:'shell', splash:96,
+               aux:{ dmg:13, range:215, cd:0.4, shot:'bullet', guns:4 } },
+
+  // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
+  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge'] },
+  warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:520, size:24, cost:120, time:9, produces:['raider','slinger'] },
+  totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:340, size:13, cost:110, time:7, dmg:12, range:165, cd:0.8, aggro:190, shot:'glob' },
+  raider:    { fac:'ember', kind:'unit', name:'Raider', hp:70, size:8, speed:128, cost:45, time:4, dmg:9, range:16, cd:0.6, aggro:185, shot:'melee' },
+  slinger:   { fac:'ember', kind:'unit', name:'Slinger', hp:52, size:8, speed:100, cost:80, time:5, dmg:11, range:135, cd:0.9, aggro:195, shot:'glob' },
+  firebrand: { fac:'ember', kind:'unit', name:'Firebrand', hp:95, size:9, speed:92, cost:150, time:8, dmg:18, range:120, cd:1.3, aggro:200, shot:'shell', splash:34 },
+  warbeast:  { fac:'ember', kind:'unit', name:'War Beast', hp:300, size:15, speed:96, cost:280, time:13, dmg:24, range:20, cd:0.9, aggro:185, shot:'melee', splash:26 },
+  warlodge:  { fac:'ember', kind:'building', name:'War Lodge', hp:520, size:22, cost:140, time:12, researchLab:true },
+  firewagon: { fac:'ember', kind:'unit', name:'Fire Wagon', hp:160, size:13, speed:110, cost:160, time:9, dmg:16, range:90, cd:0.7, aggro:175, shot:'glob', splash:36 },
+
+  // ----- VERDANT BLOOM (garden: Sap from mature Blooms; Groves breed free Saplings) -----
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','grove','bramble','arboretum'], spawns:'sapling', spawnEvery:8 },
+  bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
+  grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6 },
+  bramble:   { fac:'verdant', kind:'building', name:'Bramble', hp:360, size:13, cost:120, time:9, dmg:11, range:172, cd:0.9, aggro:190, shot:'glob' },
+  sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee' },
+  thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:70, size:8, speed:74, cost:90, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
+  treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:300, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
+  arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true },
+  ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:420, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
+
+  // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
+  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','voltaic','gladius'], grows:['dynamo','tesla','foundry_s','stormlab'] },
+  dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
+  tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:16, range:195, cd:1.1, aggro:205, shot:'beam' },
+  foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus'] },
+  arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:90, shield:40, size:9, speed:118, cost:110, time:8, dmg:9, range:115, cd:0.4, aggro:205, shot:'bullet' },
+  voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:80, shield:60, size:9, speed:62, cost:210, time:13, dmg:30, range:230, cd:2.0, aggro:245, shot:'beam' },
+  colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:520, shield:160, size:18, speed:48, cost:420, time:24, dmg:40, range:175, cd:2.4, aggro:200, shot:'shell', splash:55 },
+  stormlab:  { fac:'stormforge', kind:'building', name:'Research Bay', hp:520, size:22, cost:150, time:14, researchLab:true },
+  gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:200, shield:90, size:13, speed:70, cost:230, time:14, dmg:22, range:130, cd:1.0, aggro:195, shot:'shell', splash:24 },
+
+  // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying) -----
+  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth','cultist'], grows:['shrine','spike','sanctum'] },
+  shrine:    { fac:'pact', kind:'building', name:'Bone Shrine', hp:420, size:22, cost:120, time:9, spawns:'thrall', spawnEvery:5 },
+  spike:     { fac:'pact', kind:'building', name:'Blood Spike', hp:340, size:13, cost:110, time:7, dmg:13, range:168, cd:0.85, aggro:190, shot:'glob' },
+  thrall:    { fac:'pact', kind:'unit', name:'Thrall', hp:46, size:7, speed:104, cost:30, time:3, dmg:7, range:14, cd:0.6, aggro:185, shot:'melee' },
+  zealot:    { fac:'pact', kind:'unit', name:'Zealot', hp:110, size:9, speed:88, cost:110, time:6, dmg:15, range:18, cd:0.8, aggro:185, shot:'melee' },
+  behemoth:  { fac:'pact', kind:'unit', name:'Behemoth', hp:560, size:18, speed:50, cost:340, time:18, dmg:34, range:24, cd:1.4, aggro:185, shot:'melee', splash:40 },
+  sanctum:   { fac:'pact', kind:'building', name:'Blood Sanctum', hp:520, size:22, cost:130, time:12, researchLab:true },
+  cultist:   { fac:'pact', kind:'unit', name:'Cultist', hp:60, size:8, speed:92, cost:70, time:5, dmg:13, range:130, cd:1.0, aggro:190, shot:'glob' },
+
+  // ----- NEUTRAL (capture / fight) -----
+  // Obelisk: indestructible capture point — hold ground nearby to claim its income.
+  obelisk:       { fac:'neutral', kind:'building', name:'Obelisk', hp:1, size:22, noTarget:true, captureR:140, captureTime:6 },
+  // Hoard: a guarded treasure tower that shoots intruders; destroy it for a bounty.
+  hoard:         { fac:'neutral', kind:'building', name:'Ancient Hoard', hp:1500, size:30, dmg:16, range:215, cd:1.0, aggro:240, shot:'shell', splash:34, bounty:550 },
+  // Cache: a small, lightly-guarded jungle camp; quick to crack for a little bounty.
+  cache:         { fac:'neutral', kind:'building', name:'Supply Cache', hp:520, size:17, dmg:8, range:150, cd:1.1, aggro:160, shot:'bullet', bounty:160 },
+};
+
+// Per-thing flavour + tech tree. `desc` shows on hover; `req` is a building that
+// must be finished before this can be built/produced (the faction's tech gate).
+const META = {
+  // IRON VANGUARD
+  hq:        { desc: 'Your core. Workers drop off crystal here, and it trains more Workers. Lose it and you lose.' },
+  worker:    { desc: 'Cheap harvester and builder. Auto-mines crystal; select one to construct buildings.' },
+  barracks:  { desc: 'Infantry school — trains Marines, Snipers and Medics.' },
+  factory:   { desc: 'Heavy vehicle bay. Builds Siege Tanks.', req: 'barracks' },
+  airfield:  { desc: 'Aircraft hangar. Builds Gunships.', req: 'factory' },
+  turret:    { desc: 'Static defensive gun. Cheap base protection.' },
+  marine:    { desc: 'Cheap, reliable rifle infantry. The backbone of any push.' },
+  sniper:    { desc: 'Fragile long-range specialist with heavy single-target damage.' },
+  medic:     { desc: 'Non-combat support; continuously heals nearby friendly units.' },
+  tank:      { desc: 'Slow siege vehicle with a splashing cannon. Anti-armour and anti-clump.' },
+  gunship:   { desc: 'Fast flyer with rapid fire. Excellent for raids and mop-up.' },
+  // MYRIAD SWARM
+  hive:      { desc: 'Your core. Spreads creep, spawns free Drones, and grows every structure.' },
+  tumor:     { desc: 'Cheap creep spreader; extends your economy and where you can build.' },
+  spawnpit:  { desc: 'Breeds Drones endlessly, for free.' },
+  spittermound:{ desc: 'Breeds ranged Spitters endlessly, for free.', req: 'spawnpit' },
+  hunterden: { desc: 'Breeds fast Hunters endlessly, for free.', req: 'spawnpit' },
+  spine:     { desc: 'Static acid turret. Creep defence.' },
+  drone:     { desc: 'Free melee swarm unit. Weak alone, lethal in numbers. Heals on creep.' },
+  spitter:   { desc: 'Free ranged unit that spits acid.' },
+  hunter:    { desc: 'Free fast melee striker that runs units down.' },
+  broodmother:{ desc: 'Elite splashing bruiser bred from the Hive.', req: 'hunterden' },
+  // SOLARI EXODUS
+  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. Deploy on a crystal node to siphon.' },
+  collector: { desc: 'Harvester that mines crystal and hauls it back to the Ark. Build more to scale your economy.' },
+  seeker:    { desc: 'Cheap shielded skirmisher that blinks onto its target.' },
+  lancer:    { desc: 'Long-range beam unit; fragile but deals heavy damage.' },
+  guardian:  { desc: 'Support unit; projects a shield-and-heal aura over nearby allies.' },
+  phoenix:   { desc: 'Fast shielded flyer with rapid fire.' },
+  templar:   { desc: 'Elite shielded warrior with a splashing siege shell.' },
+  // ASHEN CHOIR
+  ossuary:   { desc: 'Your core. Raises Wraiths and Banshees and anchors the lattice.' },
+  conduit:   { desc: 'Extends your lattice (build range) and trickles Essence.' },
+  reliquary: { desc: 'Raises elite Revenants.' },
+  spire:     { desc: 'Static beam tower. Lattice defence.', req: 'conduit' },
+  wraith:    { desc: 'Cheap fast melee spirit. Fades away from the lattice — heals by dealing damage.' },
+  banshee:   { desc: 'Ranged spirit with a piercing beam.' },
+  revenant:  { desc: 'Elite splashing melee horror raised in the Reliquary.' },
+  // GILDED SYNDICATE
+  haven:     { desc: 'Your core and treasury. Earns compound interest and hires mercenaries instantly.' },
+  watchpost: { desc: 'Air-dropped static gun. Project control across the map — but not into enemy territory.' },
+  countinghouse:{ desc: 'Raises your interest cap and pays rent. Bank more gold, earn faster.' },
+  enforcer:  { desc: 'Cheap instant mercenary with a sidearm.' },
+  arbalest:  { desc: 'Long-range marksman merc with heavy damage.', req: 'countinghouse' },
+  juggernaut:{ desc: 'Heavy splashing mercenary bruiser.', req: 'countinghouse' },
+  // WARDEN COVENANT — three tiers; Tier 2+ also costs Iron from Forges
+  keep:      { desc: 'Your core fortress. Trains Tier-1 infantry and erects every structure. Stone income scales with your buildings’ total HP.' },
+  rampart:   { desc: 'Dirt-cheap, enormously tough wall. Seals your hold and fattens your Stone income.' },
+  bastion:   { desc: 'Armoured defensive gun tower.', req: 'rampart' },
+  forge:     { desc: 'Iron Forge — your only source of Iron. Each finished Forge mints Iron every second; build many to fuel Tier-2 and Tier-3 war machines.' },
+  sentinel:  { desc: 'Tough, slow melee line-holder.' },
+  warden_g:  { desc: 'Armoured ranged trooper.', req: 'bastion' },
+  pikeman:   { desc: 'Tier-1 anti-armour spearman — cheap, hits hard in melee. A little Iron.' },
+  foundry_w: { desc: 'Tier-2 vehicle bay. Builds Bombards and Ironclads. Needs an Iron Forge.', req: 'forge' },
+  college:   { desc: 'Tier-2 research hall. Trains the Covenant’s doctrines & upgrades.', req: 'bastion' },
+  bombard:   { desc: 'Slow long-range siege artillery with splash. Costs Iron.' },
+  ironclad:  { desc: 'Tier-2 heavy assault walker — a hulking armoured melee bruiser. Costs Iron.' },
+  arsenal:   { desc: 'Tier-3 grand workshop. Assembles the colossal Castellan siege walker. Needs a War Foundry and War College.', reqs:['foundry_w','college'] },
+  castellan: { desc: 'Tier-3 siege colossus — devastating long-range splash and a wall of HP. Heavy Iron cost.' },
+  citadel:   { desc: 'The Covenant’s doomsday fortress — a colossal long-range artillery bunker ringed with four rapid machine-gun turrets. Ruinously expensive in Stone AND Iron, and slow to raise, but it shatters armies from clear across the map. Demands the full war machine, a Grand Arsenal, and Siege Doctrine.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_atk2' },
+  // EMBER NOMADS
+  pyre:      { desc: 'Your core. Musters the whole warband. Plunder from combat funds it.' },
+  warcamp:   { desc: 'Forward muster point; trains Raiders and Slingers and unlocks heavier warriors.' },
+  totem:     { desc: 'Static fire turret. Cheap defence.' },
+  raider:    { desc: 'Dirt-cheap, very fast melee raider.' },
+  slinger:   { desc: 'Fast ranged skirmisher.' },
+  firebrand: { desc: 'Splashing molotov thrower.', req: 'warcamp' },
+  warbeast:  { desc: 'Fast heavy charger that bowls through lines.', req: 'warcamp' },
+  // VERDANT BLOOM
+  heart:     { desc: 'Your core. Spawns free Saplings forever and grows the garden.' },
+  bloom:     { desc: 'Economy plant. Each mature Bloom pays Sap — the more you grow, the richer you get.' },
+  grove:     { desc: 'Breeds free Saplings, forever.', req: 'bloom' },
+  bramble:   { desc: 'Static thorn turret.', req: 'bloom' },
+  sapling:   { desc: 'Free, weak melee swarm creature.' },
+  thornling: { desc: 'Ranged thorn-spitter.' },
+  treant:    { desc: 'Towering splashing bruiser.', req: 'grove' },
+  // STORMFORGE DYNASTY
+  reactor:   { desc: 'Your core. Assembles machines. Income ramps with elapsed time — Dynamos accelerate it.' },
+  dynamo:    { desc: 'Accelerates your escalating income. Build several early.' },
+  tesla:     { desc: 'Static beam tower. Defence.', req: 'dynamo' },
+  foundry_s: { desc: 'Assembles the towering Colossus.', req: 'dynamo' },
+  arclight:  { desc: 'Fast shielded skirmisher with rapid fire.' },
+  voltaic:   { desc: 'Long-range shielded beam platform.', req: 'dynamo' },
+  colossus:  { desc: 'Huge shielded walker with a splashing siege cannon.' },
+  // OBSIDIAN PACT
+  altar:     { desc: 'Your core. Summons Thralls, Zealots and Behemoths. Your fallen units pay Blood.' },
+  shrine:    { desc: 'Spawns free Thralls and lets the Altar raise greater horrors.' },
+  spike:     { desc: 'Static blood turret. Cheap defence.' },
+  thrall:    { desc: 'Dirt-cheap, expendable melee body. Its death spills Blood.' },
+  zealot:    { desc: 'Tougher melee fanatic.', req: 'shrine' },
+  behemoth:  { desc: 'Massive splashing horror raised from spilled Blood.', req: 'shrine' },
+  // NEW UNITS & BUILDINGS
+  techlab:   { desc: 'Research building. Develops Iron Vanguard weapon & armour upgrades.' },
+  flametank: { desc: 'Fast short-range tank that hoses a cone of fire — devastating against clumped infantry.' },
+  goliath:   { desc: 'Heavy walker with a long-range autocannon. Durable all-rounder; anchors a push.' },
+  evochamber:{ desc: 'Research building grown on creep. Evolves the swarm’s upgrades.' },
+  ravager:   { desc: 'Bred ranged elite that lobs corrosive splash. Needs a Hunter Den.', req: 'hunterden' },
+  aegis:     { desc: 'Heavily shielded vanguard bruiser. Soaks fire and crushes what it reaches.' },
+  oracle:    { desc: 'Lattice research shrine. Unlocks the Choir’s upgrades.' },
+  lich:      { desc: 'Ranged caster spirit with a piercing death-beam. Fragile but hits hard.' },
+  blackmarket:{ desc: 'Air-dropped research den. Brokers the Syndicate’s upgrades.' },
+  marauder:  { desc: 'Instant-hire mercenary bruiser with a short-range grenade launcher.' },
+  bunker:    { desc: 'Hugely armoured gun emplacement — the backbone of an impenetrable wall. Needs a Bastion.', req: 'bastion' },
+  redoubt:   { desc: 'Long-range static artillery with splash. Shells anything that nears your line. Needs a War Foundry.', req: 'foundry_w' },
+  warlodge:  { desc: 'Research building. Hones the warband’s edge & upgrades.' },
+  firewagon: { desc: 'Fast vehicle that flings flaming pitch in a splash. Needs a War Camp.', req: 'warcamp' },
+  arboretum: { desc: 'Research building. Cultivates the garden’s upgrades.' },
+  ancient:   { desc: 'Towering elder treant — enormous HP and splashing blows. Needs a Grove.', req: 'grove' },
+  stormlab:  { desc: 'Research building. Designs the Dynasty’s upgrades.' },
+  gladius:   { desc: 'Shielded mid-weight mech with a splashing cannon. Needs a Dynamo.', req: 'dynamo' },
+  sanctum:   { desc: 'Research building. Channels the Pact’s rites & upgrades.' },
+  cultist:   { desc: 'Cheap ranged zealot — the Pact’s only ranged body. Spits hexes from afar.' },
+  // NEUTRAL
+  obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
+  hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
+  cache:     { desc: 'Lightly-guarded neutral supply cache. Crack it open for a small bounty.' },
+};
+const meta = t => META[t] || {};
+// has this faction met the tech requirement (a finished prerequisite building) for `type`?
+// every gating requirement for a buildable: prerequisite building(s) — a single
+// `req` or a `reqs` array — plus an optional researched upgrade `reqResearch`.
+// Returns [{name, ok}] so the UI can list each one and its status.
+function reqStatus(fac, type) {
+  const m = meta(type), p = game.players[fac], out = [];
+  const reqs = m.reqs || (m.req ? [m.req] : []);
+  for (const r of reqs)
+    out.push({ name: DEFS[r].name,
+      ok: game.entities.some(e => !e.dead && e.fac === fac && e.type === r && !e.constructing && !e.growing) });
+  if (m.reqResearch)
+    out.push({ name: RESEARCH[m.reqResearch].name, ok: !!(p && p.research.has(m.reqResearch)) });
+  return out;
+}
+function techMet(fac, type) { return reqStatus(fac, type).every(r => r.ok); }
+function reqMsg(fac, type) {
+  const miss = reqStatus(fac, type).filter(r => !r.ok).map(r => r.name);
+  return miss.length ? 'Requires ' + miss.join(', ') : 'Requirements met';
+}
+
+// secondary resource: some factions (the Warden) spend a second currency (`cost2`,
+// held in p.iron) alongside their primary `res`. `cost2` is absent for everyone else.
+function affordable(p, d) { return p.res >= (d.cost || 0) && (p.iron || 0) >= (d.cost2 || 0); }
+function payFor(p, d) { p.res -= (d.cost || 0); p.iron = (p.iron || 0) - (d.cost2 || 0); }
+function costMsg(fac, d) {
+  const F = FACTIONS[fac], p = game.players[fac];
+  if ((d.cost2 || 0) > 0 && (p.iron || 0) < d.cost2 && p.res >= (d.cost || 0)) return 'Not enough ' + F.res2;
+  return 'Not enough ' + F.res;
+}
+
+// ---------------- research / upgrades ----------------
+// Each faction has its own three-step upgrade line, researched at its core. They
+// permanently buff that faction's units: two attack tiers and one defence tier.
+// Effects are multipliers; `req` gates the second attack tier behind the first.
+const RESEARCH = {};
+const RESEARCH_BY_FAC = {};
+(function () {
+  // [attack I, defence, attack II] flavour names per faction
+  const SPEC = {
+    vanguard:  ['Hardened Rounds', 'Composite Armor', 'Depleted Slugs'],
+    myriad:    ['Sharpened Claws', 'Chitin Plating', 'Corrosive Enzymes'],
+    exodus:    ['Focused Lenses', 'Aegis Matrix', 'Solar Overcharge'],
+    choir:     ['Wailing Edge', 'Bound Essence', 'Grave Hunger'],
+    syndicate: ['Premium Munitions', 'Reinforced Plating', 'Black-Market Ordnance'],
+    warden:    ['Tempered Blades', 'Forged Bulwark', 'Siege Doctrine'],
+    ember:     ['Whetted Steel', 'Boiled Leather', 'Wildfire Oil'],
+    verdant:   ['Barbed Thorns', 'Ironbark', 'Toxic Sap'],
+    stormforge:['Overclocked Coils', 'Plated Chassis', 'Arc Capacitors'],
+    pact:      ['Cruel Edges', 'Bone Wards', 'Bloodlust'],
+  };
+  const SHIELDED = { exodus: true, stormforge: true };
+  for (const fac in SPEC) {
+    const [n1, n2, n3] = SPEC[fac];
+    const a1 = fac + '_atk1', d1 = fac + '_def1', a2 = fac + '_atk2';
+    RESEARCH[a1] = { fac, name: n1, desc: '+25% attack damage for all your combat units.', cost: 150, time: 30, dmg: 1.25 };
+    RESEARCH[d1] = { fac, name: n2, cost: 175, time: 35, hp: 1.2,
+      desc: SHIELDED[fac] ? '+20% max HP and +25% shields for all your units.' : '+20% max HP for all your units.',
+      shield: SHIELDED[fac] ? 1.25 : undefined };
+    RESEARCH[a2] = { fac, name: n3, desc: '+30% more attack damage. Requires ' + n1 + '.', cost: 320, time: 45, dmg: 1.3, req: a1 };
+    RESEARCH_BY_FAC[fac] = [a1, d1, a2];
+  }
+})();
+
+// which building each faction researches at (the base-less Exodus uses its Ark)
+const LAB_OF = {};
+for (const k in DEFS) if (DEFS[k].researchLab) LAB_OF[DEFS[k].fac] = k;
+
+// derive a player's stat multipliers from the set of upgrades they've researched
+function recalcMul(p) {
+  p.dmgMul = 1; p.hpBonusMul = 1; p.shBonusMul = 1;
+  for (const rid of p.research) {
+    const r = RESEARCH[rid]; if (!r) continue;
+    if (r.dmg) p.dmgMul *= r.dmg;
+    if (r.hp) p.hpBonusMul *= r.hp;
+    if (r.shield) p.shBonusMul *= r.shield;
+  }
+}
+// effective attack damage of an entity, with its owner's attack upgrades applied
+function dmgOf(e) {
+  const p = e.def.kind === 'unit' && game.players[e.fac];
+  return e.def.dmg * (p ? p.dmgMul : 1);
+}
+function researchQueued(fac, rid) {
+  return game.entities.some(e => !e.dead && e.fac === fac && e.queue && e.queue.some(q => q.research && q.rid === rid));
+}
+// apply a finished research: record it, refresh multipliers, and retroactively
+// rescale existing units so the buff is immediate (preserving their health %).
+function applyResearch(fac, rid) {
+  const p = game.players[fac], r = RESEARCH[rid];
+  if (!p || !r || p.research.has(rid)) return;
+  p.research.add(rid);
+  recalcMul(p);
+  for (const e of game.entities) {
+    if (e.dead || e.fac !== fac || e.def.kind !== 'unit') continue;
+    const hpFrac = e.hpMax > 0 ? e.hp / e.hpMax : 1;
+    e.hpMax = e.def.hp * p.hpBonusMul; e.hp = e.hpMax * hpFrac;
+    const shMax = (e.def.shield || 0) * p.shBonusMul;
+    const shFrac = e.shieldMax > 0 ? e.shield / e.shieldMax : 0;
+    e.shieldMax = shMax; e.shield = shMax * shFrac;
+  }
+  localMsg(fac, 'Researched ' + r.name);
+}
+function enqueueResearch(e, rid) {
+  const r = RESEARCH[rid], p = game.players[e.fac];
+  if (!r || r.fac !== e.fac || !e.def.researchLab) return false;
+  if (p.research.has(rid)) { localMsg(e.fac, 'Already researched'); return false; }
+  if (researchQueued(e.fac, rid)) { localMsg(e.fac, 'Already researching ' + r.name); return false; }
+  if (r.req && !p.research.has(r.req)) { localMsg(e.fac, 'Requires ' + RESEARCH[r.req].name); return false; }
+  if (e.queue.length >= 5) { localMsg(e.fac, 'Queue is full'); return false; }
+  if (p.res < r.cost) { localMsg(e.fac, 'Not enough ' + FACTIONS[e.fac].res); return false; }
+  p.res -= r.cost;
+  e.queue.push({ research: true, rid, type: 'research', t: r.time, total: r.time });
+  return true;
+}
+
+// economy tuning
+const ECON = {
+  workerCarry: 10, workerMine: 2.0,
+  myriadBase: 2.0, myriadPerTile: 0.012,
+  exodusBase: 1.5, exodusSiphon: 4.5,
+  // choir: trickle + a cut of every death on the map; units decay in the field
+  // but are sustained near the lattice and lifesteal in combat
+  choirBase: 1.8, choirConduit: 0.8, choirDeathFlat: 5, choirDeathPct: 0.06,
+  choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.7, choirLattice: 270,
+  // syndicate: compound interest on the banked treasury, bounties on kills
+  synBase: 2.5, synInterest: 0.011, synCapBase: 1200, synCapPer: 500,
+  synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06,
+  // no building (turret, wall, anything) may be placed within this radius of an enemy structure
+  enemyKeepout: 300,
+  // warden: income scales with the total HP of standing (finished) buildings
+  wardenBase: 1.0, wardenPerHp: 0.0012,
+  // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle
+  emberBase: 1.2, emberLootPerDmg: 0.32,
+  // verdant: income per mature Bloom (grows slowly, snowballs hard)
+  verdantBase: 1.2, verdantPerBloom: 1.6,
+  // stormforge: income ramps with elapsed game time, accelerated by Dynamos
+  stormBase: 1.6, stormPerDynamo: 1.1, stormRamp: 0.0016,
+  // pact: Blood gained when your OWN units die (flat + a share of their max HP)
+  pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
+  // neutral capture points pay their holder a steady income
+  obeliskIncome: 1.4,
+};
+
+// AI difficulty. `incomeMul` is the dominant lever (the bot's whole economy is
+// scaled); `firstWave`/`waveStep` control how soon and how relentlessly it attacks;
+// `react` is how often (seconds) the bot re-plans. Easy is a clear handicap; Brutal
+// out-economies a human and pushes almost immediately.
+const DIFFS = {
+  easy:   { name: 'Easy',   incomeMul: 0.6, firstWave: 165, waveStep: 3, react: 1.5 },
+  normal: { name: 'Normal', incomeMul: 1.0, firstWave: 90,  waveStep: 2, react: 1.0 },
+  hard:   { name: 'Hard',   incomeMul: 1.5, firstWave: 55,  waveStep: 2, react: 0.7 },
+  brutal: { name: 'Brutal', incomeMul: 2.1, firstWave: 35,  waveStep: 1, react: 0.5 },
+};
+

@@ -189,16 +189,28 @@ deaths. Units: Thralls, Zealots, Behemoths, and the ranged **Cultist**.
 
 ## Code layout
 
-- `index.html` — page shell, the menu screens, HUD, and all styling.
-- `game.js` — the whole engine: entity definitions (`DEFS`), per-thing flavour and
-  tech gates (`META`), research lines (`RESEARCH`), AI difficulties (`DIFFS`),
-  economy (`tickEconomy`), creep system, combat & movement, per-faction AI
-  (`aiTick`), the command card, multiplayer transport, and the canvas renderer.
+- `index.html` — page shell, the menu screens and HUD markup.
+- `css/style.css` — all styling.
+- `js/` — the engine, split into ordered classic scripts that share one global
+  scope (so load order, set in `index.html`, matters):
+  - `defs.js` — entity definitions (`DEFS`), flavour & tech gates (`META`),
+    research lines (`RESEARCH`), economy tuning (`ECON`), AI difficulties (`DIFFS`),
+    and the requirement/secondary-resource helpers.
+  - `core.js` — global state, the canvas handles, and small helpers.
+  - `sim.js` — game setup, map generation, spawning, combat & movement, placement,
+    creep, and `tickEconomy`.
+  - `ai.js` — the per-faction bot brains (`aiTick`).
+  - `update.js` — the main simulation step and win/lose handling.
+  - `input.js` — mouse/keyboard, selection, orders and the camera.
+  - `ui.js` — the command card, tooltips and HUD.
+  - `render.js` — the canvas renderer (`draw`, `drawEnt`, scenery, minimap).
+  - `loop.js` — the `requestAnimationFrame` loop and background ticking.
+  - `net.js` — snapshot serialization and peer-to-peer multiplayer + lobby.
+  - `menu.js` — menu wiring (single-player / multiplayer setup).
 - `server.js` — a tiny dependency-free static file server (just serves the files;
   multiplayer is peer-to-peer, not relayed).
 - `libs/peerjs.min.js` — vendored PeerJS (WebRTC) for multiplayer.
 - `start.bat` / `start.sh` — launch `server.js` and open the browser.
 
-Balance levers are concentrated near the top of `game.js`: `DEFS` (unit/building
-stats and costs), `ECON` (income rates), `RESEARCH` (upgrade effects) and `DIFFS`
-(AI difficulty).
+Balance levers are concentrated in `js/defs.js`: `DEFS` (unit/building stats and
+costs), `ECON` (income rates), `RESEARCH` (upgrade effects) and `DIFFS` (AI difficulty).

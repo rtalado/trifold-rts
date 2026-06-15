@@ -1,0 +1,28 @@
+// ---------------- global state ----------------
+let game = null;
+let nextId = 1;
+let lastFrame = 0;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const mmCanvas = document.getElementById('minimap');
+const mmCtx = mmCanvas.getContext('2d');
+
+function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+addEventListener('resize', resize); resize();
+
+// ---------------- helpers ----------------
+const byId = id => game.entities.find(e => e.id === id && !e.dead);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const tileIdx = (x, y) => {
+  const tx = clamp(Math.floor(x / TILE), 0, GW - 1), ty = clamp(Math.floor(y / TILE), 0, GH - 1);
+  return ty * GW + tx;
+};
+const facIdx = fac => Object.keys(FACTIONS).indexOf(fac) + 1;
+const onCreep = (fac, x, y) => game.creep[tileIdx(x, y)] === facIdx(fac);
+
+function ents(filter) { return game.entities.filter(e => !e.dead && filter(e)); }
+function countUnits(fac) { return game.entities.reduce((n, e) => n + (!e.dead && e.fac === fac && e.def.kind === 'unit' ? 1 : 0), 0); }
+function armyOf(fac) { return ents(e => e.fac === fac && e.def.kind === 'unit' && (e.def.dmg > 0 || e.def.aura) && !e.def.harvester && !e.def.core); }
+
