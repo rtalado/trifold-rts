@@ -105,7 +105,7 @@ function buildMatch(roster, localFac, mode, seed) {
     eliminated: new Set(),
     sel: [], placing: null,
     cam: { x: 0, y: 0, z: 1 },
-    creepTimer: 0, hudTimer: 0, aiTimer: 0, netTimer: 0, netFx: [],
+    creepTimer: 0, hudTimer: 0, aiTimer: 0, aiCursor: 0, netTimer: 0, netFx: [],
     aiInterval: 1.0,
   };
   // bots re-plan as often as the toughest of them demands
@@ -647,6 +647,11 @@ function recomputeCreep() {
         }
       }
   }
+  // tally creep coverage per faction here (every 0.5s) so the economy doesn't have
+  // to rescan the whole grid every single frame
+  const counts = {};
+  for (let i = 0; i < game.creep.length; i++) { const v = game.creep[i]; if (v) counts[v] = (counts[v] || 0) + 1; }
+  for (const fac in game.players) game.players[fac].creepTiles = counts[facIdx(fac)] || 0;
 }
 
 function tickEconomy(dt) {
@@ -654,11 +659,8 @@ function tickEconomy(dt) {
     const p = game.players[fac];
     let gain = 0;
     if (fac === 'myriad') {
-      let tiles = 0;
-      const v = facIdx(fac);
-      for (let i = 0; i < game.creep.length; i++) if (game.creep[i] === v) tiles++;
-      p.creepTiles = tiles;
-      gain = ECON.myriadBase + tiles * ECON.myriadPerTile;
+      // creepTiles is refreshed in recomputeCreep (every 0.5s) — no per-frame rescan
+      gain = ECON.myriadBase + (p.creepTiles || 0) * ECON.myriadPerTile;
     } else if (fac === 'exodus') {
       gain = ECON.exodusBase;
       const ark = ents(e => e.fac === fac && e.def.core)[0];
@@ -769,8 +771,12 @@ function tickRegen(dt) {
 }
 
 // ---------------- separation / collision ----------------
+// Tight all-pairs loop (V8 JITs this far better than a spatial grid at the unit
+// counts this game reaches). The one real fix over the old version: push units out
+// of a pre-filtered BUILDINGS list rather than re-scanning every entity per unit.
 function separation() {
   const units = ents(e => e.def.kind === 'unit');
+  const buildings = ents(e => e.def.kind === 'building');
   for (let i = 0; i < units.length; i++) {
     const a = units[i];
     for (let j = i + 1; j < units.length; j++) {
@@ -788,8 +794,7 @@ function separation() {
       }
     }
     // push out of buildings & nodes
-    for (const s of game.entities) {
-      if (s.dead || s.def.kind !== 'building') continue;
+    for (const s of buildings) {
       const dx = a.x - s.x, dy = a.y - s.y, rr = a.size + s.size;
       const d = Math.hypot(dx, dy);
       if (d < rr && d > 0.01) { a.x = s.x + dx / d * rr; a.y = s.y + dy / d * rr; }

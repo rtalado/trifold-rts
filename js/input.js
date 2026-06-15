@@ -23,7 +23,7 @@ canvas.addEventListener('mousedown', ev => {
     mouse.dragging = true; mouse.dx0 = mouse.x; mouse.dy0 = mouse.y;
   } else if (ev.button === 2) {
     if (game.placing) { game.placing = null; return; }
-    issueOrder(mouse.wx, mouse.wy);
+    issueOrder(mouse.wx, mouse.wy, ev.shiftKey); // Shift = attack-move
   }
 });
 
@@ -66,18 +66,20 @@ canvas.addEventListener('wheel', ev => {
   const w = screenToWorld(mouse.x, mouse.y); mouse.wx = w.x; mouse.wy = w.y;
 }, { passive: false });
 
-function issueOrder(wx, wy) { // local right-click
+function issueOrder(wx, wy, amove) { // local right-click (amove = attack-move)
   if (!game.sel.length) return;
   if (game.mode === 'guest') {
-    netSend({ t: 'cmd', fac: game.localFac, kind: 'order', ids: game.sel.map(e => e.id), x: wx, y: wy });
-    addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: '#7dffa8' });
+    netSend({ t: 'cmd', fac: game.localFac, kind: 'order', ids: game.sel.map(e => e.id), x: wx, y: wy, amove });
+    addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: amove ? '#ff6a6a' : '#7dffa8' });
     return;
   }
-  applyOrder(game.localFac, game.sel, wx, wy);
+  applyOrder(game.localFac, game.sel, wx, wy, amove);
 }
 
-// runs on the simulating side (SP or host) for either faction
-function applyOrder(fac, selEnts, wx, wy) {
+// runs on the simulating side (SP or host) for either faction.
+// amove=true issues an attack-move (engage on the way); otherwise a plain move
+// that ignores enemies — so you can actually pull units OUT of a fight to retreat.
+function applyOrder(fac, selEnts, wx, wy, amove) {
   const target = ents(o => o.fac !== fac && !o.def.noTarget && dist(o, { x: wx, y: wy }) <= o.size + 5)[0];
   const node = game.nodes.find(n => n.amount > 0 && Math.hypot(n.x - wx, n.y - wy) <= n.r + 6);
   let acted = false;
@@ -102,7 +104,7 @@ function applyOrder(fac, selEnts, wx, wy) {
     }
     else if (node && d.harvester) { e.order = { type: 'harvest', nodeId: node.id, phase: 'go', timer: 0, carry: 0 }; acted = true; }
     else if (d.harvester || !d.dmg) { e.order = { type: 'move', x: wx, y: wy }; acted = true; }
-    else { e.order = { type: 'amove', x: wx, y: wy }; acted = true; }
+    else { e.order = { type: amove ? 'amove' : 'move', x: wx, y: wy }; acted = true; }
   }
   if (acted) addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: target ? '#ff6a6a' : '#7dffa8' });
 }

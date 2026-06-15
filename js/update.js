@@ -29,9 +29,19 @@ function update(dt) {
     }
   }
 
-  // the simulating side (SP or host) drives every AI faction
-  game.aiTimer -= dt;
-  if (game.aiTimer <= 0) { game.aiTimer = game.aiInterval || 1.0; for (const f of game.aiFacs) aiTick(f); }
+  // the simulating side (SP or host) drives every AI faction, but ROUND-ROBIN —
+  // one bot per fire instead of all of them in the same frame. Each faction still
+  // re-plans every aiInterval seconds; the work is just spread across frames so the
+  // AI no longer causes a periodic lag spike.
+  if (game.aiFacs.length) {
+    game.aiTimer -= dt;
+    if (game.aiTimer <= 0) {
+      game.aiTimer = (game.aiInterval || 1.0) / game.aiFacs.length;
+      game.aiCursor = (game.aiCursor || 0) % game.aiFacs.length;
+      aiTick(game.aiFacs[game.aiCursor]);
+      game.aiCursor++;
+    }
+  }
 
   // host: stream a state snapshot to all guests ~10×/s. If a guest's channel is
   // backed up, skip this snapshot (only the latest matters) and retry sooner —

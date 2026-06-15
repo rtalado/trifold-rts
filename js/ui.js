@@ -176,7 +176,7 @@ function updateHUD() {
   // selection info
   const si = document.getElementById('selinfo');
   if (!game.sel.length) {
-    si.textContent = 'Nothing selected.\nDrag to select · right-click to act\nF = select army · Space = go to core';
+    si.textContent = 'Nothing selected.\nDrag to select · right-click = move/attack\nShift+right-click = attack-move · F = army · Space = core';
   } else if (game.sel.length === 1) {
     const e = game.sel[0];
     let s = e.def.name + '\nHP ' + Math.ceil(e.hp) + '/' + e.hpMax;
