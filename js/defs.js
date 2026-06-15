@@ -91,7 +91,7 @@ const DEFS = {
   goliath:  { fac:'vanguard', kind:'unit', name:'Goliath', hp:380, size:15, speed:48, cost:270, time:15, dmg:26, range:185, cd:1.4, aggro:200, shot:'bullet' },
 
   // ----- MYRIAD SWARM -----
-  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother','ravager'], grows:['tumor','spawnpit','spittermound','hunterden','spine','evochamber'], spawns:'drone', spawnEvery:7 },
+  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother','ravager'], grows:['tumor','spawnpit','spittermound','hunterden','spine','evochamber','broodnexus'], spawns:'drone', spawnEvery:7 },
   tumor:       { fac:'myriad', kind:'building', name:'Creep Tumor', hp:130, size:10, cost:50,  time:8,  creepR:6.5 },
   spawnpit:    { fac:'myriad', kind:'building', name:'Spawn Pit', hp:350, size:21, cost:150, time:14, spawns:'drone',   spawnEvery:5 },
   spittermound:{ fac:'myriad', kind:'building', name:'Spitter Mound', hp:380, size:21, cost:200, time:16, spawns:'spitter', spawnEvery:8.5 },
@@ -105,7 +105,7 @@ const DEFS = {
   ravager:     { fac:'myriad', kind:'unit', name:'Ravager', hp:170, size:11, speed:84, cost:200, time:13, dmg:20, range:150, cd:1.2, aggro:195, shot:'glob', splash:24 },
 
   // ----- SOLARI EXODUS -----
-  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true, produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis'] },
+  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true, produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis','sovereign'] },
   collector:{ fac:'exodus', kind:'unit', name:'Collector', hp:70, shield:30, size:8, speed:84, cost:60, time:6, aggro:0, harvester:true },
   seeker:   { fac:'exodus', kind:'unit', name:'Seeker', hp:65, shield:45, size:8, speed:112, cost:120, time:9, dmg:10, range:55, cd:0.6, aggro:205, shot:'melee', blink:true },
   lancer:   { fac:'exodus', kind:'unit', name:'Lancer', hp:70, shield:55, size:9, speed:60, cost:220, time:14, dmg:30, range:235, cd:2.1, aggro:250, shot:'beam' },
@@ -115,7 +115,7 @@ const DEFS = {
   aegis:    { fac:'exodus', kind:'unit', name:'Aegis', hp:240, shield:180, size:14, speed:50, cost:300, time:16, dmg:26, range:60, cd:0.9, aggro:190, shot:'melee', splash:30 },
 
   // ----- ASHEN CHOIR -----
-  ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'], grows:['conduit','reliquary','spire','oracle'] },
+  ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'], grows:['conduit','reliquary','spire','oracle','charnel'] },
   conduit:   { fac:'choir', kind:'building', name:'Soul Conduit', hp:160, size:11, cost:60, time:7 },
   reliquary: { fac:'choir', kind:'building', name:'Reliquary', hp:600, size:26, cost:180, time:16, produces:['revenant'] },
   spire:     { fac:'choir', kind:'building', name:'Mourning Spire', hp:450, size:14, cost:130, time:12, dmg:12, range:185, cd:1.0, aggro:205, shot:'beam' },
@@ -126,7 +126,7 @@ const DEFS = {
   lich:      { fac:'choir', kind:'unit', name:'Lich', hp:120, size:10, speed:64, cost:180, time:12, dmg:24, range:175, cd:1.6, aggro:210, shot:'beam' },
 
   // ----- GILDED SYNDICATE -----
-  haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut','marauder'], grows:['watchpost','countinghouse','blackmarket'] },
+  haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut','marauder'], grows:['watchpost','countinghouse','blackmarket','exchange'] },
   watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet' },
   countinghouse: { fac:'syndicate', kind:'building', name:'Countinghouse', hp:500, size:24, cost:200, time:8 },
   enforcer:      { fac:'syndicate', kind:'unit', name:'Enforcer', hp:90, size:8, speed:80, cost:90, time:0.5, dmg:9, range:105, cd:0.75, aggro:180, shot:'bullet' },
@@ -162,7 +162,7 @@ const DEFS = {
                aux:{ dmg:13, range:215, cd:0.4, shot:'bullet', guns:4 } },
 
   // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
-  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge'] },
+  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge','greatpyre'] },
   warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:520, size:24, cost:120, time:9, produces:['raider','slinger'] },
   totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:340, size:13, cost:110, time:7, dmg:12, range:165, cd:0.8, aggro:190, shot:'glob' },
   raider:    { fac:'ember', kind:'unit', name:'Raider', hp:70, size:8, speed:128, cost:45, time:4, dmg:9, range:16, cd:0.6, aggro:185, shot:'melee' },
@@ -173,7 +173,7 @@ const DEFS = {
   firewagon: { fac:'ember', kind:'unit', name:'Fire Wagon', hp:160, size:13, speed:110, cost:160, time:9, dmg:16, range:90, cd:0.7, aggro:175, shot:'glob', splash:36 },
 
   // ----- VERDANT BLOOM (garden: Sap from mature Blooms; Groves breed free Saplings) -----
-  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','grove','bramble','arboretum'], spawns:'sapling', spawnEvery:8 },
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','grove','bramble','arboretum','heartgrove'], spawns:'sapling', spawnEvery:8 },
   bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
   grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6 },
   bramble:   { fac:'verdant', kind:'building', name:'Bramble', hp:360, size:13, cost:120, time:9, dmg:11, range:172, cd:0.9, aggro:190, shot:'glob' },
@@ -184,7 +184,7 @@ const DEFS = {
   ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:420, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
 
   // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
-  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','voltaic','gladius'], grows:['dynamo','tesla','foundry_s','stormlab'] },
+  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','voltaic','gladius'], grows:['dynamo','tesla','foundry_s','stormlab','arcfoundry'] },
   dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
   tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:16, range:195, cd:1.1, aggro:205, shot:'beam' },
   foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus'] },
@@ -195,7 +195,7 @@ const DEFS = {
   gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:200, shield:90, size:13, speed:70, cost:230, time:14, dmg:22, range:130, cd:1.0, aggro:195, shot:'shell', splash:24 },
 
   // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying) -----
-  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth','cultist'], grows:['shrine','spike','sanctum'] },
+  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth','cultist'], grows:['shrine','spike','sanctum','grandaltar'] },
   shrine:    { fac:'pact', kind:'building', name:'Bone Shrine', hp:420, size:22, cost:120, time:9, spawns:'thrall', spawnEvery:5 },
   spike:     { fac:'pact', kind:'building', name:'Blood Spike', hp:340, size:13, cost:110, time:7, dmg:13, range:168, cd:0.85, aggro:190, shot:'glob' },
   thrall:    { fac:'pact', kind:'unit', name:'Thrall', hp:46, size:7, speed:104, cost:30, time:3, dmg:7, range:14, cd:0.6, aggro:185, shot:'melee' },
@@ -203,6 +203,62 @@ const DEFS = {
   behemoth:  { fac:'pact', kind:'unit', name:'Behemoth', hp:560, size:18, speed:50, cost:340, time:18, dmg:34, range:24, cd:1.4, aggro:185, shot:'melee', splash:40 },
   sanctum:   { fac:'pact', kind:'building', name:'Blood Sanctum', hp:520, size:22, cost:130, time:12, researchLab:true },
   cultist:   { fac:'pact', kind:'unit', name:'Cultist', hp:60, size:8, speed:92, cost:70, time:5, dmg:13, range:130, cd:1.0, aggro:190, shot:'glob' },
+
+  // ===== APEX TECH: each faction's late-game super-structure + titan =====
+  // Gated behind deep tech (a top-tier production building / research lab) AND the
+  // Offense capstone (Siege Ordnance, *_ord), and ruinously expensive — the payoff
+  // for teching all game instead of just spamming cheap bodies. `apex:true` gives
+  // them a glowing marker; several carry an `aux` machine-gun ring like the Bulwark.
+  // (The Warden already has its own apex pair: the Castellan + the Bulwark.)
+
+  // IRON VANGUARD — a walking dreadnought: siege cannon + four autocannon turrets
+  dominion:  { fac:'vanguard', kind:'building', name:'Dominion Yard', hp:1100, size:32, cost:600, time:30, apex:true, produces:['leviathan'] },
+  leviathan: { fac:'vanguard', kind:'unit', name:'Leviathan', hp:1500, size:22, speed:40, cost:700, time:36, apex:true,
+               dmg:60, range:235, cd:3.0, aggro:245, shot:'shell', splash:80,
+               aux:{ dmg:11, range:150, cd:0.3, shot:'bullet', guns:4 } },
+
+  // MYRIAD SWARM — a colossal brood-mother that crushes and heals the swarm around it
+  broodnexus:{ fac:'myriad', kind:'building', name:'Brood Nexus', hp:1200, size:30, cost:520, time:26, apex:true, creepR:7, produces:['tyrant'] },
+  tyrant:    { fac:'myriad', kind:'unit', name:'Brood Tyrant', hp:1750, size:22, speed:46, cost:650, time:34, apex:true,
+               dmg:40, range:30, cd:1.4, aggro:200, shot:'melee', splash:60, aura:160, heal:8 },
+
+  // SOLARI EXODUS — a shielded capital ship (no base, so the Ark builds it directly)
+  sovereign: { fac:'exodus', kind:'unit', name:'Solar Sovereign', hp:900, shield:800, size:24, speed:58, cost:820, time:40, apex:true,
+               dmg:30, range:200, cd:1.8, aggro:225, shot:'beam', splash:50,
+               aux:{ dmg:10, range:160, cd:0.3, shot:'bullet', guns:4 } },
+
+  // ASHEN CHOIR — an avatar of death; lifesteals like all spirits, but enormously
+  charnel:   { fac:'choir', kind:'building', name:'Charnel Throne', hp:1100, size:28, cost:520, time:26, apex:true, produces:['devourer'] },
+  devourer:  { fac:'choir', kind:'unit', name:'Soul Devourer', hp:1400, size:22, speed:56, cost:640, time:34, apex:true,
+               dmg:46, range:175, cd:1.6, aggro:215, shot:'beam', splash:55 },
+
+  // GILDED SYNDICATE — the ultimate instant-hire merc: arrives ready, for a fortune
+  exchange:  { fac:'syndicate', kind:'building', name:'War Exchange', hp:1000, size:28, cost:500, time:8, apex:true, produces:['warlord'] },
+  warlord:   { fac:'syndicate', kind:'unit', name:'Warlord', hp:1300, size:21, speed:56, cost:820, time:0.5, apex:true,
+               dmg:50, range:175, cd:2.2, aggro:215, shot:'shell', splash:55,
+               aux:{ dmg:12, range:150, cd:0.3, shot:'bullet', guns:4 } },
+
+  // EMBER NOMADS — a fast-moving inferno engine that hoses splashing fire
+  greatpyre: { fac:'ember', kind:'building', name:'Great Pyre', hp:950, size:28, cost:560, time:16, apex:true, produces:['titan'] },
+  titan:     { fac:'ember', kind:'unit', name:'Ash Titan', hp:1250, size:21, speed:80, cost:600, time:30, apex:true,
+               dmg:34, range:120, cd:0.9, aggro:205, shot:'glob', splash:60,
+               aux:{ dmg:10, range:130, cd:0.3, shot:'glob', guns:3 } },
+
+  // VERDANT BLOOM — a world-tree: titanic HP, splashing blows, heals the garden
+  heartgrove:{ fac:'verdant', kind:'building', name:'Heart Grove', hp:1250, size:28, cost:540, time:18, apex:true, spawns:'sapling', spawnEvery:5, produces:['eldertree'] },
+  eldertree: { fac:'verdant', kind:'unit', name:'Eldertree', hp:1900, size:24, speed:36, cost:720, time:38, apex:true,
+               dmg:40, range:32, cd:1.6, aggro:190, shot:'melee', splash:62, aura:170, heal:7 },
+
+  // STORMFORGE DYNASTY — a storm titan: heavy shields, long beam + four arc turrets
+  arcfoundry:{ fac:'stormforge', kind:'building', name:'Grand Foundry', hp:1000, size:30, cost:580, time:22, apex:true, produces:['tempest'] },
+  tempest:   { fac:'stormforge', kind:'unit', name:'Storm Titan', hp:1100, shield:500, size:23, speed:46, cost:780, time:38, apex:true,
+               dmg:44, range:230, cd:2.2, aggro:240, shot:'beam', splash:50,
+               aux:{ dmg:12, range:160, cd:0.3, shot:'beam', guns:4 } },
+
+  // OBSIDIAN PACT — an avatar of slaughter that births Thralls and heals the horde
+  grandaltar:{ fac:'pact', kind:'building', name:'Grand Altar', hp:1000, size:28, cost:500, time:14, apex:true, spawns:'thrall', spawnEvery:4, produces:['bloodavatar'] },
+  bloodavatar:{ fac:'pact', kind:'unit', name:'Blood Avatar', hp:1600, size:22, speed:52, cost:600, time:32, apex:true,
+               dmg:48, range:26, cd:1.4, aggro:190, shot:'melee', splash:55, aura:150, heal:6 },
 
   // ----- NEUTRAL (capture / fight) -----
   // Obelisk: indestructible capture point — hold ground nearby to claim its income.
@@ -329,6 +385,24 @@ const META = {
   gladius:   { desc: 'Shielded mid-weight mech with a splashing cannon. Needs a Dynamo.', req: 'dynamo' },
   sanctum:   { desc: 'Research building. Channels the Pact’s rites & upgrades.' },
   cultist:   { desc: 'Cheap ranged zealot — the Pact’s only ranged body. Spits hexes from afar.' },
+  // APEX TECH — late-game super-structures + titans (each gated on Siege Ordnance)
+  dominion:  { desc: 'Vanguard apex yard. Assembles the Leviathan dreadnought. Needs an Airfield and a Tech Lab.', reqs:['airfield','techlab'] },
+  leviathan: { desc: 'A walking dreadnought — a long-range siege cannon ringed by four autocannon turrets, on a wall of armour. Requires Siege Ordnance.', reqResearch:'vanguard_ord' },
+  broodnexus:{ desc: 'Myriad apex pool. Births the Brood Tyrant. Needs a Hunter Den and an Evolution Chamber.', reqs:['hunterden','evochamber'] },
+  tyrant:    { desc: 'A colossal brood-mother that crushes lines with splashing blows and heals the swarm around it. Requires Siege Ordnance.', reqResearch:'myriad_ord' },
+  sovereign: { desc: 'A shielded Solari capital ship — a splashing beam lance and four point-defence guns behind a vast shield. Built from the Ark. Requires Siege Ordnance.', reqResearch:'exodus_ord' },
+  charnel:   { desc: 'Choir apex throne. Raises the Soul Devourer. Needs a Reliquary and a Bone Oracle.', reqs:['reliquary','oracle'] },
+  devourer:  { desc: 'An avatar of death — a huge splashing death-beam that feasts (lifesteals) on everything it burns. Requires Siege Ordnance.', reqResearch:'choir_ord' },
+  exchange:  { desc: 'Syndicate apex exchange. Hires the Warlord — instantly, for a fortune. Needs a Countinghouse and a Black Market.', reqs:['countinghouse','blackmarket'] },
+  warlord:   { desc: 'The ultimate mercenary — arrives battle-ready with a siege gun and four autocannons. No wait, just a colossal price. Requires Siege Ordnance.', reqResearch:'syndicate_ord' },
+  greatpyre: { desc: 'Ember apex pyre. Stokes the Ash Titan. Needs a War Lodge and a War Camp.', reqs:['warlodge','warcamp'] },
+  titan:     { desc: 'A fast-rolling inferno engine that hoses splashing fire from a main thrower and three side jets. Requires Siege Ordnance.', reqResearch:'ember_ord' },
+  heartgrove:{ desc: 'Verdant apex grove. Grows the Eldertree and breeds extra free Saplings. Needs a Grove and an Arboretum.', reqs:['grove','arboretum'] },
+  eldertree: { desc: 'A titanic world-tree — staggering HP, splashing blows, and an aura that heals the whole garden. Requires Siege Ordnance.', reqResearch:'verdant_ord' },
+  arcfoundry:{ desc: 'Stormforge apex foundry. Forges the Storm Titan. Needs a Foundry and a Research Bay.', reqs:['foundry_s','stormlab'] },
+  tempest:   { desc: 'A storm titan — a long arc-beam and four arc turrets behind heavy shields. Requires Siege Ordnance.', reqResearch:'stormforge_ord' },
+  grandaltar:{ desc: 'Pact apex altar. Summons the Blood Avatar and births free Thralls. Needs a Blood Sanctum and a Bone Shrine.', reqs:['sanctum','shrine'] },
+  bloodavatar:{ desc: 'An avatar of slaughter — splashing strikes, an aura that heals the horde, and an unending Thrall tide at its feet. Requires Siege Ordnance.', reqResearch:'pact_ord' },
   // NEUTRAL
   obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },

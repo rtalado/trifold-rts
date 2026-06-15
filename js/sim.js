@@ -446,6 +446,8 @@ function updateUnit(e, dt) {
 
   // Ark production + siphon
   if (d.produces && d.kind === 'unit') tickQueue(e, dt);
+  // apex units (Leviathan, Sovereign, …) carry their own machine-gun ring
+  if (d.aux) updateAux(e, dt);
 }
 
 function nearestNode(x, y) {

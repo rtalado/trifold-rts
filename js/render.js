@@ -629,6 +629,28 @@ function drawEnt(e) {
     }
   }
 
+  // apex marker: a pulsing aura ring, plus tracking gun-turret nubs for any unit
+  // carrying a machine-gun ring (Leviathan, Sovereign, Warlord, Ash Titan, Storm Titan)
+  if (e.def.apex && !e.constructing && !e.growing) {
+    ctx.globalAlpha = 0.45 + 0.3 * Math.sin(game.t * 3 + e.id);
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, s + 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+    if (e.def.aux) {
+      const guns = e.def.aux.guns || 1, auxT = e.auxTgt || [];
+      for (let i = 0; i < guns; i++) {
+        const ga = i * Math.PI * 2 / guns + Math.PI / guns;
+        const gx = x + Math.cos(ga) * s * 0.78, gy = y + Math.sin(ga) * s * 0.78;
+        ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(gx, gy, s * 0.17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        const gt = auxT[i] ? byId(auxT[i]) : null;
+        const ba = gt ? Math.atan2(gt.y - gy, gt.x - gx) : ga;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ba) * s * 0.32, gy + Math.sin(ba) * s * 0.32); ctx.stroke();
+      }
+    }
+  }
+
   ctx.globalAlpha = 1;
 
   // hp bar

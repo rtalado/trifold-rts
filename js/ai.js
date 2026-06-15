@@ -126,7 +126,9 @@ function aiTick(fac) {
       const phoenixes = ents(e => e.fac === fac && e.type === 'phoenix').length;
       const templars = ents(e => e.fac === fac && e.type === 'templar').length;
       const aegises = ents(e => e.fac === fac && e.type === 'aegis').length;
+      const sovs = ents(e => e.fac === fac && e.type === 'sovereign').length;
       if (collectors < aiGrow(5, 2, 15) && p.res >= 60) enqueue(ark, 'collector');
+      else if (sovs < 2 && p.res >= 820 && techMet(fac, 'sovereign')) enqueue(ark, 'sovereign');
       else if (aegises < 2 && p.res >= 300 && game.t > 200) enqueue(ark, 'aegis');
       else if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
       else if (lancers <= seekers / 2 && p.res >= 220) enqueue(ark, 'lancer');
@@ -299,6 +301,25 @@ function aiTick(fac) {
       else if (zeals < 6 && p.res >= 110 && techMet(fac, 'zealot')) enqueue(altar, 'zealot');
       else if (p.res >= 30) enqueue(altar, 'thrall');
     }
+  }
+
+  // ---- apex tech (all factions but Exodus, handled above, and the Warden, which
+  // already has its Castellan + Bulwark): once the bot has teched deep, raise its
+  // super-structure and keep one titan rolling out of it ----
+  const APEX = {
+    vanguard: { b: 'dominion', u: 'leviathan' }, myriad: { b: 'broodnexus', u: 'tyrant' },
+    choir: { b: 'charnel', u: 'devourer' }, syndicate: { b: 'exchange', u: 'warlord' },
+    ember: { b: 'greatpyre', u: 'titan' }, verdant: { b: 'heartgrove', u: 'eldertree' },
+    stormforge: { b: 'arcfoundry', u: 'tempest' }, pact: { b: 'grandaltar', u: 'bloodavatar' },
+  };
+  const ax = APEX[fac];
+  if (ax && game.t > 220) {
+    const yards = ents(e => e.fac === fac && e.type === ax.b);
+    if (yards.length < 1 && affordable(p, DEFS[ax.b]) && techMet(fac, ax.b)) aiPlace(fac, ax.b, p.base);
+    for (const b of yards)
+      if (!b.constructing && !b.growing && !b.queue.length
+        && ents(e => e.fac === fac && e.type === ax.u).length < 2
+        && affordable(p, DEFS[ax.u]) && techMet(fac, ax.u)) enqueue(b, ax.u);
   }
 }
 
