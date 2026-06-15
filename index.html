@@ -201,6 +201,22 @@
   <button onclick="backToMenu()">RETURN TO MENU</button>
 </div>
 
+<div id="techtree" onclick="if(event.target===this)closeTechTree()">
+  <div id="techPanel">
+    <div id="techBar">
+      <span id="techTitle"></span>
+      <span id="techRes"></span>
+      <button id="techCloseBtn" onclick="closeTechTree()">✕ CLOSE&nbsp;(T)</button>
+    </div>
+    <div id="techScroll">
+      <div id="techBody">
+        <svg id="techLines"></svg>
+        <div id="techNodes"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="libs/peerjs.min.js"></script>
 <!-- modular game scripts: classic (non-module) scripts share one global scope,
      so load order matters — data first, then state, logic, UI, render, net, bootstrap -->

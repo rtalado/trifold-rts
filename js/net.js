@@ -268,6 +268,8 @@ function handleCmd(m) {
   } else if (m.kind === 'research') {
     const e = byId(m.id);
     if (e && e.fac === fac && e.def.researchLab) enqueueResearch(e, m.rid);
+  } else if (m.kind === 'sell') {
+    sellBuilding(fac, m.id);
   }
 }
 

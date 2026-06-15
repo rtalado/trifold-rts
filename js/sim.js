@@ -145,6 +145,7 @@ function setupFaction(fac, base, isAI, diff) {
     swarmRally: towardCenter(0.18),
     lastAttack: null, waveSize: 0,
     research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1,
+    speedMul: 1, rangeMul: 1, cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0,
     // difficulty handicaps (1 / neutral for humans)
     diff: isAI ? (diff || 'normal') : null,
     incomeMul: isAI ? D.incomeMul : 1, firstWave: D.firstWave, waveStep: D.waveStep,
@@ -288,7 +289,7 @@ function addFx(f) {
 // ---------------- combat ----------------
 function findTarget(e) {
   const d = e.def;
-  let best = null, bd = d.aggro;
+  let best = null, bd = aggroOf(e);
   for (const o of game.entities) {
     if (o.dead || o.fac === e.fac || o.def.noTarget) continue;
     const dd = dist(e, o) - o.size;
@@ -299,11 +300,11 @@ function findTarget(e) {
 
 function fireAt(e, t) {
   const d = e.def, dmg = dmgOf(e);
-  e.cd = d.cd;
+  e.cd = cdOf(e);
   e.tgt = t.id;
   if (d.shot === 'melee') {
     applyDamage(t, dmg, e);
-    if (d.splash) splash(e, t, d);
+    if (d.splash) splash(e, t);
     addFx({ kind: 'slash', x: t.x, y: t.y, ttl: 0.15, max: 0.15, color: facColor(e.fac) });
   } else if (d.shot === 'beam') {
     applyDamage(t, dmg, e);
@@ -311,29 +312,30 @@ function fireAt(e, t) {
   } else {
     const speed = d.shot === 'shell' ? 240 : 380;
     game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed,
-      dmg, splash: d.splash || 0, fac: e.fac, attackerId: e.id,
+      dmg, splash: splashOf(e), fac: e.fac, attackerId: e.id,
       color: d.shot === 'glob' ? '#9fe06a' : facColor(e.fac), r: d.shot === 'shell' ? 4 : 2.5 });
   }
 }
 
-function splash(e, center, d) {
-  const dmg = dmgOf(e);
+function splash(e, center) {
+  const dmg = dmgOf(e), rad = splashOf(e);
   for (const o of game.entities) {
     if (o.dead || o.fac === e.fac || o === center) continue;
-    if (dist(center, o) < d.splash + o.size) applyDamage(o, dmg * 0.6, e);
+    if (dist(center, o) < rad + o.size) applyDamage(o, dmg * 0.6, e);
   }
 }
 
 // secondary rapid-fire turrets (e.g. the Citadel's side machine guns): several
 // independent guns, each tracking and shooting its own nearest target.
 function updateAux(e, dt) {
-  const ax = e.def.aux, guns = ax.guns || 1;
+  const ax = e.def.aux, guns = ax.guns || 1, p = game.players[e.fac];
+  const reach = ax.range * ((p && p.rangeMul) || 1), cd = ax.cd * ((p && p.cdMul) || 1);
   if (!e.auxCd) { e.auxCd = new Array(guns).fill(0); e.auxTgt = new Array(guns).fill(0); }
   for (let i = 0; i < guns; i++) {
     e.auxCd[i] = Math.max(0, e.auxCd[i] - dt);
     let t = e.auxTgt[i] ? byId(e.auxTgt[i]) : null;
-    if (!t || t.dead || dist(e, t) > ax.range + e.size + t.size) {
-      t = null; let bd = ax.range + e.size;
+    if (!t || t.dead || dist(e, t) > reach + e.size + t.size) {
+      t = null; let bd = reach + e.size;
       for (const o of game.entities) {
         if (o.dead || o.fac === e.fac || o.def.noTarget) continue;
         const dd = dist(e, o) - o.size;
@@ -341,8 +343,8 @@ function updateAux(e, dt) {
       }
       e.auxTgt[i] = t ? t.id : 0;
     }
-    if (t && e.auxCd[i] <= 0 && dist(e, t) <= ax.range + e.size + t.size) {
-      e.auxCd[i] = ax.cd;
+    if (t && e.auxCd[i] <= 0 && dist(e, t) <= reach + e.size + t.size) {
+      e.auxCd[i] = cd;
       game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed: 380,
         dmg: ax.dmg, splash: 0, fac: e.fac, attackerId: e.id, color: facColor(e.fac), r: 2.5 });
     }
@@ -352,7 +354,7 @@ function updateAux(e, dt) {
 // engage target: shoot if in range else chase (unless stationary)
 function engage(e, t, dt) {
   const d = e.def;
-  const r = d.range + e.size + t.size;
+  const r = rangeOf(e) + e.size + t.size;
   if (dist(e, t) <= r) {
     if (e.cd <= 0) fireAt(e, t);
   } else if (!d.stationary && d.speed) {
@@ -372,7 +374,7 @@ function engage(e, t, dt) {
 function moveToward(e, x, y, dt) {
   const dx = x - e.x, dy = y - e.y, dl = Math.hypot(dx, dy);
   if (dl < 3) return true;
-  const sp = e.def.speed * dt;
+  const sp = spd(e) * dt;
   if (dl <= sp) { e.x = x; e.y = y; return true; }
   e.x += dx / dl * sp; e.y += dy / dl * sp;
   return false;
@@ -394,7 +396,7 @@ function updateUnit(e, dt) {
       e.tgt = t ? t.id : 0;
     }
     const t = e.tgt ? byId(e.tgt) : null;
-    if (t && dist(e, t) <= d.range + e.size + t.size && e.cd <= 0) fireAt(e, t);
+    if (t && dist(e, t) <= rangeOf(e) + e.size + t.size && e.cd <= 0) fireAt(e, t);
   }
 
   switch (o.type) {
@@ -507,7 +509,7 @@ function updateBuilding(e, dt) {
     e.spawnTimer -= dt;
     if (e.spawnTimer <= 0) {
       e.spawnTimer = d.spawnEvery;
-      if (countUnits(e.fac) < FACTIONS[e.fac].cap) {
+      if (countUnits(e.fac) < capOf(e.fac)) {
         const a = Math.random() * Math.PI * 2;
         const u = spawnEnt(d.spawns, e.fac, e.x + Math.cos(a) * (e.size + 12), e.y + Math.sin(a) * (e.size + 12));
         const r = game.players[e.fac].swarmRally;
@@ -523,7 +525,7 @@ function updateBuilding(e, dt) {
     e.scanT -= dt;
     if (e.scanT <= 0) { e.scanT = 0.3; const t = findTarget(e); e.tgt = t ? t.id : 0; }
     const t = e.tgt ? byId(e.tgt) : null;
-    if (t && dist(e, t) <= d.range + e.size + t.size && e.cd <= 0) fireAt(e, t);
+    if (t && dist(e, t) <= rangeOf(e) + e.size + t.size && e.cd <= 0) fireAt(e, t);
   }
   // secondary machine-gun ring (the Citadel)
   if (d.aux) updateAux(e, dt);
@@ -535,7 +537,7 @@ function tickQueue(e, dt) {
   item.t -= dt;
   if (item.t <= 0) {
     if (item.research) { e.queue.shift(); applyResearch(e.fac, item.rid); return; }
-    if (countUnits(e.fac) >= FACTIONS[e.fac].cap) { item.t = 0; return; } // hold until supply frees
+    if (countUnits(e.fac) >= capOf(e.fac)) { item.t = 0; return; } // hold until supply frees
     e.queue.shift();
     const a = Math.random() * Math.PI * 2;
     const u = spawnEnt(item.type, e.fac, e.x + Math.cos(a) * (e.size + 14), e.y + Math.sin(a) * (e.size + 14));
@@ -609,6 +611,21 @@ function placeBuilding(fac, type, x, y) {
   return true;
 }
 
+// fraction of a building's cost returned when you sell/demolish it
+const SELL_REFUND = 0.5;
+// sell (demolish) one of your buildings — refunds half its cost. Cores can't be sold.
+function sellBuilding(fac, id) {
+  const e = byId(id);
+  if (!e || e.fac !== fac || e.def.kind !== 'building' || e.def.core) return false;
+  const p = game.players[fac], d = e.def;
+  p.res += Math.round((d.cost || 0) * SELL_REFUND);
+  p.iron = (p.iron || 0) + Math.round((d.cost2 || 0) * SELL_REFUND);
+  e.dead = true;
+  addFx({ kind: 'boom', x: e.x, y: e.y, r: e.size * 1.4, ttl: 0.4, max: 0.4, color: facColor(fac) });
+  localMsg(fac, 'Sold ' + d.name + ' (+' + Math.round((d.cost || 0) * SELL_REFUND) + ' ' + FACTIONS[fac].res + ')');
+  return true;
+}
+
 // ---------------- creep & economy ----------------
 function recomputeCreep() {
   game.creep.fill(0);
@@ -677,7 +694,7 @@ function tickEconomy(dt) {
     }
     // every Obelisk this faction holds adds a steady trickle
     gain += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.obeliskIncome;
-    gain *= p.incomeMul; // AI difficulty handicap (1 for humans)
+    gain *= p.incomeMul * (p.econMul || 1); // AI handicap × researched economy upgrades
     p.res += gain * dt;
     p.gainAccum += gain * dt;
 
@@ -685,7 +702,7 @@ function tickEconomy(dt) {
     let iron = 0;
     for (const e of game.entities)
       if (!e.dead && e.fac === fac && e.def.ironPerSec && !e.constructing && !e.growing) iron += e.def.ironPerSec;
-    if (iron) { iron *= p.incomeMul; p.iron += iron * dt; p.ironAccum += iron * dt; }
+    if (iron) { iron *= p.incomeMul * (p.econMul || 1); p.iron += iron * dt; p.ironAccum += iron * dt; }
   }
 }
 

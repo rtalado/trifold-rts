@@ -70,10 +70,32 @@ function currentCommands() {
         },
       });
     }
-    // research is done at the faction's research building (the Ark, for the base-less Exodus)
-    if (d.researchLab && RESEARCH_BY_FAC[fac]) RESEARCH_BY_FAC[fac].forEach(rid => researchBtn(sel0, rid));
+    // the faction's research building opens the full visual tech tree
+    if (d.researchLab && RESEARCH_BY_FAC[fac]) {
+      const done = RESEARCH_BY_FAC[fac].filter(rid => p.research.has(rid)).length;
+      cmds.push({
+        label: '⚙ Tech Tree', cost: 0, enabled: true,
+        sub: done + '/' + RESEARCH_BY_FAC[fac].length,
+        desc: 'Open the research tree — spend ' + FACTIONS[fac].res + ' on permanent upgrades.',
+        onClick: () => openTechTree(),
+      });
+    }
+    // sell any of your own non-core buildings to recover half the cost
+    if (d.kind === 'building' && !d.core && sel0.fac === fac) {
+      const ref = Math.round((d.cost || 0) * SELL_REFUND);
+      cmds.push({
+        label: '✖ Sell', cost: 0, enabled: true,
+        sub: '+' + ref + ' ' + FACTIONS[fac].res + ((d.cost2 ? ' +' + Math.round(d.cost2 * SELL_REFUND) + ' ' + FACTIONS[fac].res2 : '')),
+        desc: 'Demolish this building and recover half of what it cost. Handy for fixing a bad placement.',
+        onClick: () => {
+          if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'sell', id: sel0.id });
+          else sellBuilding(fac, sel0.id);
+          game.sel = []; refreshCard();
+        },
+      });
+    }
   }
-  return cmds.slice(0, 12);
+  return cmds.slice(0, 14);
 }
 
 // compact stat readout for a definition, shown in the build tooltip
@@ -149,7 +171,7 @@ function updateHUD() {
   } else res2El.style.display = 'none';
   document.getElementById('hudIncome').innerHTML = '+' + p.income.toFixed(1) + '/s'
     + (fac === 'myriad' ? ' · Creep: <b>' + (p.creepTiles || 0) + '</b> tiles' : '');
-  document.getElementById('hudArmy').innerHTML = 'Units: <b>' + countUnits(fac) + '</b>/' + FACTIONS[fac].cap;
+  document.getElementById('hudArmy').innerHTML = 'Units: <b>' + countUnits(fac) + '</b>/' + capOf(fac);
 
   // selection info
   const si = document.getElementById('selinfo');
@@ -188,5 +210,75 @@ function updateHUD() {
   const btns = card.querySelectorAll('button');
   if (btns.length === cmds.length) cmds.forEach((c, i) => { btns[i].disabled = !c.enabled; });
   else refreshCard();
+
+  if (techOpen) buildTechTree(); // keep the open tech tree live
+}
+
+// ---------------- visual tech tree ----------------
+let techOpen = false;
+// the player's standing research building (the Ark, for the base-less Exodus)
+function techLab() { return ents(e => e.fac === game.localFac && e.def.researchLab && !e.constructing && !e.growing)[0]; }
+function openTechTree() { if (!game) return; techOpen = true; document.getElementById('techtree').style.display = 'flex'; buildTechTree(); }
+function closeTechTree() { techOpen = false; document.getElementById('techtree').style.display = 'none'; }
+function toggleTechTree() { techOpen ? closeTechTree() : openTechTree(); }
+
+function researchNode(rid) {
+  const lab = techLab();
+  if (!lab) { floatMsg('Build your research building first'); return; }
+  if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'research', id: lab.id, rid });
+  else enqueueResearch(lab, rid);
+  buildTechTree();
+}
+
+// grid layout: tier = column, branch = row
+const TECH_COLW = 188, TECH_ROWH = 104, TECH_PADX = 116, TECH_PADY = 14, TECH_NW = 150, TECH_NH = 70;
+function techPos(rid) { const r = RESEARCH[rid]; return { x: TECH_PADX + r.tier * TECH_COLW, y: TECH_PADY + r.branch * TECH_ROWH }; }
+
+function buildTechTree() {
+  if (!game || !techOpen) return;
+  const fac = game.localFac, p = game.players[fac], F = FACTIONS[fac], list = RESEARCH_BY_FAC[fac] || [];
+  const title = document.getElementById('techTitle');
+  title.textContent = F.name + ' — TECH TREE'; title.style.color = F.color;
+  const done = list.filter(r => p.research.has(r)).length;
+  document.getElementById('techRes').innerHTML = F.res + ': <b>' + Math.floor(p.res) + '</b> &nbsp;·&nbsp; Researched ' + done + '/' + list.length;
+
+  const W = TECH_PADX + 4 * TECH_COLW, H = TECH_PADY + 4 * TECH_ROWH;
+  const nodes = document.getElementById('techNodes'), svg = document.getElementById('techLines');
+  nodes.style.width = W + 'px'; nodes.style.height = H + 'px';
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  nodes.innerHTML = '';
+
+  // branch labels down the left
+  TECH_BRANCHES.forEach((b, i) => {
+    const lbl = document.createElement('div'); lbl.className = 'techbranch';
+    lbl.textContent = b; lbl.style.left = '6px'; lbl.style.top = (TECH_PADY + i * TECH_ROWH + TECH_NH / 2) + 'px';
+    nodes.appendChild(lbl);
+  });
+
+  // dependency curves
+  let lines = '';
+  for (const rid of list) {
+    const r = RESEARCH[rid]; if (!r.req) continue;
+    const a = techPos(r.req), b = techPos(rid);
+    const x1 = a.x + TECH_NW, y1 = a.y + TECH_NH / 2, x2 = b.x, y2 = b.y + TECH_NH / 2, mx = (x1 + x2) / 2;
+    const col = p.research.has(rid) ? '#7dd87d' : (p.research.has(r.req) ? '#5b6b82' : '#2c3849');
+    lines += '<path d="M' + x1 + ' ' + y1 + ' C ' + mx + ' ' + y1 + ' ' + mx + ' ' + y2 + ' ' + x2 + ' ' + y2 + '" fill="none" stroke="' + col + '" stroke-width="2"/>';
+  }
+  svg.innerHTML = lines;
+
+  // nodes
+  for (const rid of list) {
+    const r = RESEARCH[rid];
+    const has = p.research.has(rid), queued = researchQueued(fac, rid);
+    const reqMet = !r.req || p.research.has(r.req), afford = p.res >= r.cost;
+    let cls = 'technode';
+    if (has) cls += ' done'; else if (queued) cls += ' queued'; else if (!reqMet) cls += ' locked'; else cls += afford ? ' avail' : ' poor';
+    const el = document.createElement('div'); el.className = cls;
+    const pp = techPos(rid); el.style.left = pp.x + 'px'; el.style.top = pp.y + 'px';
+    el.innerHTML = '<div class="tn-name">' + r.name + '</div><div class="tn-desc">' + r.desc + '</div>'
+      + '<div class="tn-cost">' + (has ? '✓ Researched' : queued ? '⚙ Researching…' : r.cost + ' ' + F.res) + '</div>';
+    if (!has && !queued && reqMet) el.onclick = () => researchNode(rid);
+    nodes.appendChild(el);
+  }
 }
 

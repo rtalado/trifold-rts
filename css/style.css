@@ -157,3 +157,37 @@
   #endscreen button { padding:12px 38px; background:#173153; color:#9fd0ff; border:1px solid #2a4a78;
     border-radius:6px; font-size:15px; letter-spacing:2px; cursor:pointer; }
   #endscreen button:hover { background:#1f3f6b; }
+
+  /* ---- tech tree overlay ---- */
+  #techtree { display:none; position:fixed; inset:0; z-index:50; background:rgba(6,9,14,0.82);
+    align-items:center; justify-content:center; }
+  #techPanel { width:min(960px,94vw); max-height:90vh; display:flex; flex-direction:column;
+    background:#0e141d; border:1px solid #2a3954; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.6); }
+  #techBar { display:flex; align-items:center; gap:18px; padding:12px 18px; border-bottom:1px solid #1d2735; }
+  #techTitle { font-size:18px; font-weight:700; letter-spacing:2px; }
+  #techRes { color:#aeb9c9; font-size:13px; }
+  #techCloseBtn { margin-left:auto; padding:7px 16px; background:#173153; color:#9fd0ff;
+    border:1px solid #2a4a78; border-radius:6px; cursor:pointer; font-size:12px; letter-spacing:1px; }
+  #techCloseBtn:hover { background:#1f3f6b; }
+  #techScroll { overflow:auto; padding:16px; }
+  #techBody { position:relative; }
+  #techLines { position:absolute; left:0; top:0; pointer-events:none; }
+  #techNodes { position:relative; }
+  .techbranch { position:absolute; width:104px; font-size:11px; letter-spacing:2px; color:#5e6b7e;
+    text-transform:uppercase; transform:rotate(-90deg); transform-origin:left center; }
+  .technode { position:absolute; width:150px; height:70px; box-sizing:border-box; padding:7px 9px;
+    border-radius:7px; border:1px solid #2a3954; background:#141c28; overflow:hidden; transition:transform .08s; }
+  .technode .tn-name { font-size:12.5px; font-weight:700; color:#dfe7f2; }
+  .technode .tn-desc { font-size:9.5px; line-height:1.18; color:#8290a4; margin-top:2px; }
+  .technode .tn-cost { position:absolute; bottom:5px; left:9px; font-size:10px; color:#cdd6e4; }
+  .technode.avail { border-color:#3f6fa8; background:#16263a; cursor:pointer; }
+  .technode.avail:hover { transform:scale(1.04); border-color:#5b9be0; }
+  .technode.avail .tn-cost { color:#9fd0ff; }
+  .technode.poor { border-color:#5a3a2a; opacity:0.92; }
+  .technode.poor .tn-cost { color:#e0843d; }
+  .technode.queued { border-color:#c9a23a; background:#241f12; }
+  .technode.queued .tn-cost { color:#ffd97a; }
+  .technode.done { border-color:#3f8f55; background:#13241a; }
+  .technode.done .tn-cost { color:#7dd87d; }
+  .technode.locked { opacity:0.5; }
+  .technode.locked .tn-cost { color:#6a7689; }

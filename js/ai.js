@@ -1,6 +1,11 @@
 // ---------------- AI ----------------
-// AI builds its research station, then buys its upgrade line in order once it has
-// a comfortable surplus — keeps bots teching up without starving their army.
+// caps that grow over the match so bots keep expanding economy and output instead
+// of stalling at an early-game ceiling: base now, +perMin every minute, up to max.
+const aiGrow = (base, perMin, max) => Math.min(max, base + Math.floor(game.t / 60) * perMin);
+
+// AI builds its research station, then works through the whole tech tree — taking
+// the cheapest currently-available node whenever it has a comfortable surplus, so
+// it keeps teching across all four branches without starving its army.
 function aiResearch(fac, p) {
   const labType = LAB_OF[fac];
   if (!labType) return;
@@ -10,13 +15,15 @@ function aiResearch(fac, p) {
     return;
   }
   if (lab.constructing || lab.growing || lab.queue.length) return;
+  let best = null;
   for (const rid of RESEARCH_BY_FAC[fac] || []) {
     const r = RESEARCH[rid];
-    if (p.research.has(rid)) continue;
-    if (r.req && !p.research.has(r.req)) return;
-    if (p.res >= r.cost) enqueueResearch(lab, rid);
-    return; // research in order; wait if we can't afford the next one yet
+    if (p.research.has(rid) || researchQueued(fac, rid)) continue;
+    if (r.req && !p.research.has(r.req)) continue;           // prereq not met yet
+    if (p.res < r.cost + 60) continue;                       // keep a small buffer for the army
+    if (!best || r.cost < RESEARCH[best].cost) best = rid;    // cheapest available
   }
+  if (best) enqueueResearch(lab, best);
 }
 
 function aiTick(fac) {
@@ -31,28 +38,44 @@ function aiTick(fac) {
   const army = armyOf(fac);
   const underAttack = p.lastAttack && game.t - p.lastAttack.t < 6;
 
-  // ---- shared: defend / attack waves ----
+  // ---- shared: defend / muster / committed attack waves ----
+  // The bot defends by default and only all-ins once it has genuinely MASSED an
+  // army — then it commits for a sustained window so newly-built units stream into
+  // the same push (no more trickling units in to die one squad at a time).
   const defendPt = underAttack ? p.lastAttack : null;
-  if (defendPt && Math.hypot(defendPt.x - myCore.x, defendPt.y - myCore.y) < 700) {
+  // muster point: just outside our own core, so idle units stay home to defend
+  const muster = { x: myCore.x + (enemyCore.x - myCore.x) * 0.12, y: myCore.y + (enemyCore.y - myCore.y) * 0.12 };
+  if (defendPt && Math.hypot(defendPt.x - myCore.x, defendPt.y - myCore.y) < 850) {
     for (const u of army) if (u.order.type === 'idle' || u.order.type === 'amove')
       u.order = { type: 'amove', x: defendPt.x, y: defendPt.y };
-  } else if (army.length >= p.waveSize && game.t > p.firstWave) {
-    for (const u of army) u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
-    p.waveSize += p.waveStep;
+  } else {
+    // launch once we hit our wave size; afterwards commit for a window and ratchet
+    // the next wave up toward the army we can field, so pushes grow over the match
+    if (game.t > p.firstWave && army.length >= p.waveSize && (!p.attackUntil || game.t > p.attackUntil + 12)) {
+      p.attackUntil = game.t + 40;
+      p.waveSize = Math.min(90, Math.max(p.waveSize + p.waveStep + 2, Math.floor(army.length * 0.6)));
+    }
+    if (p.attackUntil && game.t < p.attackUntil) {
+      for (const u of army) if (u.order.type === 'idle' || u.order.type === 'amove')
+        u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
+    } else {
+      // between pushes: hold the muster point near home (ready to defend or regroup)
+      for (const u of army) if (u.order.type === 'idle') u.order = { type: 'amove', x: muster.x, y: muster.y };
+    }
   }
 
   if (fac === 'vanguard') {
     const workers = ents(e => e.fac === fac && e.type === 'worker');
     const hq = ents(e => e.fac === fac && e.type === 'hq' && !e.constructing)[0];
-    if (hq && workers.length < 9 && p.res >= 50 && !hq.queue.length) enqueue(hq, 'worker');
+    if (hq && workers.length < aiGrow(9, 2, 26) && p.res >= 50 && !hq.queue.length) enqueue(hq, 'worker');
     const rax = ents(e => e.fac === fac && e.type === 'barracks');
     const fact = ents(e => e.fac === fac && e.type === 'factory');
     const air = ents(e => e.fac === fac && e.type === 'airfield');
     const turrets = ents(e => e.fac === fac && e.type === 'turret');
-    if (rax.length < 2 && p.res >= 150) aiPlace(fac, 'barracks', p.base);
-    else if (rax.length >= 1 && fact.length < 1 && p.res >= 250) aiPlace(fac, 'factory', p.base);
-    else if (fact.length >= 1 && air.length < 1 && p.res >= 300 && game.t > 200) aiPlace(fac, 'airfield', p.base);
-    else if (turrets.length < 3 && p.res >= 220 && game.t > 150) aiPlace(fac, 'turret', p.base);
+    if (rax.length < aiGrow(2, 1, 6) && p.res >= 150) aiPlace(fac, 'barracks', p.base);
+    else if (rax.length >= 1 && fact.length < aiGrow(1, 1, 4) && p.res >= 250) aiPlace(fac, 'factory', p.base);
+    else if (fact.length >= 1 && air.length < aiGrow(1, 1, 3) && p.res >= 300 && game.t > 200) aiPlace(fac, 'airfield', p.base);
+    else if (turrets.length < aiGrow(3, 1, 10) && p.res >= 220 && game.t > 150) aiPlace(fac, 'turret', p.base);
     for (const b of rax) if (!b.constructing && !b.queue.length && p.res >= 60) {
       const r = Math.random();
       enqueue(b, (r < 0.25 && p.res >= 110) ? 'sniper' : (r < 0.4 && p.res >= 75) ? 'medic' : 'marine');
@@ -72,7 +95,7 @@ function aiTick(fac) {
     const dens = ents(e => e.fac === fac && e.type === 'hunterden');
     const spines = ents(e => e.fac === fac && e.type === 'spine');
     // spread creep toward the enemy
-    if (tumors.length < 9 && p.res >= 50 && Math.random() < 0.65) {
+    if (tumors.length < aiGrow(9, 3, 30) && p.res >= 50 && Math.random() < 0.65) {
       const sources = [hive, ...tumors].filter(Boolean);
       const src = sources[Math.floor(Math.random() * sources.length)];
       if (src) {
@@ -81,10 +104,10 @@ function aiTick(fac) {
         aiPlaceAt(fac, 'tumor', src.x + Math.cos(ang) * r, src.y + Math.sin(ang) * r);
       }
     }
-    if (pits.length < 3 && p.res >= 150) aiPlace(fac, 'spawnpit', p.base);
-    else if (mounds.length < 2 && pits.length >= 1 && p.res >= 200) aiPlace(fac, 'spittermound', p.base);
-    else if (dens.length < 2 && pits.length >= 2 && p.res >= 250) aiPlace(fac, 'hunterden', p.base);
-    else if (spines.length < 3 && p.res >= 120 && game.t > 150) aiPlace(fac, 'spine', p.base);
+    if (pits.length < aiGrow(3, 1, 8) && p.res >= 150) aiPlace(fac, 'spawnpit', p.base);
+    else if (mounds.length < aiGrow(2, 1, 6) && pits.length >= 1 && p.res >= 200) aiPlace(fac, 'spittermound', p.base);
+    else if (dens.length < aiGrow(2, 1, 6) && pits.length >= 2 && p.res >= 250) aiPlace(fac, 'hunterden', p.base);
+    else if (spines.length < aiGrow(3, 1, 9) && p.res >= 120 && game.t > 150) aiPlace(fac, 'spine', p.base);
     else if (hive && !hive.queue.length && p.res >= 200 && game.t > 160 && techMet(fac, 'ravager'))
       enqueue(hive, (p.res >= 300 && Math.random() < 0.5) ? 'broodmother' : 'ravager');
     // swarm rally drifts toward the enemy as the game goes on
@@ -103,7 +126,7 @@ function aiTick(fac) {
       const phoenixes = ents(e => e.fac === fac && e.type === 'phoenix').length;
       const templars = ents(e => e.fac === fac && e.type === 'templar').length;
       const aegises = ents(e => e.fac === fac && e.type === 'aegis').length;
-      if (collectors < 5 && p.res >= 60) enqueue(ark, 'collector');
+      if (collectors < aiGrow(5, 2, 15) && p.res >= 60) enqueue(ark, 'collector');
       else if (aegises < 2 && p.res >= 300 && game.t > 200) enqueue(ark, 'aegis');
       else if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
       else if (lancers <= seekers / 2 && p.res >= 220) enqueue(ark, 'lancer');
@@ -136,7 +159,7 @@ function aiTick(fac) {
     const reliqs = ents(e => e.fac === fac && e.type === 'reliquary');
     const spires = ents(e => e.fac === fac && e.type === 'spire');
     // crawl the lattice toward the enemy with conduits
-    if (conduits.length < 8 && p.res >= 60 && Math.random() < 0.6) {
+    if (conduits.length < aiGrow(8, 2, 24) && p.res >= 60 && Math.random() < 0.6) {
       const srcs = ents(e => e.fac === fac && e.def.kind === 'building' && !e.growing);
       const src = srcs[Math.floor(Math.random() * srcs.length)];
       if (src) {
@@ -144,8 +167,8 @@ function aiTick(fac) {
         aiPlaceAt(fac, 'conduit', src.x + Math.cos(ang) * 200, src.y + Math.sin(ang) * 200);
       }
     }
-    if (reliqs.length < 1 && p.res >= 180) aiPlace(fac, 'reliquary', p.base);
-    else if (spires.length < 2 && p.res >= 130 && game.t > 130) aiPlace(fac, 'spire', p.base);
+    if (reliqs.length < aiGrow(1, 1, 3) && p.res >= 180) aiPlace(fac, 'reliquary', p.base);
+    else if (spires.length < aiGrow(2, 1, 6) && p.res >= 130 && game.t > 130) aiPlace(fac, 'spire', p.base);
     if (oss && !oss.queue.length && p.res >= 50)
       enqueue(oss, (Math.random() < 0.35 && p.res >= 130) ? 'banshee' : 'wraith');
     for (const b of reliqs) if (!b.growing && !b.queue.length && p.res >= 180)
@@ -156,8 +179,8 @@ function aiTick(fac) {
     const haven = myCore;
     const houses = ents(e => e.fac === fac && e.type === 'countinghouse');
     const posts = ents(e => e.fac === fac && e.type === 'watchpost');
-    if (houses.length < 2 && p.res >= 420) aiPlace(fac, 'countinghouse', p.base);
-    else if (posts.length < 3 && p.res >= 360 && game.t > 120) aiPlace(fac, 'watchpost', p.base);
+    if (houses.length < aiGrow(2, 1, 7) && p.res >= 420) aiPlace(fac, 'countinghouse', p.base);
+    else if (posts.length < aiGrow(3, 1, 9) && p.res >= 360 && game.t > 120) aiPlace(fac, 'watchpost', p.base);
     if (haven && !haven.queue.length && (p.res >= 400 || (underAttack && p.res >= 100))) {
       const enf = ents(e => e.fac === fac && e.type === 'enforcer').length;
       const arb = ents(e => e.fac === fac && e.type === 'arbalest').length;
@@ -176,16 +199,16 @@ function aiTick(fac) {
     const have = t => ents(e => e.fac === fac && e.type === t).length;
     const ramparts = have('rampart'), forges = have('forge');
     if (forges < 2 && can('forge')) aiPlace(fac, 'forge', p.base);
-    else if (ramparts < 8 && can('rampart')) aiPlace(fac, 'rampart', p.base);
-    else if (have('bastion') < 3 && can('bastion')) aiPlace(fac, 'bastion', p.base);
-    else if (have('bunker') < 3 && can('bunker') && techMet(fac, 'bunker')) aiPlace(fac, 'bunker', p.base);
-    else if (have('forge') < 4 && can('forge')) aiPlace(fac, 'forge', p.base);
-    else if (have('foundry_w') < 1 && can('foundry_w') && game.t > 110) aiPlace(fac, 'foundry_w', p.base);
+    else if (ramparts < aiGrow(8, 3, 32) && can('rampart')) aiPlace(fac, 'rampart', p.base);
+    else if (have('bastion') < aiGrow(3, 1, 8) && can('bastion')) aiPlace(fac, 'bastion', p.base);
+    else if (have('bunker') < aiGrow(3, 1, 8) && can('bunker') && techMet(fac, 'bunker')) aiPlace(fac, 'bunker', p.base);
+    else if (have('forge') < aiGrow(4, 1, 11) && can('forge')) aiPlace(fac, 'forge', p.base);
+    else if (have('foundry_w') < aiGrow(1, 1, 3) && can('foundry_w') && game.t > 110) aiPlace(fac, 'foundry_w', p.base);
     else if (have('college') < 1 && can('college') && game.t > 130) aiPlace(fac, 'college', p.base);
-    else if (have('redoubt') < 2 && can('redoubt') && techMet(fac, 'redoubt')) aiPlace(fac, 'redoubt', p.base);
-    else if (have('arsenal') < 1 && can('arsenal') && techMet(fac, 'arsenal')) aiPlace(fac, 'arsenal', p.base);
+    else if (have('redoubt') < aiGrow(2, 1, 6) && can('redoubt') && techMet(fac, 'redoubt')) aiPlace(fac, 'redoubt', p.base);
+    else if (have('arsenal') < aiGrow(1, 1, 2) && can('arsenal') && techMet(fac, 'arsenal')) aiPlace(fac, 'arsenal', p.base);
     else if (have('citadel') < 1 && can('citadel') && techMet(fac, 'citadel')) aiPlace(fac, 'citadel', p.base);
-    else if (ramparts < 16 && p.res >= 400) aiPlace(fac, 'rampart', p.base);
+    else if (ramparts < aiGrow(16, 4, 44) && p.res >= 400) aiPlace(fac, 'rampart', p.base);
     if (keep && !keep.queue.length) {
       const guards = have('warden_g'), sents = have('sentinel'), pikes = have('pikeman');
       if (pikes < sents / 3 && can('pikeman') && techMet(fac, 'pikeman')) enqueue(keep, 'pikeman');
@@ -194,7 +217,7 @@ function aiTick(fac) {
     }
     for (const f of ents(e => e.fac === fac && e.type === 'foundry_w' && !e.growing))
       if (!f.queue.length) {
-        if (have('ironclad') < 4 && can('ironclad')) enqueue(f, 'ironclad');
+        if (have('ironclad') < aiGrow(4, 1, 12) && can('ironclad')) enqueue(f, 'ironclad');
         else if (can('bombard')) enqueue(f, 'bombard');
       }
     for (const ar of ents(e => e.fac === fac && e.type === 'arsenal' && !e.growing))
@@ -205,16 +228,16 @@ function aiTick(fac) {
     const pyre = myCore;
     const camps = ents(e => e.fac === fac && e.type === 'warcamp').length;
     const totems = ents(e => e.fac === fac && e.type === 'totem').length;
-    if (camps < 2 && p.res >= 120) aiPlace(fac, 'warcamp', p.base);
-    else if (totems < 2 && p.res >= 110 && game.t > 60) aiPlace(fac, 'totem', p.base);
+    if (camps < aiGrow(2, 1, 6) && p.res >= 120) aiPlace(fac, 'warcamp', p.base);
+    else if (totems < aiGrow(2, 1, 6) && p.res >= 110 && game.t > 60) aiPlace(fac, 'totem', p.base);
     const prod = e => {
       if (!e || e.queue.length || e.growing) return;
       const beasts = ents(o => o.fac === fac && o.type === 'warbeast').length;
       const brands = ents(o => o.fac === fac && o.type === 'firebrand').length;
       const wagons = ents(o => o.fac === fac && o.type === 'firewagon').length;
-      if (beasts < 3 && p.res >= 280 && techMet(fac, 'warbeast')) enqueue(e, 'warbeast');
-      else if (wagons < 3 && p.res >= 160 && techMet(fac, 'firewagon')) enqueue(e, 'firewagon');
-      else if (brands < 5 && p.res >= 150 && techMet(fac, 'firebrand')) enqueue(e, 'firebrand');
+      if (beasts < aiGrow(3, 1, 9) && p.res >= 280 && techMet(fac, 'warbeast')) enqueue(e, 'warbeast');
+      else if (wagons < aiGrow(3, 1, 9) && p.res >= 160 && techMet(fac, 'firewagon')) enqueue(e, 'firewagon');
+      else if (brands < aiGrow(5, 1, 14) && p.res >= 150 && techMet(fac, 'firebrand')) enqueue(e, 'firebrand');
       else if (p.res >= 80 && Math.random() < 0.5) enqueue(e, 'slinger');
       else if (p.res >= 45) enqueue(e, 'raider');
     };
@@ -230,10 +253,10 @@ function aiTick(fac) {
     const blooms = ents(e => e.fac === fac && e.type === 'bloom').length;
     const groves = ents(e => e.fac === fac && e.type === 'grove').length;
     const brambles = ents(e => e.fac === fac && e.type === 'bramble').length;
-    if (blooms < 6 && p.res >= 90) aiPlace(fac, 'bloom', p.base);
-    else if (groves < 3 && p.res >= 170) aiPlace(fac, 'grove', p.base);
-    else if (brambles < 3 && p.res >= 120 && game.t > 90) aiPlace(fac, 'bramble', p.base);
-    else if (blooms < 12 && p.res >= 300) aiPlace(fac, 'bloom', p.base);
+    if (blooms < aiGrow(6, 2, 16) && p.res >= 90) aiPlace(fac, 'bloom', p.base);
+    else if (groves < aiGrow(3, 1, 8) && p.res >= 170) aiPlace(fac, 'grove', p.base);
+    else if (brambles < aiGrow(3, 1, 9) && p.res >= 120 && game.t > 90) aiPlace(fac, 'bramble', p.base);
+    else if (blooms < aiGrow(12, 3, 30) && p.res >= 300) aiPlace(fac, 'bloom', p.base);
     if (heart && !heart.queue.length && p.res >= 90) {
       const treants = ents(e => e.fac === fac && e.type === 'treant').length;
       const ancients = ents(e => e.fac === fac && e.type === 'ancient').length;
@@ -247,9 +270,9 @@ function aiTick(fac) {
     const dynamos = ents(e => e.fac === fac && e.type === 'dynamo').length;
     const teslas = ents(e => e.fac === fac && e.type === 'tesla').length;
     const foundries = ents(e => e.fac === fac && e.type === 'foundry_s').length;
-    if (dynamos < 4 && p.res >= 200) aiPlace(fac, 'dynamo', p.base);
-    else if (teslas < 3 && p.res >= 160 && game.t > 80) aiPlace(fac, 'tesla', p.base);
-    else if (foundries < 1 && p.res >= 260 && game.t > 160) aiPlace(fac, 'foundry_s', p.base);
+    if (dynamos < aiGrow(4, 1, 12) && p.res >= 200) aiPlace(fac, 'dynamo', p.base);
+    else if (teslas < aiGrow(3, 1, 8) && p.res >= 160 && game.t > 80) aiPlace(fac, 'tesla', p.base);
+    else if (foundries < aiGrow(1, 1, 3) && p.res >= 260 && game.t > 160) aiPlace(fac, 'foundry_s', p.base);
     if (reactor && !reactor.queue.length && p.res >= 110) {
       const volts = ents(e => e.fac === fac && e.type === 'voltaic').length;
       const arcs = ents(e => e.fac === fac && e.type === 'arclight').length;
@@ -265,8 +288,8 @@ function aiTick(fac) {
     const altar = myCore;
     const shrines = ents(e => e.fac === fac && e.type === 'shrine').length;
     const spikes = ents(e => e.fac === fac && e.type === 'spike').length;
-    if (shrines < 3 && p.res >= 120) aiPlace(fac, 'shrine', p.base);
-    else if (spikes < 2 && p.res >= 110 && game.t > 80) aiPlace(fac, 'spike', p.base);
+    if (shrines < aiGrow(3, 1, 9) && p.res >= 120) aiPlace(fac, 'shrine', p.base);
+    else if (spikes < aiGrow(2, 1, 6) && p.res >= 110 && game.t > 80) aiPlace(fac, 'spike', p.base);
     if (altar && !altar.queue.length && p.res >= 30) {
       const behes = ents(e => e.fac === fac && e.type === 'behemoth').length;
       const zeals = ents(e => e.fac === fac && e.type === 'zealot').length;

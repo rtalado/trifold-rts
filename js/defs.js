@@ -276,7 +276,7 @@ const META = {
   ironclad:  { desc: 'Tier-2 heavy assault walker — a hulking armoured melee bruiser. Costs Iron.' },
   arsenal:   { desc: 'Tier-3 grand workshop. Assembles the colossal Castellan siege walker. Needs a War Foundry and War College.', reqs:['foundry_w','college'] },
   castellan: { desc: 'Tier-3 siege colossus — devastating long-range splash and a wall of HP. Heavy Iron cost.' },
-  citadel:   { desc: 'The Covenant’s doomsday fortress — a colossal long-range artillery bunker ringed with four rapid machine-gun turrets. Ruinously expensive in Stone AND Iron, and slow to raise, but it shatters armies from clear across the map. Demands the full war machine, a Grand Arsenal, and Siege Doctrine.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_atk2' },
+  citadel:   { desc: 'The Covenant’s doomsday fortress — a colossal long-range artillery bunker ringed with four rapid machine-gun turrets. Ruinously expensive in Stone AND Iron, and slow to raise, but it shatters armies from clear across the map. Demands the full war machine, a Grand Arsenal, and Weapons II.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_wpn2' },
   // EMBER NOMADS
   pyre:      { desc: 'Your core. Musters the whole warband. Plunder from combat funds it.' },
   warcamp:   { desc: 'Forward muster point; trains Raiders and Slingers and unlocks heavier warriors.' },
@@ -366,37 +366,48 @@ function costMsg(fac, d) {
 }
 
 // ---------------- research / upgrades ----------------
-// Each faction has its own three-step upgrade line, researched at its core. They
-// permanently buff that faction's units: two attack tiers and one defence tier.
-// Effects are multipliers; `req` gates the second attack tier behind the first.
+// Every faction shares the same four-branch tech tree (Offense / Defense / Mobility
+// / Economy), laid out as a grid: `branch` is the row, `tier` the column. Each node
+// permanently buffs the faction via multipliers (dmg/hp/shield/speed/range/cd/splash/
+// econ) or a flat unit-cap bonus, and most are gated behind an earlier node (`req`).
+// The Siege-Doctrine prerequisite for the Warden's Bulwark maps onto Weapons II.
+const TECH_TEMPLATE = [
+  // OFFENSE — branch 0
+  { key: 'wpn1',  branch: 0, tier: 0, name: 'Weapons I',      cost: 120, time: 24, dmg: 1.20, desc: '+20% attack damage for all your combat units.' },
+  { key: 'wpn2',  branch: 0, tier: 1, name: 'Weapons II',     cost: 220, time: 34, dmg: 1.20, req: 'wpn1', desc: '+20% more attack damage.' },
+  { key: 'rof',   branch: 0, tier: 2, name: 'Targeting Array', cost: 300, time: 40, cd: 0.85,  req: 'wpn2', desc: '+18% rate of fire (faster cooldowns).' },
+  { key: 'ord',   branch: 0, tier: 3, name: 'Siege Ordnance', cost: 380, time: 46, splash: 1.4, dmg: 1.10, req: 'rof', desc: '+40% splash radius and +10% damage.' },
+  // DEFENSE — branch 1
+  { key: 'arm1',  branch: 1, tier: 0, name: 'Plating I',      cost: 130, time: 26, hp: 1.18, desc: '+18% max HP for all your units.' },
+  { key: 'arm2',  branch: 1, tier: 1, name: 'Plating II',     cost: 230, time: 36, hp: 1.20, req: 'arm1', desc: '+20% more max HP.' },
+  { key: 'ward',  branch: 1, tier: 2, name: 'Ward Fields',    cost: 300, time: 40, shield: 1.30, hp: 1.05, req: 'arm2', desc: '+30% shields and +5% HP.' },
+  { key: 'fort',  branch: 1, tier: 3, name: 'Fortification',  cost: 380, time: 46, hp: 1.22, req: 'ward', desc: '+22% more max HP.' },
+  // MOBILITY — branch 2
+  { key: 'eng1',  branch: 2, tier: 0, name: 'Engines I',      cost: 120, time: 22, speed: 1.15, desc: '+15% movement speed.' },
+  { key: 'eng2',  branch: 2, tier: 1, name: 'Engines II',     cost: 210, time: 32, speed: 1.15, req: 'eng1', desc: '+15% more movement speed.' },
+  { key: 'optic', branch: 2, tier: 2, name: 'Long Optics',    cost: 280, time: 38, range: 1.18, req: 'eng1', desc: '+18% weapon range.' },
+  { key: 'over',  branch: 2, tier: 3, name: 'Overdrive',      cost: 340, time: 44, speed: 1.12, cd: 0.92, req: 'eng2', desc: '+12% speed and +8% rate of fire.' },
+  // ECONOMY — branch 3
+  { key: 'log1',  branch: 3, tier: 0, name: 'Logistics I',    cost: 120, time: 22, econ: 1.15, desc: '+15% resource income.' },
+  { key: 'log2',  branch: 3, tier: 1, name: 'Logistics II',   cost: 220, time: 32, econ: 1.18, req: 'log1', desc: '+18% more resource income.' },
+  { key: 'supply',branch: 3, tier: 2, name: 'Supply Lines',   cost: 260, time: 36, cap: 12, req: 'log1', desc: '+12 unit cap.' },
+  { key: 'wecon', branch: 3, tier: 3, name: 'War Economy',    cost: 360, time: 44, econ: 1.20, cap: 8, req: 'log2', desc: '+20% income and +8 unit cap.' },
+];
+const TECH_BRANCHES = ['Offense', 'Defense', 'Mobility', 'Economy'];
 const RESEARCH = {};
 const RESEARCH_BY_FAC = {};
 (function () {
-  // [attack I, defence, attack II] flavour names per faction
-  const SPEC = {
-    vanguard:  ['Hardened Rounds', 'Composite Armor', 'Depleted Slugs'],
-    myriad:    ['Sharpened Claws', 'Chitin Plating', 'Corrosive Enzymes'],
-    exodus:    ['Focused Lenses', 'Aegis Matrix', 'Solar Overcharge'],
-    choir:     ['Wailing Edge', 'Bound Essence', 'Grave Hunger'],
-    syndicate: ['Premium Munitions', 'Reinforced Plating', 'Black-Market Ordnance'],
-    warden:    ['Tempered Blades', 'Forged Bulwark', 'Siege Doctrine'],
-    ember:     ['Whetted Steel', 'Boiled Leather', 'Wildfire Oil'],
-    verdant:   ['Barbed Thorns', 'Ironbark', 'Toxic Sap'],
-    stormforge:['Overclocked Coils', 'Plated Chassis', 'Arc Capacitors'],
-    pact:      ['Cruel Edges', 'Bone Wards', 'Bloodlust'],
-  };
-  const SHIELDED = { exodus: true, stormforge: true };
-  for (const fac in SPEC) {
-    const [n1, n2, n3] = SPEC[fac];
-    const a1 = fac + '_atk1', d1 = fac + '_def1', a2 = fac + '_atk2';
-    RESEARCH[a1] = { fac, name: n1, desc: '+25% attack damage for all your combat units.', cost: 150, time: 30, dmg: 1.25 };
-    RESEARCH[d1] = { fac, name: n2, cost: 175, time: 35, hp: 1.2,
-      desc: SHIELDED[fac] ? '+20% max HP and +25% shields for all your units.' : '+20% max HP for all your units.',
-      shield: SHIELDED[fac] ? 1.25 : undefined };
-    RESEARCH[a2] = { fac, name: n3, desc: '+30% more attack damage. Requires ' + n1 + '.', cost: 320, time: 45, dmg: 1.3, req: a1 };
-    RESEARCH_BY_FAC[fac] = [a1, d1, a2];
+  for (const fac in FACTIONS) {
+    RESEARCH_BY_FAC[fac] = [];
+    for (const t of TECH_TEMPLATE) {
+      const rid = fac + '_' + t.key;
+      RESEARCH[rid] = Object.assign({}, t, { fac, rid, req: t.req ? fac + '_' + t.req : undefined });
+      RESEARCH_BY_FAC[fac].push(rid);
+    }
   }
 })();
+// the Warden's Bulwark used to gate on the old 'warden_atk2'; it now maps to Weapons II
+const WARDEN_SIEGE_DOCTRINE = 'warden_wpn2';
 
 // which building each faction researches at (the base-less Exodus uses its Ark)
 const LAB_OF = {};
@@ -405,18 +416,32 @@ for (const k in DEFS) if (DEFS[k].researchLab) LAB_OF[DEFS[k].fac] = k;
 // derive a player's stat multipliers from the set of upgrades they've researched
 function recalcMul(p) {
   p.dmgMul = 1; p.hpBonusMul = 1; p.shBonusMul = 1;
+  p.speedMul = 1; p.rangeMul = 1; p.cdMul = 1; p.splashMul = 1; p.econMul = 1; p.capBonus = 0;
   for (const rid of p.research) {
     const r = RESEARCH[rid]; if (!r) continue;
     if (r.dmg) p.dmgMul *= r.dmg;
     if (r.hp) p.hpBonusMul *= r.hp;
     if (r.shield) p.shBonusMul *= r.shield;
+    if (r.speed) p.speedMul *= r.speed;
+    if (r.range) p.rangeMul *= r.range;
+    if (r.cd) p.cdMul *= r.cd;
+    if (r.splash) p.splashMul *= r.splash;
+    if (r.econ) p.econMul *= r.econ;
+    if (r.cap) p.capBonus += r.cap;
   }
 }
-// effective attack damage of an entity, with its owner's attack upgrades applied
+// effective stats of an entity, with its owner's researched upgrades applied.
+// (damage/range/cooldown/splash apply to buildings too; speed/cap only to units.)
 function dmgOf(e) {
   const p = e.def.kind === 'unit' && game.players[e.fac];
   return e.def.dmg * (p ? p.dmgMul : 1);
 }
+function spd(e) { const p = game.players[e.fac]; return e.def.speed * ((p && p.speedMul) || 1); }
+function rangeOf(e) { const p = game.players[e.fac]; return e.def.range * ((p && p.rangeMul) || 1); }
+function aggroOf(e) { const p = game.players[e.fac]; return e.def.aggro * ((p && p.rangeMul) || 1); }
+function cdOf(e) { const p = game.players[e.fac]; return e.def.cd * ((p && p.cdMul) || 1); }
+function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1); }
+function capOf(fac) { const p = game.players[fac]; return FACTIONS[fac].cap + ((p && p.capBonus) || 0); }
 function researchQueued(fac, rid) {
   return game.entities.some(e => !e.dead && e.fac === fac && e.queue && e.queue.some(q => q.research && q.rid === rid));
 }

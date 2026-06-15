@@ -111,7 +111,8 @@ addEventListener('keydown', ev => {
   keys[ev.key.toLowerCase()] = true;
   if (!game || game.over) return;
   const k = ev.key.toLowerCase();
-  if (k === 'escape') { game.placing = null; game.sel = []; refreshCard(); }
+  if (k === 'escape') { if (techOpen) closeTechTree(); game.placing = null; game.sel = []; refreshCard(); }
+  if (k === 't') { ev.preventDefault(); toggleTechTree(); return; }
   if (k === ' ') {
     ev.preventDefault();
     const core = ents(e => e.fac === game.localFac && e.def.core)[0];

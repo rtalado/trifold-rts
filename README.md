@@ -66,12 +66,20 @@ out. Objectives worth fighting over:
 structure within an enemy core/building's keep-out radius. No base-rushing with
 buildings.
 
-## Research
+## Research — the tech tree
 
-Every faction has its own three-step upgrade line, researched at a dedicated,
-faction-flavoured **research building** (the base-less Exodus researches at its Ark).
-Two attack tiers and one defence tier; upgrades are timed, cost resources, and apply
-**retroactively** to your existing army.
+Press **T** (or select your **research building** and hit *Tech Tree*) to open the
+full visual tech tree. Every faction shares a four-branch tree — **Offense, Defense,
+Mobility, Economy** — of 16 nodes laid out as a dependency graph you click through:
+
+- **Offense:** Weapons I/II (+damage), Targeting Array (rate of fire), Siege Ordnance (splash).
+- **Defense:** Plating I/II and Fortification (+HP), Ward Fields (+shields).
+- **Mobility:** Engines I/II (+speed), Long Optics (+range), Overdrive (speed + fire rate).
+- **Economy:** Logistics I/II (+income), Supply Lines & War Economy (+unit cap).
+
+Nodes are timed, cost resources, gate behind their prerequisites, and apply
+**retroactively** to your whole army. Research happens at a dedicated, faction-flavoured
+**research building** (the base-less Exodus researches at its Ark):
 
 | Faction | Research building |
 |---|---|
@@ -181,11 +189,16 @@ deaths. Units: Thralls, Zealots, Behemoths, and the ranged **Cultist**.
 | Left-drag / left-click | Select units / a building |
 | Right-click | Move (attack-move for combat units), attack target, harvest/siphon node, set rally |
 | Mouse wheel | Zoom in / out (toward the cursor) |
-| 1–0 | Command-card hotkeys (build / produce / research / deploy) |
+| 1–0 | Command-card hotkeys (build / produce / sell / deploy) |
+| T | Open / close the tech tree |
 | F | Select your whole army |
 | Space | Jump camera to your core |
 | WASD / arrows / screen edges / minimap | Pan the camera |
-| Esc | Cancel placement / clear selection |
+| Esc | Cancel placement / clear selection / close tech tree |
+
+Selecting any unit or building shows its **weapon range** as a ring, and selected
+units draw a line to wherever they've been ordered. Select one of your buildings to
+**Sell** it (recovers half its cost) — handy for fixing a bad placement.
 
 ## Code layout
 

@@ -48,6 +48,9 @@ function draw() {
     ctx.restore();
   }
 
+  // selection overlays: range rings + order lines, under the entity sprites
+  drawSelectionOverlays();
+
   // entities (buildings first, then units, sorted by y)
   const sorted = [...game.entities].sort((a, b) =>
     (a.def.kind === 'building' ? 0 : 1) - (b.def.kind === 'building' ? 0 : 1) || a.y - b.y);
@@ -153,6 +156,45 @@ function drawDecor(d) {
     }
   }
   ctx.restore();
+}
+
+// the local player's researched range multiplier (range is shown/used with upgrades)
+function rangeMulOf(fac) { const p = game.players[fac]; return (p && p.rangeMul) || 1; }
+
+// for every selected entity: draw its weapon range as a faint ring, and for units
+// draw a line to wherever they've been ordered (move / attack-move / attack / harvest).
+function drawSelectionOverlays() {
+  for (const e of game.sel) {
+    if (e.dead) continue;
+    const col = facColor(e.fac);
+    // weapon range ring (skip pure-melee short range; include the Citadel's aux ring)
+    if (e.def.dmg && e.def.range > 40) {
+      const rng = e.def.range * rangeMulOf(e.fac) + e.size;
+      ctx.strokeStyle = col + '66'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.arc(e.x, e.y, rng, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (e.def.aux) {
+      const ar = e.def.aux.range * rangeMulOf(e.fac) + e.size;
+      ctx.strokeStyle = col + '44'; ctx.lineWidth = 1; ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.arc(e.x, e.y, ar, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // order destination line (units only)
+    if (e.def.kind !== 'unit') continue;
+    const o = e.order; let dx = null, dy = null, hostile = false;
+    if (o.type === 'move' || o.type === 'amove') { dx = o.x; dy = o.y; hostile = o.type === 'amove'; }
+    else if (o.type === 'attack') { const t = byId(o.id); if (t) { dx = t.x; dy = t.y; hostile = true; } }
+    else if (o.type === 'build') { const t = byId(o.id); if (t) { dx = t.x; dy = t.y; } }
+    else if (o.type === 'harvest') { const n = game.nodes.find(n => n.id === o.nodeId); if (n) { dx = n.x; dy = n.y; } }
+    if (dx == null) continue;
+    ctx.strokeStyle = hostile ? 'rgba(255,106,106,0.7)' : 'rgba(125,255,168,0.7)';
+    ctx.lineWidth = 1.5; ctx.setLineDash([4, 5]);
+    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(dx, dy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = hostile ? 'rgba(255,106,106,0.9)' : 'rgba(125,255,168,0.9)';
+    ctx.beginPath(); ctx.arc(dx, dy, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
 }
 
 function drawEnt(e) {
