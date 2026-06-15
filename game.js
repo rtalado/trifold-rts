@@ -136,7 +136,7 @@ const DEFS = {
   marauder:      { fac:'syndicate', kind:'unit', name:'Marauder', hp:180, size:11, speed:74, cost:150, time:0.5, dmg:14, range:120, cd:0.9, aggro:185, shot:'glob', splash:20 },
 
   // ----- WARDEN COVENANT (fortress: income from total standing building HP) -----
-  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g'], grows:['rampart','bastion','foundry_w','college','bunker','redoubt'] },
+  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g'], grows:['rampart','bastion','foundry_w','college','bunker','redoubt','citadel'] },
   rampart:   { fac:'warden', kind:'building', name:'Rampart', hp:1100, size:15, cost:70, time:6 },
   bastion:   { fac:'warden', kind:'building', name:'Bastion', hp:640, size:15, cost:150, time:10, dmg:12, range:200, cd:0.7, aggro:210, shot:'bullet' },
   foundry_w: { fac:'warden', kind:'building', name:'War Foundry', hp:900, size:30, cost:230, time:18, produces:['bombard'] },
@@ -146,6 +146,9 @@ const DEFS = {
   college:   { fac:'warden', kind:'building', name:'War College', hp:700, size:24, cost:150, time:14, researchLab:true },
   bunker:    { fac:'warden', kind:'building', name:'Bunker', hp:1400, size:18, cost:170, time:12, dmg:10, range:185, cd:0.5, aggro:205, shot:'bullet' },
   redoubt:   { fac:'warden', kind:'building', name:'Redoubt', hp:820, size:18, cost:220, time:16, dmg:30, range:235, cd:2.2, aggro:235, shot:'shell', splash:42 },
+  citadel:   { fac:'warden', kind:'building', name:'The Bulwark', hp:7200, size:56, cost:2400, time:80,
+               dmg:175, range:445, cd:4.6, aggro:475, shot:'shell', splash:96,
+               aux:{ dmg:13, range:215, cd:0.4, shot:'bullet', guns:4 } },
 
   // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
   pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge'] },
@@ -195,6 +198,8 @@ const DEFS = {
   obelisk:       { fac:'neutral', kind:'building', name:'Obelisk', hp:1, size:22, noTarget:true, captureR:140, captureTime:6 },
   // Hoard: a guarded treasure tower that shoots intruders; destroy it for a bounty.
   hoard:         { fac:'neutral', kind:'building', name:'Ancient Hoard', hp:1500, size:30, dmg:16, range:215, cd:1.0, aggro:240, shot:'shell', splash:34, bounty:550 },
+  // Cache: a small, lightly-guarded jungle camp; quick to crack for a little bounty.
+  cache:         { fac:'neutral', kind:'building', name:'Supply Cache', hp:520, size:17, dmg:8, range:150, cd:1.1, aggro:160, shot:'bullet', bounty:160 },
 };
 
 // Per-thing flavour + tech tree. `desc` shows on hover; `req` is a building that
@@ -254,6 +259,7 @@ const META = {
   sentinel:  { desc: 'Tough, slow melee line-holder.' },
   warden_g:  { desc: 'Armoured ranged trooper.', req: 'bastion' },
   bombard:   { desc: 'Slow long-range siege artillery with splash.' },
+  citadel:   { desc: 'The Covenant’s doomsday fortress — a colossal long-range artillery bunker ringed with four rapid machine-gun turrets. Ruinously expensive and slow to raise, but it shatters armies from clear across the map. Demands the full war machine and Siege Doctrine.', reqs:['foundry_w','college','bunker','redoubt'], reqResearch:'warden_atk2' },
   // EMBER NOMADS
   pyre:      { desc: 'Your core. Musters the whole warband. Plunder from combat funds it.' },
   warcamp:   { desc: 'Forward muster point; trains Raiders and Slingers and unlocks heavier warriors.' },
@@ -310,13 +316,27 @@ const META = {
   // NEUTRAL
   obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
+  cache:     { desc: 'Lightly-guarded neutral supply cache. Crack it open for a small bounty.' },
 };
 const meta = t => META[t] || {};
 // has this faction met the tech requirement (a finished prerequisite building) for `type`?
-function techMet(fac, type) {
-  const r = meta(type).req;
-  if (!r) return true;
-  return game.entities.some(e => !e.dead && e.fac === fac && e.type === r && !e.constructing && !e.growing);
+// every gating requirement for a buildable: prerequisite building(s) — a single
+// `req` or a `reqs` array — plus an optional researched upgrade `reqResearch`.
+// Returns [{name, ok}] so the UI can list each one and its status.
+function reqStatus(fac, type) {
+  const m = meta(type), p = game.players[fac], out = [];
+  const reqs = m.reqs || (m.req ? [m.req] : []);
+  for (const r of reqs)
+    out.push({ name: DEFS[r].name,
+      ok: game.entities.some(e => !e.dead && e.fac === fac && e.type === r && !e.constructing && !e.growing) });
+  if (m.reqResearch)
+    out.push({ name: RESEARCH[m.reqResearch].name, ok: !!(p && p.research.has(m.reqResearch)) });
+  return out;
+}
+function techMet(fac, type) { return reqStatus(fac, type).every(r => r.ok); }
+function reqMsg(fac, type) {
+  const miss = reqStatus(fac, type).filter(r => !r.ok).map(r => r.name);
+  return miss.length ? 'Requires ' + miss.join(', ') : 'Requirements met';
 }
 
 // ---------------- research / upgrades ----------------
@@ -494,36 +514,73 @@ function cornerBases(n) {
 }
 const signTo = b => ({ sx: b.x < WORLD_W / 2 ? 1 : -1, sy: b.y < WORLD_H / 2 ? 1 : -1 });
 
-// seeded, fair-for-everyone map: the same resource/neutral offsets are placed
-// relative to every base (fanning toward the centre), plus contested middle sites
+// seeded, deterministic map. Every player gets a small fair starter economy by
+// their base, then the rest of the world is strewn with crystal nodes and neutral
+// "jungle" camps in random spots (League-of-Legends style) so the map feels alive
+// rather than a single lane of stuff aimed at the foe. Same seed → identical map
+// on every peer, so multiplayer entity ids line up.
 function genLayout(rng, bases) {
   let nid = 1;
   const node = (x, y, amt) => game.nodes.push({ id: nid++, x: clamp(x, 60, WORLD_W - 60), y: clamp(y, 60, WORLD_H - 60), amount: amt, max: amt, r: 20 });
-  const offs = [
-    { ox: 150 + rng() * 110, oy: 120 + rng() * 110, amt: 1600 },
-    { ox: 120 + rng() * 100, oy: 320 + rng() * 140, amt: 1800 },
-    { ox: 520 + rng() * 260, oy: 360 + rng() * 240, amt: 2400 },
-    { ox: 820 + rng() * 300, oy: 700 + rng() * 280, amt: 2800 },
+  const cx = WORLD_W / 2, cy = WORLD_H / 2;
+  const P = bases.length;
+
+  const farFromBases = (x, y, d) => bases.every(b => Math.hypot(b.x - x, b.y - y) > d);
+  const occupied = (x, y, d) =>
+    game.nodes.some(n => Math.hypot(n.x - x, n.y - y) < d) ||
+    game.entities.some(e => e.fac === 'neutral' && Math.hypot(e.x - x, e.y - y) < d);
+  // try up to 60 seeded random spots; return the first that clears the spacing rules
+  const findSpot = (margin, minBase, minOther) => {
+    for (let k = 0; k < 60; k++) {
+      const x = margin + rng() * (WORLD_W - 2 * margin);
+      const y = margin + rng() * (WORLD_H - 2 * margin);
+      if (farFromBases(x, y, minBase) && !occupied(x, y, minOther)) return { x, y };
+    }
+    return null;
+  };
+
+  // 1) fair starter economy: two close nodes fanning toward the centre, per base
+  const starters = [
+    { ox: 150 + rng() * 70, oy: 150 + rng() * 70, amt: 1800 },
+    { ox: 300 + rng() * 90, oy: 250 + rng() * 90, amt: 2200 },
   ];
   for (const b of bases) {
     const { sx, sy } = signTo(b);
-    for (const o of offs) node(b.x + sx * o.ox, b.y + sy * o.oy, o.amt);
+    for (const o of starters) node(b.x + sx * o.ox, b.y + sy * o.oy, o.amt);
   }
-  // contested middle nodes
-  const cx = WORLD_W / 2, cy = WORLD_H / 2;
-  const cn = 2 + Math.floor(rng() * 3);
-  for (let i = 0; i < cn; i++) {
-    const a = rng() * Math.PI * 2, r = 200 + rng() * 520;
-    node(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 3000);
+
+  // 2) a field of extra crystal nodes scattered across the whole map
+  const extraNodes = 14 + 10 * P;     // 2p:34  3p:44  4p:54
+  for (let i = 0; i < extraNodes; i++) {
+    const s = findSpot(80, 360, 150);
+    if (s) node(s.x, s.y, 1500 + Math.floor(rng() * 2200));
   }
-  // neutral sites: a central Obelisk + one Hoard & one Obelisk per base (equidistant = fair)
+
+  // 3) neutral "jungle": lots of small caches, a scatter of Hoards & capture Obelisks
+  const caches = 12 + 9 * P;          // 2p:30  3p:39  4p:48
+  const hoards = 3 + P;               // 2p:5   3p:6   4p:7
+  const obs    = 2 + P;               // 2p:4   3p:5   4p:6
+  for (let i = 0; i < caches; i++) { const s = findSpot(90, 300, 160);  if (s) spawnEnt('cache',   'neutral', s.x, s.y); }
+  for (let i = 0; i < hoards; i++) { const s = findSpot(120, 420, 240); if (s) spawnEnt('hoard',   'neutral', s.x, s.y); }
+  for (let i = 0; i < obs;    i++) { const s = findSpot(120, 420, 260); if (s) spawnEnt('obelisk', 'neutral', s.x, s.y); }
+
+  // 4) central contested prize: a guarded Hoard + Obelisk ringed by rich nodes
   spawnEnt('obelisk', 'neutral', cx, cy);
-  const ho = { ox: 680 + rng() * 220, oy: 680 + rng() * 220 };
-  const ob = { ox: 1080 + rng() * 240, oy: 980 + rng() * 240 };
-  for (const b of bases) {
-    const { sx, sy } = signTo(b);
-    spawnEnt('hoard', 'neutral', clamp(b.x + sx * ho.ox, 80, WORLD_W - 80), clamp(b.y + sy * ho.oy, 80, WORLD_H - 80));
-    spawnEnt('obelisk', 'neutral', clamp(b.x + sx * ob.ox, 80, WORLD_W - 80), clamp(b.y + sy * ob.oy, 80, WORLD_H - 80));
+  spawnEnt('hoard', 'neutral', cx + 150, cy);
+  node(cx - 170, cy, 3200); node(cx, cy - 170, 3200);
+}
+
+// purely-visual world dressing (rocks, rubble, craters, scrub) so the map reads as
+// a real place. Deterministic from the same rng, so every peer draws the same scene.
+function genDecor(rng, bases) {
+  game.decor = [];
+  const kinds = ['rock', 'rubble', 'crater', 'scrub', 'shard'];
+  const n = 60 + 40 * bases.length;
+  for (let i = 0; i < n; i++) {
+    const x = 40 + rng() * (WORLD_W - 80);
+    const y = 40 + rng() * (WORLD_H - 80);
+    if (bases.some(b => Math.hypot(b.x - x, b.y - y) < 130)) continue;  // keep cores clear
+    game.decor.push({ x, y, k: kinds[Math.floor(rng() * kinds.length)], s: 6 + rng() * 16, r: rng() * Math.PI * 2 });
   }
 }
 
@@ -534,7 +591,7 @@ function buildMatch(roster, localFac, mode, seed) {
   nextId = 1;
   const rng = makeRng(seed);
   game = {
-    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], nodes: [],
+    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], nodes: [], decor: [],
     creep: new Uint8Array(GW * GH),
     roster, localFac, mode, seed, players: {},
     aiFacs: roster.filter(r => r.ai).map(r => r.fac),
@@ -551,6 +608,7 @@ function buildMatch(roster, localFac, mode, seed) {
   const bases = cornerBases(roster.length);
   roster.forEach((r, i) => { r.base = bases[i]; setupFaction(r.fac, bases[i], r.ai, r.diff); });
   genLayout(rng, bases);
+  genDecor(rng, bases);
 
   const me = roster.find(r => r.fac === localFac) || roster[0];
   centerCam(me.base.x, me.base.y);
@@ -758,6 +816,31 @@ function splash(e, center, d) {
   }
 }
 
+// secondary rapid-fire turrets (e.g. the Citadel's side machine guns): several
+// independent guns, each tracking and shooting its own nearest target.
+function updateAux(e, dt) {
+  const ax = e.def.aux, guns = ax.guns || 1;
+  if (!e.auxCd) { e.auxCd = new Array(guns).fill(0); e.auxTgt = new Array(guns).fill(0); }
+  for (let i = 0; i < guns; i++) {
+    e.auxCd[i] = Math.max(0, e.auxCd[i] - dt);
+    let t = e.auxTgt[i] ? byId(e.auxTgt[i]) : null;
+    if (!t || t.dead || dist(e, t) > ax.range + e.size + t.size) {
+      t = null; let bd = ax.range + e.size;
+      for (const o of game.entities) {
+        if (o.dead || o.fac === e.fac || o.def.noTarget) continue;
+        const dd = dist(e, o) - o.size;
+        if (dd < bd) { bd = dd; t = o; }
+      }
+      e.auxTgt[i] = t ? t.id : 0;
+    }
+    if (t && e.auxCd[i] <= 0 && dist(e, t) <= ax.range + e.size + t.size) {
+      e.auxCd[i] = ax.cd;
+      game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed: 380,
+        dmg: ax.dmg, splash: 0, fac: e.fac, attackerId: e.id, color: facColor(e.fac), r: 2.5 });
+    }
+  }
+}
+
 // engage target: shoot if in range else chase (unless stationary)
 function engage(e, t, dt) {
   const d = e.def;
@@ -934,6 +1017,8 @@ function updateBuilding(e, dt) {
     const t = e.tgt ? byId(e.tgt) : null;
     if (t && dist(e, t) <= d.range + e.size + t.size && e.cd <= 0) fireAt(e, t);
   }
+  // secondary machine-gun ring (the Citadel)
+  if (d.aux) updateAux(e, dt);
 }
 
 function tickQueue(e, dt) {
@@ -960,7 +1045,7 @@ function localMsg(fac, text) {
 function enqueue(e, type) {
   const d = DEFS[type], p = game.players[e.fac];
   if (e.queue.length >= 5) { localMsg(e.fac, 'Queue is full'); return false; }
-  if (!techMet(e.fac, type)) { localMsg(e.fac, 'Requires ' + DEFS[meta(type).req].name); return false; }
+  if (!techMet(e.fac, type)) { localMsg(e.fac, reqMsg(e.fac, type)); return false; }
   if (p.res < d.cost) { localMsg(e.fac, 'Not enough ' + FACTIONS[e.fac].res); return false; }
   p.res -= d.cost;
   e.queue.push({ type, t: d.time, total: d.time });
@@ -999,7 +1084,7 @@ function placeErr(fac) { return placeErrMsg; }
 
 function placeBuilding(fac, type, x, y) {
   const d = DEFS[type], p = game.players[fac];
-  if (!techMet(fac, type)) { localMsg(fac, 'Requires ' + DEFS[meta(type).req].name); return false; }
+  if (!techMet(fac, type)) { localMsg(fac, reqMsg(fac, type)); return false; }
   if (p.res < d.cost) { localMsg(fac, 'Not enough ' + FACTIONS[fac].res); return false; }
   if (!placeValid(type, fac, x, y)) { localMsg(fac, placeErr(fac)); return false; }
   if (fac === 'vanguard') {
@@ -1391,11 +1476,15 @@ function aiTick(fac) {
     const foundries = ents(e => e.fac === fac && e.type === 'foundry_w').length;
     const bunkers = ents(e => e.fac === fac && e.type === 'bunker').length;
     const redoubts = ents(e => e.fac === fac && e.type === 'redoubt').length;
+    const colleges = ents(e => e.fac === fac && e.type === 'college').length;
+    const citadels = ents(e => e.fac === fac && e.type === 'citadel').length;
     if (ramparts < 8 && p.res >= 70) aiPlace(fac, 'rampart', p.base);
     else if (bastions < 3 && p.res >= 150) aiPlace(fac, 'bastion', p.base);
     else if (bunkers < 3 && p.res >= 170 && techMet(fac, 'bunker')) aiPlace(fac, 'bunker', p.base);
     else if (foundries < 1 && p.res >= 230 && game.t > 120) aiPlace(fac, 'foundry_w', p.base);
+    else if (colleges < 1 && p.res >= 150 && game.t > 140) aiPlace(fac, 'college', p.base);
     else if (redoubts < 2 && p.res >= 220 && techMet(fac, 'redoubt')) aiPlace(fac, 'redoubt', p.base);
+    else if (citadels < 1 && p.res >= DEFS.citadel.cost && techMet(fac, 'citadel')) aiPlace(fac, 'citadel', p.base);
     else if (ramparts < 16 && p.res >= 400) aiPlace(fac, 'rampart', p.base);
     if (keep && !keep.queue.length && p.res >= 90) {
       const guards = ents(e => e.fac === fac && e.type === 'warden_g').length;
@@ -1856,11 +1945,11 @@ function showTip(c) {
     + (c.cost ? '<span class="tipcost">' + c.cost + ' ' + res + '</span>' : '') + '</div>';
   html += '<div class="tipdesc">' + (c.desc || (c.type ? meta(c.type).desc : '') || '') + '</div>';
   if (d) html += '<div class="tipstat">' + statLine(d) + '</div>';
-  const req = c.type && meta(c.type).req;
-  if (req) {
-    const have = techMet(game.localFac, c.type);
-    html += '<div class="tipreq" style="color:' + (have ? '#7dd87d' : '#e0843d') + '">'
-      + (have ? '✓ ' : '✗ Requires ') + DEFS[req].name + '</div>';
+  if (c.type) {
+    for (const r of reqStatus(game.localFac, c.type)) {
+      html += '<div class="tipreq" style="color:' + (r.ok ? '#7dd87d' : '#e0843d') + '">'
+        + (r.ok ? '✓ ' : '✗ Requires ') + r.name + '</div>';
+    }
   }
   tip.innerHTML = html;
   tip.style.display = 'block';
@@ -1966,6 +2055,9 @@ function draw() {
   ctx.strokeStyle = '#2a3954'; ctx.lineWidth = 3;
   ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
 
+  // scenery (drawn under everything else)
+  if (game.decor) for (const d of game.decor) drawDecor(d);
+
   // crystal nodes
   for (const n of game.nodes) {
     const f = 0.45 + 0.55 * (n.amount / n.max);
@@ -2049,6 +2141,44 @@ function draw() {
   }
 
   drawMinimap();
+}
+
+// a single piece of background scenery — muted, low-contrast so it never competes
+// with units or buildings for attention
+function drawDecor(d) {
+  const x = d.x, y = d.y, s = d.s;
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(d.r);
+  if (d.k === 'rock') {
+    ctx.fillStyle = '#1b2533'; ctx.strokeStyle = '#2c3a4f'; ctx.lineWidth = 1.5;
+    poly(0, 0, s, 5, 0.3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#243042'; poly(-s * 0.18, -s * 0.18, s * 0.5, 5, 0.9); ctx.fill();
+  } else if (d.k === 'rubble') {
+    ctx.fillStyle = '#202b3a';
+    for (let i = 0; i < 5; i++) {
+      const a = i * 1.3, rr = s * (0.4 + 0.5 * ((i * 7) % 3) / 3);
+      ctx.beginPath(); ctx.arc(Math.cos(a) * s * 0.5, Math.sin(a) * s * 0.5, rr * 0.4, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (d.k === 'crater') {
+    ctx.fillStyle = '#11171f'; ctx.beginPath(); ctx.arc(0, 0, s, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#2a3954'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, s * 0.92, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#0c1016'; ctx.beginPath(); ctx.arc(0, 0, s * 0.55, 0, Math.PI * 2); ctx.fill();
+  } else if (d.k === 'scrub') {
+    ctx.strokeStyle = '#234027'; ctx.lineWidth = 1.6; ctx.fillStyle = '#1a3320';
+    ctx.beginPath(); ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2); ctx.fill();
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s); ctx.stroke();
+    }
+  } else { // shard — a dull rocky crystal cluster (not harvestable)
+    ctx.fillStyle = '#243a44'; ctx.strokeStyle = '#34525e'; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 3; i++) {
+      const a = i * 2.1, px = Math.cos(a) * s * 0.4, py = Math.sin(a) * s * 0.4;
+      ctx.beginPath(); ctx.moveTo(px, py - s * 0.7); ctx.lineTo(px + s * 0.3, py); ctx.lineTo(px, py + s * 0.4); ctx.lineTo(px - s * 0.3, py); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 function drawEnt(e) {
@@ -2251,6 +2381,18 @@ function drawEnt(e) {
         ctx.strokeStyle = facColor(e.capFac); ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(x, y, s + 7, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); ctx.stroke();
       }
+    } else if (e.type === 'cache') { // small jungle camp — a crate of loot
+      ctx.fillStyle = '#26303a'; ctx.strokeStyle = '#b8923a'; ctx.lineWidth = 2;
+      roundRect(x - s, y - s * 0.8, s * 2, s * 1.6, 3); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y);
+      ctx.moveTo(x, y - s * 0.8); ctx.lineTo(x, y + s * 0.8); ctx.stroke();
+      const t = e.tgt ? byId(e.tgt) : null;
+      if (t) {
+        const a = Math.atan2(t.y - y, t.x - x);
+        ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 7), y + Math.sin(a) * (s + 7)); ctx.stroke();
+      }
     } else { // hoard: a fortified treasure tower
       ctx.fillStyle = '#2a2014'; ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 2.5;
       poly(x, y, s, 5, -Math.PI / 2); ctx.fill(); ctx.stroke();
@@ -2266,7 +2408,33 @@ function drawEnt(e) {
   }
 
   else if (e.fac === 'warden') { // steel hexagons & armoured blocks
-    if (e.def.kind === 'building') {
+    if (e.type === 'citadel') { // the super-weapon: a colossal artillery bunker
+      // outer armoured ring + inner keep
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 3.5;
+      poly(x, y, s, 6, 0); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 2; poly(x, y, s * 0.78, 6, Math.PI / 6); ctx.stroke();
+      ctx.fillStyle = '#3a4656'; poly(x, y, s * 0.5, 6, 0); ctx.fill(); ctx.stroke();
+      // four side machine-gun turrets, each tracking its own target
+      const auxT = e.auxTgt || [];
+      for (let i = 0; i < 4; i++) {
+        const ga = i * Math.PI / 2 + Math.PI / 4;
+        const gx = x + Math.cos(ga) * s * 0.72, gy = y + Math.sin(ga) * s * 0.72;
+        ctx.fillStyle = '#2b3543'; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(gx, gy, s * 0.16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        const gt = auxT[i] ? byId(auxT[i]) : null;
+        const ba = gt ? Math.atan2(gt.y - gy, gt.x - gx) : ga;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ba) * s * 0.34, gy + Math.sin(ba) * s * 0.34); ctx.stroke();
+      }
+      // the main artillery cannon
+      const t = e.tgt ? byId(e.tgt) : null;
+      const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+      ctx.strokeStyle = col; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 14), y + Math.sin(a) * (s + 14)); ctx.stroke();
+      ctx.lineCap = 'butt';
+      ctx.fillStyle = '#e7edf5'; ctx.beginPath(); ctx.arc(x, y, s * 0.2, 0, Math.PI * 2); ctx.fill();
+    }
+    else if (e.def.kind === 'building') {
       ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 3 : 2;
       poly(x, y, s, 6, 0); ctx.fill(); ctx.stroke();
       ctx.lineWidth = 1; poly(x, y, s * 0.6, 6, 0); ctx.stroke();

@@ -44,13 +44,20 @@ careless human and pushes almost immediately. Your own economy is never handicap
 
 ## The map
 
-A large point-symmetric battlefield with neutral objectives worth fighting over:
+A large battlefield strewn with crystal nodes, neutral camps and scenery, all
+seeded so every peer builds the identical map. Each player gets a small fair
+starter economy by their base; the rest of the world is scattered with objectives
+in random spots (League-of-Legends style) so the map feels alive instead of a
+single lane of stuff aimed at your foe. The more players, the more the map fills
+out. Objectives worth fighting over:
 
 - **Crystal nodes** — the mineable resource (Vanguard Workers, Exodus Collectors
-  and the deployed Ark feed on them).
+  and the deployed Ark feed on them). Dozens are scattered across the map.
 - **Obelisks** — capture points. Hold the ground around one (with no enemies in
   range) for ~6 s to claim it; each obelisk pays its owner **+1.4 resources/s** in
   whatever your faction's currency is. They can be recaptured.
+- **Supply Caches** — small, lightly-guarded jungle camps dotted everywhere.
+  Crack one open for a quick **+160 bounty**.
 - **Wild camps** — neutral guards around **Ancient Hoards**. Destroy a hoard and
   whoever lands the kill pockets a **+550 bounty**. The biggest camp sits dead
   centre, wrapped around the middle obelisk.
@@ -141,7 +148,11 @@ Enforcers, Arbalests, Juggernauts, **Marauders**.
 Your fortress *is* your economy — income scales with the total HP of your standing
 buildings. Wall in with dirt-cheap Ramparts, then bristle with **Bastions, Bunkers
 and long-range Redoubts** for a truly impenetrable base. Slow, armoured units
-(Sentinels, Warden Guards, Bombards) that grind forward and never break.
+(Sentinels, Warden Guards, Bombards) that grind forward and never break. Tech all
+the way up — a War Foundry, War College, Bunker, Redoubt *and* the Siege Doctrine
+upgrade — and you can erect **The Bulwark**: a ruinously expensive doomsday
+super-fortress with a map-spanning artillery cannon and a ring of four rapid
+machine-gun turrets. Slow to raise, but it shatters armies from across the map.
 
 ### EMBER NOMADS — the Warband · *Plunder* · core: **War Pyre**
 No mines — you fund the war by waging it: every point of damage you deal pays
