@@ -510,13 +510,13 @@ function drawEnt(e) {
       const gl = ready ? (0.55 + 0.45 * Math.sin(game.t * 4)) : 0.16;
       ctx.fillStyle = 'rgba(255,205,140,' + gl + ')';
       ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.fill();
-      // the gigantic main cannon (twin-tone for heft)
+      // the gigantic main cannon (twin-tone for heft) — scales with the body
       const t = e.tgt ? byId(e.tgt) : null;
       const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
-      const bx = x + Math.cos(a) * (s + 24), by = y + Math.sin(a) * (s + 24);
+      const bx = x + Math.cos(a) * (s * 1.38), by = y + Math.sin(a) * (s * 1.38);
       ctx.lineCap = 'round';
-      ctx.strokeStyle = col; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.stroke();
-      ctx.strokeStyle = '#1a2230'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(10, s * 0.13); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.strokeStyle = '#1a2230'; ctx.lineWidth = Math.max(3, s * 0.045); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.stroke();
       ctx.lineCap = 'butt';
       ctx.fillStyle = '#e7edf5'; ctx.beginPath(); ctx.arc(x, y, s * 0.17, 0, Math.PI * 2); ctx.fill();
       // a faint apex-style aura so it reads as the ultimate structure
