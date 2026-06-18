@@ -57,7 +57,7 @@ const HINTS = {
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
   syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
-  warden: 'You run on TWO resources. Stone flows from the total mass of your standing buildings — so Erect Ramparts (cheap, huge HP) and Bastions everywhere. Iron is minted only by Iron Forges, and it pays for your Tier-2 and Tier-3 war machines. Tier up: Forges → War Foundry (Ironclads) → Grand Arsenal (Castellans) → the doomsday Bulwark. Slow, armoured, unstoppable. Hold the Keep.',
+  warden: 'You run on TWO resources. Stone flows from the total mass of your standing buildings (Quarries add a flat trickle) — so Erect Ramparts (cheap, huge HP), Quarries and Bastions everywhere. Iron is minted only by Iron Forges. Your tech tree is DISTRIBUTED: raise advanced structures FROM advanced structures — the War College builds the Bunker/Ballista/Hall, the War Foundry builds the Redoubt/Grand Arsenal, the Arsenal raises the Bulwark and the Worldbreaker. Tier up: Forges → Foundry (Ironclads/Bombards) → Arsenal (Castellans/Trebuchets) → the Bulwark → the doomsday WORLDBREAKER siege gun with its map-spanning Gustav Strike. Slow, armoured, unstoppable. Hold the Keep.',
   ember: 'No mines, no farms — you fund the war by WAGING it. Every point of damage your warband deals to the enemy is paid back as Plunder. Fast, cheap, fragile raiders: keep attacking or starve. Guard the War Pyre.',
   verdant: 'A slow, unstoppable garden. Plant Blooms — each mature Bloom pays Sap, so the more you grow the faster you snowball. Groves breed free Saplings forever. Patient early, overwhelming late. Protect the Heartwood.',
   stormforge: 'An engine that only accelerates. Your income RAMPS the longer the game runs, supercharged by Dynamos — time is on your side. Few, expensive, devastating machines. Survive the early game and become unstoppable. Defend the Reactor.',
@@ -136,30 +136,48 @@ const DEFS = {
   marauder:      { fac:'syndicate', kind:'unit', name:'Marauder', hp:180, size:11, speed:74, cost:150, time:0.5, dmg:14, range:120, cd:0.9, aggro:185, shot:'glob', splash:20 },
 
   // ----- WARDEN COVENANT (fortress: Stone from building mass + Iron from Forges) -----
-  // A deep three-tier tech tree. Tier 1 runs on Stone alone; Tier 2 & 3 also burn
-  // Iron, which only Iron Forges produce — so you must invest in economy to unlock
-  // your heavy machines and the doomsday Bulwark.
-  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g','pikeman'], grows:['rampart','bastion','forge','foundry_w','college','bunker','redoubt','arsenal','citadel'] },
+  // The deepest tech tree in the game. Tier 1 runs on Stone alone; the higher tiers
+  // also burn Iron, which only Iron Forges produce. Crucially the Covenant tech is
+  // DISTRIBUTED: advanced structures are raised from other advanced structures, not
+  // all from the Keep — select a War College to place its halls, a War Foundry to
+  // place siege works, a Grand Arsenal to raise the doomsday engines. The chain ends
+  // at the Bulwark and, beyond even that, the world-ending Worldbreaker siege gun.
+  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g','pikeman'], grows:['rampart','bastion','quarry','forge','cauldron','foundry_w','college'] },
   // -- Tier 1: Stone only --
   rampart:   { fac:'warden', kind:'building', name:'Rampart', hp:1100, size:15, cost:70, time:6 },
   bastion:   { fac:'warden', kind:'building', name:'Bastion', hp:640, size:15, cost:150, time:10, dmg:12, range:200, cd:0.7, aggro:210, shot:'bullet' },
+  quarry:    { fac:'warden', kind:'building', name:'Stone Quarry', hp:680, size:18, cost:120, time:10, stonePerSec:1.6 },
+  cauldron:  { fac:'warden', kind:'building', name:'Oil Cauldron', hp:560, size:14, cost:110, time:9, dmg:22, range:120, cd:1.1, aggro:140, shot:'glob', splash:40 },
   forge:     { fac:'warden', kind:'building', name:'Iron Forge', hp:760, size:18, cost:130, time:11, ironPerSec:1.0 },
   sentinel:  { fac:'warden', kind:'unit', name:'Sentinel', hp:170, size:10, speed:54, cost:80, time:7, dmg:11, range:24, cd:0.9, aggro:170, shot:'melee' },
   warden_g:  { fac:'warden', kind:'unit', name:'Warden Guard', hp:120, size:9, speed:50, cost:120, time:9, dmg:16, range:165, cd:1.2, aggro:200, shot:'bullet' },
   pikeman:   { fac:'warden', kind:'unit', name:'Pikeman', hp:210, size:11, speed:52, cost:110, cost2:10, time:9, dmg:24, range:34, cd:1.3, aggro:175, shot:'melee' },
   // -- Tier 2: Stone + Iron (needs the Forge economy) --
-  foundry_w: { fac:'warden', kind:'building', name:'War Foundry', hp:900, size:30, cost:230, cost2:30, time:18, produces:['bombard','ironclad'] },
-  college:   { fac:'warden', kind:'building', name:'War College', hp:700, size:24, cost:150, time:14, researchLab:true },
+  foundry_w: { fac:'warden', kind:'building', name:'War Foundry', hp:900, size:30, cost:230, cost2:30, time:18, produces:['bombard','ironclad'], grows:['redoubt','arsenal'] },
+  college:   { fac:'warden', kind:'building', name:'War College', hp:700, size:24, cost:150, time:14, researchLab:true, grows:['bunker','ballista','hall'] },
   bunker:    { fac:'warden', kind:'building', name:'Bunker', hp:1400, size:18, cost:170, time:12, dmg:10, range:185, cd:0.5, aggro:205, shot:'bullet' },
+  ballista:  { fac:'warden', kind:'building', name:'Ballista Tower', hp:680, size:16, cost:180, cost2:20, time:14, dmg:54, range:305, cd:2.8, aggro:330, shot:'beam' },
+  hall:      { fac:'warden', kind:'building', name:'Hall of Oaths', hp:820, size:26, cost:200, cost2:25, time:16, produces:['halberd','marshal'] },
   redoubt:   { fac:'warden', kind:'building', name:'Redoubt', hp:820, size:18, cost:220, cost2:20, time:16, dmg:30, range:235, cd:2.2, aggro:235, shot:'shell', splash:42 },
   bombard:   { fac:'warden', kind:'unit', name:'Bombard', hp:240, size:14, speed:42, cost:240, cost2:25, time:15, dmg:34, range:200, cd:2.6, aggro:200, shot:'shell', splash:46 },
   ironclad:  { fac:'warden', kind:'unit', name:'Ironclad', hp:560, size:15, speed:46, cost:200, cost2:50, time:18, dmg:30, range:26, cd:1.3, aggro:185, shot:'melee', splash:30 },
+  halberd:   { fac:'warden', kind:'unit', name:'Halberdier', hp:330, size:12, speed:50, cost:140, cost2:25, time:12, dmg:42, range:32, cd:1.5, aggro:180, shot:'melee', splash:18 },
+  marshal:   { fac:'warden', kind:'unit', name:'Marshal', hp:380, size:12, speed:52, cost:170, cost2:30, time:14, dmg:14, range:150, cd:1.1, aggro:190, shot:'bullet', aura:165, heal:6 },
   // -- Tier 3: heavy Iron investment --
-  arsenal:   { fac:'warden', kind:'building', name:'Grand Arsenal', hp:1100, size:30, cost:320, cost2:90, time:24, produces:['castellan'] },
+  arsenal:   { fac:'warden', kind:'building', name:'Grand Arsenal', hp:1100, size:30, cost:320, cost2:90, time:24, produces:['castellan','trebuchet'], grows:['citadel','worldbreaker'] },
   castellan: { fac:'warden', kind:'unit', name:'Castellan', hp:940, size:20, speed:38, cost:380, cost2:130, time:26, dmg:46, range:215, cd:2.4, aggro:210, shot:'shell', splash:62 },
+  trebuchet: { fac:'warden', kind:'unit', name:'Trebuchet', hp:220, size:15, speed:30, cost:280, cost2:70, time:20, dmg:72, range:325, cd:4.2, aggro:355, shot:'shell', splash:74 },
   citadel:   { fac:'warden', kind:'building', name:'The Bulwark', hp:7200, size:56, cost:2400, cost2:450, time:80,
                dmg:175, range:445, cd:4.6, aggro:475, shot:'shell', splash:96,
                aux:{ dmg:13, range:215, cd:0.4, shot:'bullet', guns:4 } },
+  // -- Tier 4: the doomsday siege gun — a colossal long-range artillery emplacement
+  // with an active, map-spanning bombardment strike (see `ability`). The single most
+  // expensive, most heavily gated thing the Covenant — or anyone — can build.
+  worldbreaker: { fac:'warden', kind:'building', name:'The Worldbreaker', hp:9000, size:62, cost:3400, cost2:850, time:100,
+               dmg:230, range:560, cd:5.4, aggro:590, shot:'shell', splash:120,
+               aux:{ dmg:15, range:230, cd:0.35, shot:'bullet', guns:6 },
+               ability:{ key:'gustav', name:'Gustav Strike', range:3800, cd:55, delay:2.4, dmg:820, splash:165,
+                         desc:'Designate any point in colossal range; after a flight delay, a single annihilating shell levels everything in a wide blast. ~1 minute reload.' } },
 
   // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
   pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge','greatpyre'] },
@@ -318,21 +336,32 @@ const META = {
   enforcer:  { desc: 'Cheap instant mercenary with a sidearm.' },
   arbalest:  { desc: 'Long-range marksman merc with heavy damage.', req: 'countinghouse' },
   juggernaut:{ desc: 'Heavy splashing mercenary bruiser.', req: 'countinghouse' },
-  // WARDEN COVENANT — three tiers; Tier 2+ also costs Iron from Forges
-  keep:      { desc: 'Your core fortress. Trains Tier-1 infantry and erects every structure. Stone income scales with your buildings’ total HP.' },
+  // WARDEN COVENANT — a deep, DISTRIBUTED tech tree (build advanced structures from
+  // other advanced structures). Tier 2+ also costs Iron from Forges.
+  keep:      { desc: 'Your core fortress. Trains Tier-1 infantry and raises your Tier-1 structures and tech buildings. Stone income scales with your buildings’ total HP.' },
   rampart:   { desc: 'Dirt-cheap, enormously tough wall. Seals your hold and fattens your Stone income.' },
   bastion:   { desc: 'Armoured defensive gun tower.', req: 'rampart' },
-  forge:     { desc: 'Iron Forge — your only source of Iron. Each finished Forge mints Iron every second; build many to fuel Tier-2 and Tier-3 war machines.' },
+  quarry:    { desc: 'Stone Quarry — mints a steady flow of Stone every second on top of your building-mass income. The Covenant’s only flat economy building; stack them to fund the war machine.' },
+  cauldron:  { desc: 'Oil Cauldron — a short-range emplacement that dumps burning splash on anything that closes the wall. Cheap, brutal at point-blank.', req: 'rampart' },
+  forge:     { desc: 'Iron Forge — your only source of Iron. Each finished Forge mints Iron every second; build many to fuel the higher tiers.' },
   sentinel:  { desc: 'Tough, slow melee line-holder.' },
   warden_g:  { desc: 'Armoured ranged trooper.', req: 'bastion' },
   pikeman:   { desc: 'Tier-1 anti-armour spearman — cheap, hits hard in melee. A little Iron.' },
-  foundry_w: { desc: 'Tier-2 vehicle bay. Builds Bombards and Ironclads. Needs an Iron Forge.', req: 'forge' },
-  college:   { desc: 'Tier-2 research hall. Trains the Covenant’s doctrines & upgrades.', req: 'bastion' },
+  foundry_w: { desc: 'Tier-2 vehicle bay. Builds Bombards and Ironclads — and raises the Redoubt and the Grand Arsenal. Needs an Iron Forge.', req: 'forge' },
+  college:   { desc: 'Tier-2 research hall AND siege-works yard — researches the Covenant’s upgrades and raises the Bunker, Ballista Tower and Hall of Oaths. Needs a Bastion.', req: 'bastion' },
+  bunker:    { desc: 'Hugely armoured gun emplacement — the backbone of an impenetrable wall. Raised from the War College.', req: 'college' },
+  ballista:  { desc: 'Ballista Tower — extreme-range single-bolt tower that skewers heavy targets from afar. No splash, but it outranges almost everything. Raised from the War College.', req: 'college' },
+  hall:      { desc: 'Hall of Oaths — musters the Covenant’s elite foot: anti-armour Halberdiers and banner-bearing Marshals. Raised from the War College.', req: 'college' },
+  redoubt:   { desc: 'Long-range static artillery with splash. Shells anything that nears your line. Raised from the War Foundry.', req: 'foundry_w' },
   bombard:   { desc: 'Slow long-range siege artillery with splash. Costs Iron.' },
   ironclad:  { desc: 'Tier-2 heavy assault walker — a hulking armoured melee bruiser. Costs Iron.' },
-  arsenal:   { desc: 'Tier-3 grand workshop. Assembles the colossal Castellan siege walker. Needs a War Foundry and War College.', reqs:['foundry_w','college'] },
+  halberd:   { desc: 'Elite anti-armour shock infantry — a wall of polearms that cleaves through heavy units. Trained at the Hall of Oaths.', req: 'hall' },
+  marshal:   { desc: 'Banner-bearing officer. Fights at range AND projects an aura that heals nearby troops and REPAIRS damaged buildings — the keystone of a self-mending fortress. Trained at the Hall of Oaths.', req: 'hall' },
+  arsenal:   { desc: 'Tier-3 grand workshop. Assembles the Castellan siege colossus and the long-range Trebuchet — and raises the Bulwark and the Worldbreaker. Needs a War Foundry and War College.', reqs:['foundry_w','college'] },
   castellan: { desc: 'Tier-3 siege colossus — devastating long-range splash and a wall of HP. Heavy Iron cost.' },
-  citadel:   { desc: 'The Covenant’s doomsday fortress — a colossal long-range artillery bunker ringed with four rapid machine-gun turrets. Ruinously expensive in Stone AND Iron, and slow to raise, but it shatters armies from clear across the map. Demands the full war machine, a Grand Arsenal, and Weapons II.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_wpn2' },
+  trebuchet: { desc: 'Tier-3 glass-cannon artillery — the longest-ranged unit in the game. Crawls forward, fragile up close, but lobs city-cracking splash from a screen away. Heavy Iron cost.' },
+  citadel:   { desc: 'The Covenant’s doomsday fortress — a colossal long-range artillery bunker ringed with four rapid machine-gun turrets. Ruinously expensive, slow to raise, but it shatters armies from clear across the map. Raised from a Grand Arsenal; demands the full war machine and Weapons II.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_wpn2' },
+  worldbreaker: { desc: 'THE WORLDBREAKER — a Schwerer-Gustav-scale siege gun and the single most powerful structure in the game. Auto-shells the longest range of any emplacement, AND wields the active GUSTAV STRIKE: designate any point across nearly the whole map and, after a flight delay, a lone annihilating shell levels everything in a wide blast (≈1-minute reload). Demands a Grand Arsenal, a standing Bulwark, and Siege Ordnance.', reqs:['arsenal','citadel'], reqResearch:'warden_ord' },
   // EMBER NOMADS
   pyre:      { desc: 'Your core. Musters the whole warband. Plunder from combat funds it.' },
   warcamp:   { desc: 'Forward muster point; trains Raiders and Slingers and unlocks heavier warriors.' },
@@ -563,8 +592,9 @@ const ECON = {
   synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06,
   // no building (turret, wall, anything) may be placed within this radius of an enemy structure
   enemyKeepout: 300,
-  // warden: income scales with the total HP of standing (finished) buildings
-  wardenBase: 1.0, wardenPerHp: 0.0012,
+  // warden: income scales with the total HP of standing (finished) buildings,
+  // plus a flat trickle from each Stone Quarry
+  wardenBase: 1.0, wardenPerHp: 0.0012, wardenQuarry: 1.6,
   // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle
   emberBase: 1.2, emberLootPerDmg: 0.32,
   // verdant: income per mature Bloom (grows slowly, snowballs hard)

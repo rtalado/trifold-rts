@@ -195,21 +195,26 @@ function aiTick(fac) {
     }
   }
 
-  else if (fac === 'warden') { // turtle: Forges for Iron, Ramparts for mass, then grind out tiers
+  else if (fac === 'warden') { // turtle: Forges for Iron, Quarries+Ramparts for mass, then grind out tiers
     const keep = myCore;
     const can = t => affordable(p, DEFS[t]);   // respects both Stone and Iron
     const have = t => ents(e => e.fac === fac && e.type === t).length;
     const ramparts = have('rampart'), forges = have('forge');
     if (forges < 2 && can('forge')) aiPlace(fac, 'forge', p.base);
+    else if (have('quarry') < aiGrow(2, 1, 8) && can('quarry')) aiPlace(fac, 'quarry', p.base);
     else if (ramparts < aiGrow(8, 3, 32) && can('rampart')) aiPlace(fac, 'rampart', p.base);
     else if (have('bastion') < aiGrow(3, 1, 8) && can('bastion')) aiPlace(fac, 'bastion', p.base);
+    else if (have('cauldron') < aiGrow(2, 1, 6) && can('cauldron') && techMet(fac, 'cauldron') && game.t > 90) aiPlace(fac, 'cauldron', p.base);
     else if (have('bunker') < aiGrow(3, 1, 8) && can('bunker') && techMet(fac, 'bunker')) aiPlace(fac, 'bunker', p.base);
+    else if (have('ballista') < aiGrow(2, 1, 7) && can('ballista') && techMet(fac, 'ballista')) aiPlace(fac, 'ballista', p.base);
     else if (have('forge') < aiGrow(4, 1, 11) && can('forge')) aiPlace(fac, 'forge', p.base);
     else if (have('foundry_w') < aiGrow(1, 1, 3) && can('foundry_w') && game.t > 110) aiPlace(fac, 'foundry_w', p.base);
     else if (have('college') < 1 && can('college') && game.t > 130) aiPlace(fac, 'college', p.base);
+    else if (have('hall') < 1 && can('hall') && techMet(fac, 'hall') && game.t > 150) aiPlace(fac, 'hall', p.base);
     else if (have('redoubt') < aiGrow(2, 1, 6) && can('redoubt') && techMet(fac, 'redoubt')) aiPlace(fac, 'redoubt', p.base);
     else if (have('arsenal') < aiGrow(1, 1, 2) && can('arsenal') && techMet(fac, 'arsenal')) aiPlace(fac, 'arsenal', p.base);
     else if (have('citadel') < 1 && can('citadel') && techMet(fac, 'citadel')) aiPlace(fac, 'citadel', p.base);
+    else if (have('worldbreaker') < 1 && can('worldbreaker') && techMet(fac, 'worldbreaker')) aiPlace(fac, 'worldbreaker', p.base);
     else if (ramparts < aiGrow(16, 4, 44) && p.res >= 400) aiPlace(fac, 'rampart', p.base);
     if (keep && !keep.queue.length) {
       const guards = have('warden_g'), sents = have('sentinel'), pikes = have('pikeman');
@@ -222,8 +227,19 @@ function aiTick(fac) {
         if (have('ironclad') < aiGrow(4, 1, 12) && can('ironclad')) enqueue(f, 'ironclad');
         else if (can('bombard')) enqueue(f, 'bombard');
       }
+    for (const h of ents(e => e.fac === fac && e.type === 'hall' && !e.growing))
+      if (!h.queue.length) {
+        if (have('marshal') < aiGrow(1, 1, 4) && can('marshal')) enqueue(h, 'marshal');
+        else if (can('halberd')) enqueue(h, 'halberd');
+      }
     for (const ar of ents(e => e.fac === fac && e.type === 'arsenal' && !e.growing))
-      if (!ar.queue.length && can('castellan')) enqueue(ar, 'castellan');
+      if (!ar.queue.length) {
+        if (have('trebuchet') < aiGrow(2, 1, 6) && can('trebuchet')) enqueue(ar, 'trebuchet');
+        else if (can('castellan')) enqueue(ar, 'castellan');
+      }
+    // unleash the Gustav Strike on the richest enemy target in range whenever it's loaded
+    for (const wb of ents(e => e.fac === fac && e.type === 'worldbreaker' && !e.growing && !e.constructing && (e.abilityCd || 0) <= 0))
+      aiGustavStrike(fac, wb);
   }
 
   else if (fac === 'ember') { // pure aggression — fund the war by waging it
@@ -321,6 +337,25 @@ function aiTick(fac) {
         && ents(e => e.fac === fac && e.type === ax.u).length < 2
         && affordable(p, DEFS[ax.u]) && techMet(fac, ax.u)) enqueue(b, ax.u);
   }
+}
+
+// pick the juiciest impact point for a Worldbreaker's Gustav Strike and fire it:
+// the enemy entity whose blast neighbourhood holds the most hostile mass (prefers a
+// dense army cluster, and will gladly bombard an enemy core if one is in range).
+function aiGustavStrike(fac, wb) {
+  const ab = wb.def.ability; if (!ab) return;
+  const foes = ents(e => e.fac !== fac && e.fac !== 'neutral' && !e.def.noTarget && dist(wb, e) <= ab.range);
+  if (!foes.length) return;
+  let best = null, bestScore = 0;
+  for (const c of foes) {
+    let score = 0;
+    for (const o of foes) {
+      if (Math.hypot(o.x - c.x, o.y - c.y) <= ab.splash) score += o.def.core ? 60 : (o.def.kind === 'building' ? 8 : 4);
+    }
+    if (score > bestScore) { bestScore = score; best = c; }
+  }
+  // only spend the shot on a worthwhile target (a cluster or any structure/core)
+  if (best && bestScore >= 12) fireAbility(fac, wb, best.x, best.y);
 }
 
 function aiPlace(fac, type, near) {

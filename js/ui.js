@@ -70,6 +70,21 @@ function currentCommands() {
         },
       });
     }
+    // active targeted ability (the Worldbreaker's Gustav Strike)
+    if (d.ability && sel0.fac === fac) {
+      const ab = d.ability;
+      const ready = (sel0.abilityCd || 0) <= 0 && !sel0.constructing && !sel0.growing;
+      const aiming = game.targeting && game.targeting.id === sel0.id;
+      cmds.push({
+        label: (aiming ? '◎ ' : '☢ ') + ab.name, cost: 0, enabled: ready,
+        sub: aiming ? 'Click a target…' : (ready ? 'READY' : 'Reload ' + Math.ceil(sel0.abilityCd || 0) + 's'),
+        desc: ab.desc + ' Range ' + ab.range + ' · Blast ' + ab.splash + ' · Reload ' + ab.cd + 's.',
+        onClick: () => {
+          game.targeting = { id: sel0.id, ability: ab.key };
+          floatMsg('Designate ' + ab.name + ' impact — left-click (Esc / right-click to cancel)');
+        },
+      });
+    }
     // the faction's research building opens the full visual tech tree
     if (d.researchLab && RESEARCH_BY_FAC[fac]) {
       const done = RESEARCH_BY_FAC[fac].filter(rid => p.research.has(rid)).length;
@@ -193,6 +208,7 @@ function updateHUD() {
     if (e.type === 'hive') s += '\nRight-click to set the swarm rally';
     if (e.type === 'ark' && e.deployed) s += '\nDEPLOYED — siphoning' + (e.siphonNode ? ' crystal' : '… (no node in reach)');
     if (e.type === 'haven') s += '\nTreasury earns interest — Countinghouses raise the cap';
+    if (e.def.ability) s += '\n' + e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — use the command card to target');
     if (e.fac === 'choir' && e.def.kind === 'unit') s += '\nFades away from the lattice — heals by dealing damage';
     const desc = meta(e.type).desc;
     if (desc) s += '\n' + desc;

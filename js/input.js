@@ -10,6 +10,11 @@ canvas.addEventListener('mousemove', ev => {
 canvas.addEventListener('mousedown', ev => {
   if (!game || game.over) return;
   if (ev.button === 0) {
+    if (game.targeting) {        // designating an active-ability strike point
+      fireAbilityAt(mouse.wx, mouse.wy);
+      game.targeting = null;
+      return;
+    }
     if (game.placing) {
       if (game.mode === 'guest') {
         const d = DEFS[game.placing], fac = game.localFac;
@@ -22,10 +27,22 @@ canvas.addEventListener('mousedown', ev => {
     }
     mouse.dragging = true; mouse.dx0 = mouse.x; mouse.dy0 = mouse.y;
   } else if (ev.button === 2) {
+    if (game.targeting) { game.targeting = null; return; }
     if (game.placing) { game.placing = null; return; }
     issueOrder(mouse.wx, mouse.wy, ev.shiftKey); // Shift = attack-move
   }
 });
+
+// fire the currently-targeted building's active ability at a world point
+function fireAbilityAt(wx, wy) {
+  const t = game.targeting; if (!t) return;
+  const e = byId(t.id);
+  if (!e || e.fac !== game.localFac || !e.def.ability) return;
+  if (game.mode === 'guest') {
+    netSend({ t: 'cmd', fac: game.localFac, kind: 'ability', id: e.id, x: wx, y: wy });
+    addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: '#ffd9a0' });
+  } else fireAbility(game.localFac, e, wx, wy);
+}
 
 addEventListener('mouseup', ev => {
   if (ev.button !== 0 || !mouse.dragging || !game || game.over) { mouse.dragging = false; return; }
@@ -113,7 +130,7 @@ addEventListener('keydown', ev => {
   keys[ev.key.toLowerCase()] = true;
   if (!game || game.over) return;
   const k = ev.key.toLowerCase();
-  if (k === 'escape') { if (techOpen) closeTechTree(); game.placing = null; game.sel = []; refreshCard(); }
+  if (k === 'escape') { if (techOpen) closeTechTree(); game.placing = null; game.targeting = null; game.sel = []; refreshCard(); }
   if (k === 't') { ev.preventDefault(); toggleTechTree(); return; }
   if (k === ' ') {
     ev.preventDefault();

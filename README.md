@@ -152,15 +152,30 @@ Gold breeds gold: your treasury earns **compound interest**. Mercenaries arrive
 into enemy territory) and Countinghouses to raise your interest cap. Units:
 Enforcers, Arbalests, Juggernauts, **Marauders**.
 
-### WARDEN COVENANT — the Bulwark · *Stone* · core: **Bastion Keep**
-Your fortress *is* your economy — income scales with the total HP of your standing
-buildings. Wall in with dirt-cheap Ramparts, then bristle with **Bastions, Bunkers
-and long-range Redoubts** for a truly impenetrable base. Slow, armoured units
-(Sentinels, Warden Guards, Bombards) that grind forward and never break. Tech all
-the way up — a War Foundry, War College, Bunker, Redoubt *and* the Siege Doctrine
-upgrade — and you can erect **The Bulwark**: a ruinously expensive doomsday
-super-fortress with a map-spanning artillery cannon and a ring of four rapid
-machine-gun turrets. Slow to raise, but it shatters armies from across the map.
+### WARDEN COVENANT — the Bulwark · *Stone* + *Iron* · core: **Bastion Keep**
+The most intricate faction in the game, on **two resources**: Stone scales with the
+total HP of your standing buildings (and a flat trickle from **Stone Quarries**),
+while Iron is minted only by **Iron Forges** and pays for everything heavier than
+Tier 1. Crucially the tech tree is **distributed** — advanced structures are raised
+from *other* advanced structures, not all from the Keep:
+
+- **Keep** → Ramparts, Bastions, Quarries, Forges, **Oil Cauldrons**, War Foundry, War College.
+- **War College** (your research hall) → **Bunkers, Ballista Towers, Hall of Oaths**.
+- **War Foundry** → **Redoubts** and the **Grand Arsenal**.
+- **Grand Arsenal** → **The Bulwark** and **The Worldbreaker**.
+
+Wall in and bristle with layered defences for a truly impenetrable base. Slow,
+armoured units (Sentinels, Warden Guards, Pikemen, Ironclads, Bombards) grind
+forward and never break; the **Hall of Oaths** musters anti-armour **Halberdiers**
+and banner-bearing **Marshals** whose aura heals troops *and repairs buildings*; the
+Arsenal builds the **Castellan** colossus and the longest-ranged unit in the game,
+the **Trebuchet**. Tech the whole way and erect **The Bulwark** (a doomsday
+artillery fortress ringed with four machine-guns) — then, beyond even that, the
+**WORLDBREAKER**: a Schwerer-Gustav-scale siege gun with the longest passive range
+on the map *and* an active **Gustav Strike** — designate any point in colossal
+range and, after a telegraphed flight delay, a single annihilating shell levels
+everything in a wide blast (~1-minute reload). Demands a Grand Arsenal, a standing
+Bulwark, and the Siege Ordnance doctrine.
 
 ### EMBER NOMADS — the Warband · *Plunder* · core: **War Pyre**
 No mines — you fund the war by waging it: every point of damage you deal pays

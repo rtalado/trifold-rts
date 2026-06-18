@@ -36,7 +36,8 @@ function buildSnap() {
     return [e.id, TYPE_IDX[e.type], Math.round(e.x), Math.round(e.y),
       Math.ceil(e.hp), Math.ceil(e.shield), fl, prog,
       q ? (q.research ? -1 : TYPE_IDX[q.type]) : 0, q ? Math.round((1 - q.t / q.total) * 100) : 0,
-      e.queue ? e.queue.length : 0, q && q.research ? q.rid : 0];
+      e.queue ? e.queue.length : 0, q && q.research ? q.rid : 0,
+      e.abilityCd ? Math.ceil(e.abilityCd) : 0];
   });
   const players = {};
   for (const f in game.players) {
@@ -70,7 +71,7 @@ function applySnap(m) {
   const byIdMap = new Map();
   for (const o of game.entities) byIdMap.set(o.id, o);
   for (const row of m.units) {
-    const [id, ti, x, y, hp, sh, fl, prog, qt, qp, qn, qrid] = row;
+    const [id, ti, x, y, hp, sh, fl, prog, qt, qp, qn, qrid, acd] = row;
     seen.add(id);
     let e = byIdMap.get(id);
     if (!e) {
@@ -92,6 +93,7 @@ function applySnap(m) {
     const ownIdx = (fl >> 4) & 15; e.owner = ownIdx ? Object.keys(FACTIONS)[ownIdx - 1] : null;
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };
     e.progress = prog / 100 * e.def.time;
+    e.abilityCd = acd || 0;
     e.queue = [];
     for (let i = 0; i < qn; i++) {
       if (qt === -1) e.queue.push({ research: true, rid: qrid, type: 'research', t: 1 - qp / 100, total: 1 });
@@ -291,6 +293,9 @@ function handleCmd(m) {
     if (e && e.fac === fac && e.def.researchLab) enqueueResearch(e, m.rid);
   } else if (m.kind === 'sell') {
     sellBuilding(fac, m.id);
+  } else if (m.kind === 'ability') {
+    const e = byId(m.id);
+    if (e && e.fac === fac && e.def.ability) fireAbility(fac, e, m.x, m.y);
   }
 }
 

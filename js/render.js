@@ -91,6 +91,22 @@ function draw() {
     } else if (f.kind === 'slash') {
       ctx.strokeStyle = f.color; ctx.globalAlpha = a; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(f.x - 6, f.y - 6); ctx.lineTo(f.x + 6, f.y + 6); ctx.stroke();
+    } else if (f.kind === 'strikewarn') {
+      // a Gustav shell is inbound: a pulsing crosshair + a ring closing to the blast edge
+      const pulse = 0.5 + 0.5 * Math.sin(game.t * 9);
+      ctx.globalAlpha = 0.4 + 0.45 * pulse; ctx.strokeStyle = f.color; ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.3 + 0.7 * (1 - a)), 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(f.x - f.r - 6, f.y); ctx.lineTo(f.x + f.r + 6, f.y);
+      ctx.moveTo(f.x, f.y - f.r - 6); ctx.lineTo(f.x, f.y + f.r + 6); ctx.stroke();
+    } else if (f.kind === 'shock') {
+      // detonation shockwave: a fat expanding ring
+      ctx.strokeStyle = f.color; ctx.globalAlpha = a; ctx.lineWidth = 1 + 5 * a;
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.6 - a), 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
@@ -106,6 +122,28 @@ function draw() {
     ctx.globalAlpha = 1;
     ctx.strokeStyle = ok ? '#7dffa8' : '#ff7d7d';
     ctx.beginPath(); ctx.arc(mouse.wx, mouse.wy, d.size, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // active-ability targeting overlay (the Worldbreaker's Gustav Strike)
+  if (game.targeting) {
+    const e = byId(game.targeting.id);
+    if (e && e.def.ability) {
+      const ab = e.def.ability;
+      const inRange = dist(e, { x: mouse.wx, y: mouse.wy }) <= ab.range;
+      // colossal max-range ring around the gun
+      ctx.strokeStyle = inRange ? 'rgba(255,210,150,0.5)' : 'rgba(255,120,120,0.4)';
+      ctx.lineWidth = 2; ctx.setLineDash([10, 9]);
+      ctx.beginPath(); ctx.arc(e.x, e.y, ab.range, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      // blast reticle under the cursor
+      const col = inRange ? '#ffd9a0' : '#ff7d7d';
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(mouse.wx, mouse.wy, ab.splash, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(mouse.wx - ab.splash - 8, mouse.wy); ctx.lineTo(mouse.wx + ab.splash + 8, mouse.wy);
+      ctx.moveTo(mouse.wx, mouse.wy - ab.splash - 8); ctx.lineTo(mouse.wx, mouse.wy + ab.splash + 8); ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else game.targeting = null;
   }
 
   ctx.restore();
@@ -450,6 +488,43 @@ function drawEnt(e) {
       ctx.lineCap = 'butt';
       ctx.fillStyle = '#e7edf5'; ctx.beginPath(); ctx.arc(x, y, s * 0.2, 0, Math.PI * 2); ctx.fill();
     }
+    else if (e.type === 'worldbreaker') { // the doomsday Gustav siege gun — layered fortress + colossal barrel
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 4;
+      poly(x, y, s, 8, Math.PI / 8); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 2.5; poly(x, y, s * 0.82, 8, 0); ctx.stroke();
+      ctx.fillStyle = '#3a4656'; poly(x, y, s * 0.55, 6, 0); ctx.fill(); ctx.stroke();
+      // aux machine-gun ring (six guns), each tracking its own target
+      const guns = (e.def.aux && e.def.aux.guns) || 6, auxT = e.auxTgt || [];
+      for (let i = 0; i < guns; i++) {
+        const ga = i * Math.PI * 2 / guns + Math.PI / guns;
+        const gx = x + Math.cos(ga) * s * 0.74, gy = y + Math.sin(ga) * s * 0.74;
+        ctx.fillStyle = '#2b3543'; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(gx, gy, s * 0.12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        const gt = auxT[i] ? byId(auxT[i]) : null;
+        const ba = gt ? Math.atan2(gt.y - gy, gt.x - gx) : ga;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ba) * s * 0.26, gy + Math.sin(ba) * s * 0.26); ctx.stroke();
+      }
+      // glowing charge core — bright & pulsing when the Gustav Strike is loaded
+      const ready = (e.abilityCd || 0) <= 0 && !e.constructing && !e.growing;
+      const gl = ready ? (0.55 + 0.45 * Math.sin(game.t * 4)) : 0.16;
+      ctx.fillStyle = 'rgba(255,205,140,' + gl + ')';
+      ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.fill();
+      // the gigantic main cannon (twin-tone for heft)
+      const t = e.tgt ? byId(e.tgt) : null;
+      const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+      const bx = x + Math.cos(a) * (s + 24), by = y + Math.sin(a) * (s + 24);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = col; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.strokeStyle = '#1a2230'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.lineCap = 'butt';
+      ctx.fillStyle = '#e7edf5'; ctx.beginPath(); ctx.arc(x, y, s * 0.17, 0, Math.PI * 2); ctx.fill();
+      // a faint apex-style aura so it reads as the ultimate structure
+      ctx.globalAlpha = 0.3 + 0.25 * Math.sin(game.t * 3);
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, s + 8, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     else if (e.def.kind === 'building') {
       ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 3 : 2;
       poly(x, y, s, 6, 0); ctx.fill(); ctx.stroke();
@@ -464,7 +539,17 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.moveTo(x - s * 0.45, y - s * 0.45); ctx.lineTo(x + s * 0.45, y + s * 0.45);
         ctx.moveTo(x + s * 0.45, y - s * 0.45); ctx.lineTo(x - s * 0.45, y + s * 0.45); ctx.stroke();
         ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, s * 0.16, 0, Math.PI * 2); ctx.fill();
-      } else if (e.def.dmg) { // any armed Warden structure (keep, bastion, bunker, redoubt)
+      } else if (e.type === 'quarry') { // stacked cut-stone blocks
+        ctx.fillStyle = '#cfd8e4';
+        ctx.fillRect(x - s * 0.42, y - s * 0.05, s * 0.36, s * 0.34);
+        ctx.fillRect(x + s * 0.06, y - s * 0.05, s * 0.36, s * 0.34);
+        ctx.fillRect(x - s * 0.18, y - s * 0.42, s * 0.36, s * 0.34);
+      } else if (e.type === 'hall') { // an oath banner on a pole
+        ctx.strokeStyle = '#cfd8e4'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, y + s * 0.5); ctx.lineTo(x, y - s * 0.6); ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.6); ctx.lineTo(x + s * 0.55, y - s * 0.42); ctx.lineTo(x, y - s * 0.18); ctx.closePath(); ctx.fill();
+      } else if (e.def.dmg) { // any armed Warden structure (keep, bastion, bunker, redoubt, cauldron, ballista)
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
         ctx.lineWidth = e.type === 'redoubt' ? 4 : 3.5;
@@ -480,21 +565,35 @@ function drawEnt(e) {
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 11), y + Math.sin(a) * (s + 11)); ctx.stroke();
       ctx.lineCap = 'butt';
     } else {
-      ctx.fillStyle = e.type === 'ironclad' ? '#2a3342' : dark; ctx.strokeStyle = col;
-      ctx.lineWidth = e.type === 'ironclad' ? 2.5 : 2;
+      ctx.fillStyle = e.type === 'ironclad' ? '#2a3342' : e.type === 'marshal' ? '#27405a' : dark;
+      ctx.strokeStyle = col; ctx.lineWidth = e.type === 'ironclad' ? 2.5 : 2;
       roundRect(x - s, y - s, s * 2, s * 2, 3); ctx.fill(); ctx.stroke();
-      if (e.type === 'bombard' || e.type === 'warden_g') {
+      if (e.type === 'bombard' || e.type === 'warden_g' || e.type === 'trebuchet' || e.type === 'marshal') {
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : 0;
-        ctx.lineWidth = e.type === 'bombard' ? 3 : 2;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 7), y + Math.sin(a) * (s + 7)); ctx.stroke();
+        const reach = e.type === 'trebuchet' ? s + 11 : s + 7;
+        ctx.lineWidth = (e.type === 'bombard' || e.type === 'trebuchet') ? 3 : 2;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * reach, y + Math.sin(a) * reach); ctx.stroke();
+        if (e.type === 'trebuchet') { // throwing-arm pivot
+          ctx.fillStyle = '#dfe6f0'; ctx.beginPath(); ctx.arc(x, y, s * 0.28, 0, Math.PI * 2); ctx.fill();
+        } else if (e.type === 'marshal') { // rally banner
+          ctx.strokeStyle = '#dfe6f0'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x, y + s * 0.4); ctx.lineTo(x, y - s - 4); ctx.stroke();
+          ctx.fillStyle = col;
+          ctx.beginPath(); ctx.moveTo(x, y - s - 4); ctx.lineTo(x + s * 0.8, y - s + 1); ctx.lineTo(x, y - s * 0.4); ctx.closePath(); ctx.fill();
+        }
       } else if (e.type === 'ironclad') { // riveted cross plating
         ctx.strokeStyle = col; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(x - s * 0.6, y); ctx.lineTo(x + s * 0.6, y);
         ctx.moveTo(x, y - s * 0.6); ctx.lineTo(x, y + s * 0.6); ctx.stroke();
-      } else if (e.type === 'pikeman') { // forward spike
+      } else if (e.type === 'pikeman' || e.type === 'halberd') { // forward polearm
         ctx.strokeStyle = '#dfe6f0'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - s - 5); ctx.stroke();
+        const len = e.type === 'halberd' ? s + 9 : s + 5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - len); ctx.stroke();
+        if (e.type === 'halberd') { // axe head on the haft
+          ctx.fillStyle = '#dfe6f0';
+          ctx.beginPath(); ctx.moveTo(x, y - len); ctx.lineTo(x + s * 0.55, y - len + s * 0.5); ctx.lineTo(x, y - len + s * 0.7); ctx.closePath(); ctx.fill();
+        }
       } else { ctx.fillStyle = col; ctx.fillRect(x - s * 0.4, y - s * 0.4, s * 0.8, s * 0.8); }
     }
   }

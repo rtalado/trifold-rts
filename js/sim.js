@@ -98,7 +98,7 @@ function buildMatch(roster, localFac, mode, seed) {
   nextId = 1;
   const rng = makeRng(seed);
   game = {
-    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], nodes: [], decor: [],
+    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], strikes: [], nodes: [], decor: [],
     creep: new Uint8Array(GW * GH),
     roster, localFac, mode, seed, players: {},
     aiFacs: roster.filter(r => r.ai).map(r => r.fac),
@@ -224,6 +224,7 @@ function spawnEnt(type, fac, x, y, opts = {}) {
   };
   if (d.creepR) e.creepCur = opts.creepCur != null ? opts.creepCur : 2;
   if (d.spawns) e.spawnTimer = d.spawnEvery;
+  if (d.ability) e.abilityCd = 0;   // active-ability buildings start ready
   if (opts.constructing) { e.constructing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.12); }
   if (opts.growing) { e.growing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.25); }
   game.entities.push(e);
@@ -349,6 +350,46 @@ function updateAux(e, dt) {
         dmg: ax.dmg, splash: 0, fac: e.fac, attackerId: e.id, color: facColor(e.fac), r: 2.5 });
     }
   }
+}
+
+// ---------------- active abilities (the Worldbreaker's Gustav Strike) ----------------
+// Fire a building's targeted ground ability at (wx,wy). Runs on the simulating side
+// (SP or host). Returns true if the strike was launched. The shell is telegraphed:
+// a warning marker shows for `delay` seconds before it lands, so a sharp opponent
+// can scatter — power, but not a free instant-win button.
+function fireAbility(fac, e, wx, wy) {
+  if (!e || e.dead || e.fac !== fac || !e.def.ability) return false;
+  if (e.constructing || e.growing) { localMsg(fac, 'Still being raised'); return false; }
+  const ab = e.def.ability;
+  if ((e.abilityCd || 0) > 0) { localMsg(fac, ab.name + ' reloading (' + Math.ceil(e.abilityCd) + 's)'); return false; }
+  if (dist(e, { x: wx, y: wy }) > ab.range) { localMsg(fac, 'Target out of range'); return false; }
+  e.abilityCd = ab.cd;
+  game.strikes.push({ x: wx, y: wy, t: ab.delay, dmg: ab.dmg, splash: ab.splash, fac, attackerId: e.id });
+  // a long-lived warning marker (forwarded to guests as cosmetic fx) telegraphs the hit
+  addFx({ kind: 'strikewarn', x: wx, y: wy, r: ab.splash, ttl: ab.delay, max: ab.delay, color: facColor(fac) });
+  // muzzle flash + a streak from the gun toward the impact point
+  addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#ffd9a0' });
+  localMsg(fac, ab.name + ' away!');
+  return true;
+}
+
+// pending ground strikes detonate when their flight timer expires
+function tickStrikes(dt) {
+  if (!game.strikes.length) return;
+  for (const s of game.strikes) {
+    s.t -= dt;
+    if (s.t > 0) continue;
+    s.done = true;
+    const attacker = byId(s.attackerId);
+    for (const o of game.entities) {
+      if (o.dead || o.fac === s.fac || o.def.noTarget) continue;
+      if (Math.hypot(o.x - s.x, o.y - s.y) < s.splash + o.size) applyDamage(o, s.dmg, attacker);
+    }
+    // big detonation: an expanding shockwave ring + a flash
+    addFx({ kind: 'shock', x: s.x, y: s.y, r: s.splash * 1.6, ttl: 0.8, max: 0.8, color: '#ffe2b0' });
+    addFx({ kind: 'boom', x: s.x, y: s.y, r: s.splash, ttl: 0.6, max: 0.6, color: facColor(s.fac) });
+  }
+  game.strikes = game.strikes.filter(s => !s.done);
 }
 
 // engage target: shoot if in range else chase (unless stationary)
@@ -531,6 +572,8 @@ function updateBuilding(e, dt) {
   }
   // secondary machine-gun ring (the Citadel)
   if (d.aux) updateAux(e, dt);
+  // active-ability reload (the Worldbreaker's Gustav Strike)
+  if (d.ability && e.abilityCd > 0) e.abilityCd = Math.max(0, e.abilityCd - dt);
 }
 
 function tickQueue(e, dt) {
@@ -680,11 +723,14 @@ function tickEconomy(dt) {
       const cap = ECON.synCapBase + houses * ECON.synCapPer;
       gain = ECON.synBase + houses * ECON.synHouseFlat + ECON.synInterest * Math.min(p.res, cap);
     } else if (fac === 'warden') {
-      // the fortress pays out by its mass: total HP of all finished buildings
-      let hp = 0;
+      // the fortress pays out by its mass: total HP of all finished buildings,
+      // plus a flat trickle from each standing Stone Quarry
+      let hp = 0, quarries = 0;
       for (const e of game.entities)
-        if (!e.dead && e.fac === fac && e.def.kind === 'building' && !e.constructing && !e.growing) hp += e.hp;
-      gain = ECON.wardenBase + hp * ECON.wardenPerHp;
+        if (!e.dead && e.fac === fac && e.def.kind === 'building' && !e.constructing && !e.growing) {
+          hp += e.hp; if (e.type === 'quarry') quarries++;
+        }
+      gain = ECON.wardenBase + hp * ECON.wardenPerHp + quarries * ECON.wardenQuarry;
     } else if (fac === 'ember') {
       gain = ECON.emberBase; // the rest is plundered through combat (see applyDamage)
     } else if (fac === 'verdant') {
