@@ -17,7 +17,8 @@ function currentCommands() {
   const prodBtn = (host, type) => {
     const d = DEFS[type], tech = techMet(fac, type);
     cmds.push({
-      type, label: d.name, cost: d.cost, cost2: d.cost2,
+      type, label: d.name, cost: d.cost, cost2: d.cost2, cat: 'unit',
+      poor: tech && !affordable(p, d),
       enabled: tech && affordable(p, d) && !host.constructing && !host.growing,
       onClick: () => {
         if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'enq', id: host.id, type });
@@ -29,8 +30,10 @@ function currentCommands() {
   const buildBtn = type => {
     const d = DEFS[type], tech = techMet(fac, type);
     cmds.push({
-      type, label: (BUILD_VERB[fac] || 'Build ') + d.name,
+      type, label: d.name, cat: 'building',
+      tag: (BUILD_VERB[fac] || 'Build').trim().toUpperCase(),
       cost: d.cost, cost2: d.cost2, enabled: tech && affordable(p, d),
+      poor: tech && !affordable(p, d),
       onClick: () => { game.placing = type; },
     });
   };
@@ -39,7 +42,7 @@ function currentCommands() {
     const inProg = researchQueued(fac, rid);
     const reqMet = !r.req || p.research.has(r.req);
     cmds.push({
-      rid, label: (have ? '✓ ' : '⚙ ') + r.name,
+      rid, cat: 'research', label: (have ? '✓ ' : '⚙ ') + r.name,
       cost: (have || inProg || !reqMet) ? 0 : r.cost,
       sub: have ? 'Researched' : (inProg ? 'Researching…' : (!reqMet ? 'Requires ' + RESEARCH[r.req].name : null)),
       desc: r.desc,
@@ -60,8 +63,8 @@ function currentCommands() {
     if (d.produces && !sel0.constructing && !sel0.growing) d.produces.forEach(t => prodBtn(sel0, t));
     if (sel0.type === 'ark') {
       cmds.push({
-        label: sel0.deployed ? 'Undeploy Ark' : 'Deploy Ark', cost: 0, enabled: true,
-        sub: 'Siphon energy from a crystal node',
+        label: sel0.deployed ? 'Undeploy Ark' : 'Deploy Ark', cost: 0, enabled: true, cat: 'ability',
+        tag: 'DEPLOY', sub: 'Siphon energy from a crystal node',
         desc: 'Anchor the Ark on a crystal node to siphon Energy quickly. Undeploy to move again.',
         onClick: () => {
           if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'deploy', id: sel0.id, on: !sel0.deployed });
@@ -76,7 +79,7 @@ function currentCommands() {
       const ready = (sel0.abilityCd || 0) <= 0 && !sel0.constructing && !sel0.growing;
       const aiming = game.targeting && game.targeting.id === sel0.id;
       cmds.push({
-        label: (aiming ? '◎ ' : '☢ ') + ab.name, cost: 0, enabled: ready,
+        label: (aiming ? '◎ ' : '☢ ') + ab.name, cost: 0, enabled: ready, cat: 'ability',
         sub: aiming ? 'Click a target…' : (ready ? 'READY' : 'Reload ' + Math.ceil(sel0.abilityCd || 0) + 's'),
         desc: ab.desc + ' Range ' + ab.range + ' · Blast ' + ab.splash + ' · Reload ' + ab.cd + 's.',
         onClick: () => {
@@ -89,7 +92,7 @@ function currentCommands() {
     if (d.researchLab && RESEARCH_BY_FAC[fac]) {
       const done = RESEARCH_BY_FAC[fac].filter(rid => p.research.has(rid)).length;
       cmds.push({
-        label: '⚙ Tech Tree', cost: 0, enabled: true,
+        label: '⚙ Tech Tree', cost: 0, enabled: true, cat: 'research',
         sub: done + '/' + RESEARCH_BY_FAC[fac].length,
         desc: 'Open the research tree — spend ' + FACTIONS[fac].res + ' on permanent upgrades.',
         onClick: () => openTechTree(),
@@ -99,7 +102,7 @@ function currentCommands() {
     if (d.kind === 'building' && !d.core && sel0.fac === fac) {
       const ref = Math.round((d.cost || 0) * SELL_REFUND);
       cmds.push({
-        label: '✖ Sell', cost: 0, enabled: true,
+        label: '✖ Sell', cost: 0, enabled: true, cat: 'sell',
         sub: '+' + ref + ' ' + FACTIONS[fac].res + ((d.cost2 ? ' +' + Math.round(d.cost2 * SELL_REFUND) + ' ' + FACTIONS[fac].res2 : '')),
         desc: 'Demolish this building and recover half of what it cost. Handy for fixing a bad placement.',
         onClick: () => {
@@ -110,6 +113,12 @@ function currentCommands() {
       });
     }
   }
+  // group like with like (buildings, then units, then abilities, research, sell)
+  // — a stable sort, so order within each category is preserved. Both the card
+  // render and the digit hotkeys read this same array, so they stay in sync.
+  const catOrder = { building: 0, unit: 1, ability: 2, research: 3, sell: 4 };
+  cmds.forEach((c, i) => { c._i = i; });
+  cmds.sort((a, b) => ((catOrder[a.cat] ?? 8) - (catOrder[b.cat] ?? 8)) || (a._i - b._i));
   return cmds.slice(0, 14);
 }
 
@@ -137,7 +146,12 @@ function showTip(c) {
   if (!c || (!c.type && !c.desc)) { tip.style.display = 'none'; return; }
   const d = c.type ? DEFS[c.type] : null;
   const cs = costStr(game.localFac, c.cost, c.cost2);
-  let html = '<div class="tipname">' + (d ? d.name : c.label)
+  const cat = c.cat || (d ? d.kind : null);
+  const catLbl = cat === 'building' ? 'BUILDING' : cat === 'unit' ? 'UNIT'
+    : cat === 'research' ? 'RESEARCH' : cat === 'sell' ? 'SELL' : cat === 'ability' ? 'ABILITY' : '';
+  let html = '<div class="tipname">'
+    + (catLbl ? '<span class="tipcat tipcat-' + catClass(cat) + '">' + catLbl + '</span>' : '')
+    + (d ? d.name : c.label)
     + (cs ? '<span class="tipcost">' + cs + '</span>' : '') + '</div>';
   html += '<div class="tipdesc">' + (c.desc || (c.type ? meta(c.type).desc : '') || '') + '</div>';
   if (d) html += '<div class="tipstat">' + statLine(d) + '</div>';
@@ -161,14 +175,87 @@ function refreshCard() {
   cmds.forEach((c, i) => {
     const b = document.createElement('button');
     b.disabled = !c.enabled;
+    const cat = c.cat || 'ability';
+    b.className = 'cmd-' + catClass(cat);
     const cs = costStr(game.localFac, c.cost, c.cost2);
-    b.innerHTML = '<span class="k">' + (hot[i] || '') + '</span>' + c.label
-      + (cs ? '<span class="c">' + cs + '</span>' : (c.sub ? '<span class="c">' + c.sub + '</span>' : ''));
+    const tag = c.tag || CAT_TAG[cat] || 'USE';
+    const sub = cs || c.sub || '';
+    b.innerHTML =
+      '<span class="cmd-top"><span class="cmd-tag">' + tag + '</span>'
+        + '<span class="k">' + (hot[i] || '') + '</span></span>'
+      + '<span class="cmd-name">' + c.label + '</span>'
+      + (sub ? '<span class="c' + (c.poor ? ' poor' : '') + '">' + sub + '</span>' : '');
     b.onclick = () => { if (c.enabled) c.onClick(); };
     b.addEventListener('mouseenter', () => showTip(c));
     b.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
     card.appendChild(b);
   });
+}
+
+// command categories → CSS suffix + default corner tag
+const CAT_TAG = { building: 'BUILD', unit: 'TRAIN', research: 'TECH', ability: 'USE', sell: 'SELL' };
+function catClass(cat) {
+  return cat === 'building' ? 'build' : cat === 'unit' ? 'unit'
+    : cat === 'research' ? 'tech' : cat === 'sell' ? 'sell' : 'ability';
+}
+
+// ---------------- selection info panel ----------------
+function catPill(cat) {
+  const lbl = cat === 'building' ? 'BUILDING' : cat === 'unit' ? 'UNIT' : cat.toUpperCase();
+  return '<span class="catpill cat-' + catClass(cat) + '">' + lbl + '</span>';
+}
+function statBar(label, cur, max, cls) {
+  const pct = max ? Math.max(0, Math.min(100, cur / max * 100)) : 0;
+  return '<div class="statbar"><i class="fill ' + cls + '" style="width:' + pct + '%"></i>'
+    + '<b>' + label + ' ' + Math.ceil(cur) + '/' + max + '</b></div>';
+}
+function renderSelInfo(si) {
+  if (!game.sel.length) {
+    si.innerHTML = '<div class="sel-empty"><div class="sel-empty-t">NOTHING SELECTED</div>'
+      + '<div>Drag or click to select.</div>'
+      + '<div>Right-click — move / attack / harvest</div>'
+      + '<div>Shift+right-click — attack-move</div>'
+      + '<div><b>F</b> select army &nbsp;·&nbsp; <b>Space</b> jump to core</div></div>';
+    return;
+  }
+  if (game.sel.length === 1) {
+    const e = game.sel[0], cat = e.def.kind;
+    let h = '<div class="sel-head">' + catPill(cat) + '<span class="sel-name">' + e.def.name + '</span></div>';
+    h += '<div class="sel-bars">' + statBar('HP', e.hp, e.hpMax, 'hp');
+    if (e.shieldMax) h += statBar('Shield', e.shield, e.shieldMax, 'shield');
+    h += '</div>';
+    const notes = [];
+    if (e.constructing) notes.push('Under construction ' + Math.floor(e.progress / e.def.time * 100) + '%');
+    if (e.growing) notes.push('Growing ' + Math.floor(e.progress / e.def.time * 100) + '%');
+    if (e.queue && e.queue.length) {
+      const it = e.queue[0];
+      const what = it.research ? ('Researching ' + (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'))
+        : ('Producing ' + DEFS[it.type].name);
+      notes.push(what + ' ' + Math.floor((1 - it.t / it.total) * 100) + '%'
+        + (e.queue.length > 1 ? ' (+' + (e.queue.length - 1) + ' queued)' : ''));
+    }
+    if (e.type === 'hive') notes.push('Right-click to set the swarm rally');
+    if (e.type === 'ark' && e.deployed) notes.push('DEPLOYED — siphoning' + (e.siphonNode ? ' crystal' : '… (no node in reach)'));
+    if (e.type === 'haven') notes.push('Treasury earns interest — Countinghouses raise the cap');
+    if (e.def.ability) notes.push(e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — target via the command card'));
+    if (e.fac === 'choir' && e.def.kind === 'unit') notes.push('Fades away from the lattice — heals by dealing damage');
+    if (notes.length) h += '<div class="sel-status">' + notes.map(n => '<div>' + n + '</div>').join('') + '</div>';
+    const desc = meta(e.type).desc;
+    if (desc) h += '<div class="sel-desc">' + desc + '</div>';
+    si.innerHTML = h;
+    return;
+  }
+  // multi-select: count, then a colour-dotted tally by type
+  const counts = {};
+  for (const e of game.sel) counts[e.type] = (counts[e.type] || 0) + 1;
+  let h = '<div class="sel-head"><span class="sel-name">' + game.sel.length + ' SELECTED</span></div>';
+  h += '<div class="sel-list">';
+  for (const t in counts) {
+    const d = DEFS[t];
+    h += '<div class="sel-li"><span class="dot dot-' + catClass(d.kind) + '"></span>'
+      + '<span class="n">' + d.name + '</span><span class="x">×' + counts[t] + '</span></div>';
+  }
+  si.innerHTML = h + '</div>';
 }
 
 function updateHUD() {
@@ -189,36 +276,7 @@ function updateHUD() {
   document.getElementById('hudArmy').innerHTML = 'Units: <b>' + countUnits(fac) + '</b>/' + capOf(fac);
 
   // selection info
-  const si = document.getElementById('selinfo');
-  if (!game.sel.length) {
-    si.textContent = 'Nothing selected.\nDrag to select · right-click = move/attack\nShift+right-click = attack-move · F = army · Space = core';
-  } else if (game.sel.length === 1) {
-    const e = game.sel[0];
-    let s = e.def.name + '\nHP ' + Math.ceil(e.hp) + '/' + e.hpMax;
-    if (e.shieldMax) s += '  ·  Shield ' + Math.ceil(e.shield) + '/' + e.shieldMax;
-    if (e.constructing) s += '\nUnder construction ' + Math.floor(e.progress / e.def.time * 100) + '%';
-    if (e.growing) s += '\nGrowing ' + Math.floor(e.progress / e.def.time * 100) + '%';
-    if (e.queue && e.queue.length) {
-      const it = e.queue[0];
-      const what = it.research ? ('Researching ' + (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'))
-        : ('Producing ' + DEFS[it.type].name);
-      s += '\n' + what + ' ' + Math.floor((1 - it.t / it.total) * 100) + '%'
-        + (e.queue.length > 1 ? ' (+' + (e.queue.length - 1) + ' queued)' : '');
-    }
-    if (e.type === 'hive') s += '\nRight-click to set the swarm rally';
-    if (e.type === 'ark' && e.deployed) s += '\nDEPLOYED — siphoning' + (e.siphonNode ? ' crystal' : '… (no node in reach)');
-    if (e.type === 'haven') s += '\nTreasury earns interest — Countinghouses raise the cap';
-    if (e.def.ability) s += '\n' + e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — use the command card to target');
-    if (e.fac === 'choir' && e.def.kind === 'unit') s += '\nFades away from the lattice — heals by dealing damage';
-    const desc = meta(e.type).desc;
-    if (desc) s += '\n' + desc;
-    si.textContent = s;
-  } else {
-    const counts = {};
-    for (const e of game.sel) counts[e.def.name] = (counts[e.def.name] || 0) + 1;
-    si.textContent = game.sel.length + ' selected\n'
-      + Object.entries(counts).map(([n, c]) => c + '× ' + n).join('\n');
-  }
+  renderSelInfo(document.getElementById('selinfo'));
 
   // refresh card button enabled-state cheaply
   const card = document.getElementById('cmdcard');
