@@ -103,6 +103,30 @@ function draw() {
       ctx.beginPath();
       ctx.moveTo(f.x - f.r - 6, f.y); ctx.lineTo(f.x + f.r + 6, f.y);
       ctx.moveTo(f.x, f.y - f.r - 6); ctx.lineTo(f.x, f.y + f.r + 6); ctx.stroke();
+      // the colossal main-gun shell itself, flying from the muzzle to the impact
+      if (f.sx != null) {
+        const prog = 1 - a;                               // 0 at launch → 1 at impact
+        const sxp = f.sx + (f.x - f.sx) * prog, syp = f.sy + (f.y - f.sy) * prog;
+        const ang = Math.atan2(f.y - f.sy, f.x - f.sx);
+        const sr = 22 + 16 * prog;                        // huge, and bearing down
+        // fiery trail behind the shell
+        const tx = sxp - Math.cos(ang) * sr * 3.4, ty = syp - Math.sin(ang) * sr * 3.4;
+        const grad = ctx.createLinearGradient(tx, ty, sxp, syp);
+        grad.addColorStop(0, 'rgba(255,120,40,0)'); grad.addColorStop(1, 'rgba(255,180,80,0.85)');
+        ctx.globalAlpha = 0.85; ctx.strokeStyle = grad; ctx.lineWidth = sr * 1.3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(sxp, syp); ctx.stroke(); ctx.lineCap = 'butt';
+        // hot glow halo
+        ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(255,205,135,0.45)';
+        ctx.beginPath(); ctx.arc(sxp, syp, sr * 1.6, 0, Math.PI * 2); ctx.fill();
+        // dark heavy shell body + bright rim
+        ctx.fillStyle = '#241b12';
+        ctx.beginPath(); ctx.arc(sxp, syp, sr, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ffd9a0'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(sxp, syp, sr, 0, Math.PI * 2); ctx.stroke();
+        // white-hot nose
+        ctx.fillStyle = '#fff3d6';
+        ctx.beginPath(); ctx.arc(sxp + Math.cos(ang) * sr * 0.45, syp + Math.sin(ang) * sr * 0.45, sr * 0.38, 0, Math.PI * 2); ctx.fill();
+      }
     } else if (f.kind === 'shock') {
       // detonation shockwave: a fat expanding ring
       ctx.strokeStyle = f.color; ctx.globalAlpha = a; ctx.lineWidth = 1 + 5 * a;
@@ -233,6 +257,26 @@ function drawSelectionOverlays() {
     ctx.fillStyle = hostile ? 'rgba(255,106,106,0.9)' : 'rgba(125,255,168,0.9)';
     ctx.beginPath(); ctx.arc(dx, dy, 3.5, 0, Math.PI * 2); ctx.fill();
   }
+
+  // rally points: a flag (and tether) for any selected structure that musters units
+  for (const e of game.sel) {
+    if (e.dead || !e.rally || !(e.def.produces || e.def.spawns)) continue;
+    const col = facColor(e.fac);
+    ctx.strokeStyle = col + '88'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 6]);
+    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.rally.x, e.rally.y); ctx.stroke();
+    ctx.setLineDash([]);
+    drawRallyFlag(e.rally.x, e.rally.y, col);
+  }
+}
+
+// a small rally flag planted at a muster point
+function drawRallyFlag(x, y, col) {
+  ctx.strokeStyle = col; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 17); ctx.stroke();
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.moveTo(x, y - 17); ctx.lineTo(x + 12, y - 13.5); ctx.lineTo(x, y - 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#0d1117'; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.stroke();
 }
 
 function drawEnt(e) {
@@ -704,8 +748,31 @@ function drawEnt(e) {
       ctx.fillStyle = e.order.type === 'harvest' && e.order.carry > 0 ? '#6ee7ff' : '#9ff0e2';
       ctx.beginPath(); ctx.arc(x, y, s * 0.4, 0, Math.PI * 2); ctx.fill();
     } else if (e.type === 'ark') {
+      const tier = (game.players[e.fac] && game.players[e.fac].arkTier) || 0;
+      // inner diamond
       ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x, y - s * 0.5); ctx.lineTo(x + s * 0.5, y); ctx.lineTo(x, y + s * 0.5); ctx.lineTo(x - s * 0.5, y); ctx.closePath(); ctx.stroke();
+      // each upgrade tier layers on more: a second hull ring, radiant spokes, a halo
+      if (tier >= 1) {
+        ctx.strokeStyle = 'rgba(255,217,125,0.8)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.78); ctx.lineTo(x + s * 0.78, y); ctx.lineTo(x, y + s * 0.78); ctx.lineTo(x - s * 0.78, y); ctx.closePath(); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,231,160,' + (0.4 + 0.25 * Math.sin(game.t * 3 + e.id)) + ')';
+        ctx.beginPath(); ctx.arc(x, y, s * (0.18 + 0.05 * tier), 0, Math.PI * 2); ctx.fill();
+      }
+      if (tier >= 2) {
+        ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.5;
+        for (let i = 0; i < 4; i++) {
+          const a2 = i * Math.PI / 2 + Math.PI / 4;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a2) * s * 0.5, y + Math.sin(a2) * s * 0.5);
+          ctx.lineTo(x + Math.cos(a2) * (s + 8), y + Math.sin(a2) * (s + 8)); ctx.stroke();
+        }
+      }
+      if (tier >= 3) {
+        ctx.globalAlpha = 0.35 + 0.3 * Math.sin(game.t * 3);
+        ctx.strokeStyle = '#ffe9b0'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(x, y, s + 7, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       if (e.deployed) {
         ctx.strokeStyle = 'rgba(255,217,125,' + (0.5 + 0.3 * Math.sin(game.t * 4)) + ')';
         ctx.beginPath(); ctx.arc(x, y, s + 10, 0, Math.PI * 2); ctx.stroke();

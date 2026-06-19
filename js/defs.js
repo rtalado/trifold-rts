@@ -533,14 +533,35 @@ function recalcMul(p) {
     if (r.cap) p.capBonus += r.cap;
   }
 }
+// ---- Solari Exodus: the Ark upgrade ladder ----
+// Buying an upgrade raises the Ark's tier (stored on the player), which scales
+// its size, HP, shields and firepower — and the model is redrawn larger and more
+// imposing at each step. Tier 0 mirrors the base `ark` definition.
+const ARK_TIERS = [
+  { size: 38, hp: 2300, shield: 900,  statMul: 1.0 },
+  { size: 48, hp: 3400, shield: 1400, statMul: 1.3 },
+  { size: 60, hp: 4900, shield: 2100, statMul: 1.65 },
+  { size: 74, hp: 6800, shield: 3000, statMul: 2.05 },
+];
+const ARK_UPGRADES = [
+  { name: 'Reinforced Ark', cost: 600,  desc: 'Forge-plate the hull and over-charge the reactors: far more HP, shields, firepower and reach. The Ark visibly grows.' },
+  { name: 'Radiant Ark',    cost: 1500, desc: 'Bind the pilgrimage’s light into the chassis: another leap in durability and power, and the Ark looms larger.' },
+  { name: 'Ascendant Ark',  cost: 3200, desc: 'The Ark ascends into a walking cathedral-fortress — colossal, radiant and devastating.' },
+];
+function arkTierData(fac) { const p = game.players[fac]; return ARK_TIERS[Math.min((p && p.arkTier) || 0, ARK_TIERS.length - 1)]; }
+function baseHp(e)      { return e.type === 'ark' ? arkTierData(e.fac).hp : e.def.hp; }
+function baseShield(e)  { return e.type === 'ark' ? arkTierData(e.fac).shield : (e.def.shield || 0); }
+function baseSize(e)    { return e.type === 'ark' ? arkTierData(e.fac).size : e.def.size; }
+function arkStatMul(e)  { return e.type === 'ark' ? arkTierData(e.fac).statMul : 1; }
+
 // effective stats of an entity, with its owner's researched upgrades applied.
 // (damage/range/cooldown/splash apply to buildings too; speed/cap only to units.)
 function dmgOf(e) {
   const p = e.def.kind === 'unit' && game.players[e.fac];
-  return e.def.dmg * (p ? p.dmgMul : 1);
+  return e.def.dmg * (p ? p.dmgMul : 1) * arkStatMul(e);
 }
 function spd(e) { const p = game.players[e.fac]; return e.def.speed * ((p && p.speedMul) || 1); }
-function rangeOf(e) { const p = game.players[e.fac]; return e.def.range * ((p && p.rangeMul) || 1); }
+function rangeOf(e) { const p = game.players[e.fac]; return e.def.range * ((p && p.rangeMul) || 1) * arkStatMul(e); }
 function aggroOf(e) { const p = game.players[e.fac]; return e.def.aggro * ((p && p.rangeMul) || 1); }
 function cdOf(e) { const p = game.players[e.fac]; return e.def.cd * ((p && p.cdMul) || 1); }
 function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1); }
@@ -558,8 +579,8 @@ function applyResearch(fac, rid) {
   for (const e of game.entities) {
     if (e.dead || e.fac !== fac || e.def.kind !== 'unit') continue;
     const hpFrac = e.hpMax > 0 ? e.hp / e.hpMax : 1;
-    e.hpMax = e.def.hp * p.hpBonusMul; e.hp = e.hpMax * hpFrac;
-    const shMax = (e.def.shield || 0) * p.shBonusMul;
+    e.hpMax = baseHp(e) * p.hpBonusMul; e.hp = e.hpMax * hpFrac;
+    const shMax = baseShield(e) * p.shBonusMul;
     const shFrac = e.shieldMax > 0 ? e.shield / e.shieldMax : 0;
     e.shieldMax = shMax; e.shield = shMax * shFrac;
   }

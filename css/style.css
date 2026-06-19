@@ -5,7 +5,7 @@
 
   /* ---------- main menu ---------- */
   #menu { position:fixed; inset:0; background: radial-gradient(ellipse at 50% 30%, #131a26 0%, #07090d 70%);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50;
+    display:flex; flex-direction:column; align-items:center; justify-content:safe center; z-index:50;
     overflow-y:auto; padding:24px 0; }
   #menu h1 { font-size:48px; letter-spacing:14px; margin:0 0 6px 0; color:#e8eef8; font-weight:200; }
   #menu .sub { color:#7b8aa3; margin-bottom:24px; letter-spacing:3px; font-size:13px; }
@@ -139,6 +139,7 @@
   .catpill.cat-tech    { background:#2b1f4a; color:#d8c2ff; }
   .catpill.cat-ability { background:#402a12; color:#ffce9a; }
   .catpill.cat-sell    { background:#3a1712; color:#ffb29a; }
+  .catpill.cat-upg     { background:#43370f; color:#ffe199; }
   #selinfo .sel-bars { display:flex; flex-direction:column; gap:4px; margin-bottom:6px; }
   .statbar { position:relative; height:15px; background:#0c1119; border:1px solid #233247;
     border-radius:3px; overflow:hidden; }
@@ -161,6 +162,22 @@
   #selinfo .sel-li .x { color:#8fa3c4; font-weight:600; }
   .dot-build { background:#4f93e6; } .dot-unit { background:#54c27c; }
   .dot-tech { background:#b07cff; } .dot-ability { background:#ffa23d; } .dot-sell { background:#e0653d; }
+  .dot-upg { background:#ffc94d; }
+  /* editable production queue (in the selection panel) */
+  #selinfo .sel-qhead { font-size:9px; font-weight:800; letter-spacing:1.5px; color:#7b8aa3; margin:2px 0 4px; }
+  #selinfo .sel-qhead .qcap { color:#5d6b82; font-weight:600; }
+  #selinfo .sel-queue { display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start;
+    max-height:74px; overflow:hidden; }
+  #selinfo .qchip { position:relative; display:flex; align-items:center; gap:5px; max-width:128px;
+    padding:3px 6px; background:#141c2a; border:1px solid #2a3954; border-radius:4px; cursor:pointer;
+    font-size:11px; color:#cdd6e4; overflow:hidden; }
+  #selinfo .qchip:hover { border-color:#e0653d; background:#241620; }
+  #selinfo .qchip.q-research { border-left:3px solid #b07cff; }
+  #selinfo .qchip .qprog { position:absolute; left:0; top:0; bottom:0; width:0;
+    background:rgba(84,194,124,0.20); pointer-events:none; }
+  #selinfo .qchip .qn { position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #selinfo .qchip .qx { position:relative; color:#7b8aa3; font-size:10px; font-weight:700; }
+  #selinfo .qchip:hover .qx { color:#ff9a7a; }
   #cmdcard { flex:1; height:142px; background:#0b0f16ee; border:1px solid #243247; border-radius:6px;
     padding:8px; pointer-events:auto; display:flex; flex-wrap:wrap; gap:7px; align-content:flex-start; overflow-y:auto; }
   #cmdcard button { position:relative; flex:1 1 132px; min-width:132px; max-width:188px; height:58px;
@@ -188,6 +205,8 @@
   #cmdcard .cmd-ability .cmd-tag { background:#402a12; color:#ffce9a; }
   #cmdcard .cmd-sell    { border-left-color:#e0653d; }
   #cmdcard .cmd-sell    .cmd-tag { background:#3a1712; color:#ffb29a; }
+  #cmdcard .cmd-upg     { border-left-color:#ffc94d; }
+  #cmdcard .cmd-upg     .cmd-tag { background:#43370f; color:#ffe199; }
   #msg { position:absolute; bottom:175px; left:50%; transform:translateX(-50%); font-size:14px;
     color:#ffd97d; text-shadow:0 1px 3px #000; transition:opacity .4s; opacity:0; }
   #tooltip { position:absolute; bottom:178px; left:534px; max-width:440px; display:none;
@@ -201,6 +220,7 @@
   #tooltip .tipcat-tech    { background:#2b1f4a; color:#d8c2ff; }
   #tooltip .tipcat-ability { background:#402a12; color:#ffce9a; }
   #tooltip .tipcat-sell    { background:#3a1712; color:#ffb29a; }
+  #tooltip .tipcat-upg     { background:#43370f; color:#ffe199; }
   #tooltip .tipcost { float:right; color:#ffd97d; font-weight:600; font-size:12.5px; }
   #tooltip .tipdesc { font-size:12.5px; color:#aeb9cb; line-height:1.5; }
   #tooltip .tipstat { font-size:11.5px; color:#7f8ea6; margin-top:6px; }

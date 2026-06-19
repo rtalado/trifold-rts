@@ -146,6 +146,8 @@ function setupFaction(fac, base, isAI, diff) {
     lastAttack: null, waveSize: 0,
     research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1,
     speedMul: 1, rangeMul: 1, cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0,
+    arkTier: 0,   // Solari Exodus: how far the Ark has been upgraded
+
     // difficulty handicaps (1 / neutral for humans)
     diff: isAI ? (diff || 'normal') : null,
     incomeMul: isAI ? D.incomeMul : 1, firstWave: D.firstWave, waveStep: D.waveStep,
@@ -213,11 +215,15 @@ function spawnEnt(type, fac, x, y, opts = {}) {
   const p = game.players[fac];
   const hpMul = (d.kind === 'unit' && p) ? p.hpBonusMul : 1;
   const shMul = (d.kind === 'unit' && p) ? p.shBonusMul : 1;
+  // the Ark's base size/HP/shields come from its current upgrade tier
+  const bHp = type === 'ark' ? arkTierData(fac).hp : d.hp;
+  const bSh = type === 'ark' ? arkTierData(fac).shield : (d.shield || 0);
+  const bSize = type === 'ark' ? arkTierData(fac).size : d.size;
   const e = {
     id: nextId++, type, def: d, fac,
     x: clamp(x, 20, WORLD_W - 20), y: clamp(y, 20, WORLD_H - 20),
-    hp: d.hp * hpMul, hpMax: d.hp * hpMul, size: d.size,
-    shield: (d.shield || 0) * shMul, shieldMax: (d.shield || 0) * shMul, lastHurt: -99,
+    hp: bHp * hpMul, hpMax: bHp * hpMul, size: bSize,
+    shield: bSh * shMul, shieldMax: bSh * shMul, lastHurt: -99,
     cd: 0, blinkCd: 0, scanT: Math.random() * 0.25, tgt: 0,
     order: { type: 'idle' }, dead: false,
     queue: [], rally: null, deployed: false,
@@ -365,8 +371,9 @@ function fireAbility(fac, e, wx, wy) {
   if (dist(e, { x: wx, y: wy }) > ab.range) { localMsg(fac, 'Target out of range'); return false; }
   e.abilityCd = ab.cd;
   game.strikes.push({ x: wx, y: wy, t: ab.delay, dmg: ab.dmg, splash: ab.splash, fac, attackerId: e.id });
-  // a long-lived warning marker (forwarded to guests as cosmetic fx) telegraphs the hit
-  addFx({ kind: 'strikewarn', x: wx, y: wy, r: ab.splash, ttl: ab.delay, max: ab.delay, color: facColor(fac) });
+  // a long-lived warning marker (forwarded to guests as cosmetic fx) telegraphs the
+  // hit. sx/sy carry the gun's muzzle so the renderer can fly a huge shell in.
+  addFx({ kind: 'strikewarn', x: wx, y: wy, sx: e.x, sy: e.y, r: ab.splash, ttl: ab.delay, max: ab.delay, color: facColor(fac) });
   // muzzle flash + a streak from the gun toward the impact point
   addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#ffd9a0' });
   localMsg(fac, ab.name + ' away!');
@@ -597,14 +604,54 @@ function localMsg(fac, text) {
   else if (game.mode === 'host' && !game.players[fac].isAI) netSend({ t: 'msg', text, to: fac });
 }
 
+const MAX_QUEUE = 12;
 function enqueue(e, type) {
   const d = DEFS[type], p = game.players[e.fac];
-  if (e.queue.length >= 5) { localMsg(e.fac, 'Queue is full'); return false; }
+  if (e.queue.length >= MAX_QUEUE) { localMsg(e.fac, 'Queue is full'); return false; }
   if (!techMet(e.fac, type)) { localMsg(e.fac, reqMsg(e.fac, type)); return false; }
   if (!affordable(p, d)) { localMsg(e.fac, costMsg(e.fac, d)); return false; }
   payFor(p, d);
   e.queue.push({ type, t: d.time, total: d.time });
   return true;
+}
+
+// cancel a queued item, refunding what it cost. idx 0 is the one in progress.
+function dequeue(e, idx) {
+  if (!e || !e.queue || idx < 0 || idx >= e.queue.length) return false;
+  const item = e.queue[idx], p = game.players[e.fac];
+  if (item.research) { const r = RESEARCH[item.rid]; if (r) p.res += r.cost; }
+  else { const d = DEFS[item.type]; if (d) { p.res += d.cost || 0; p.iron = (p.iron || 0) + (d.cost2 || 0); } }
+  e.queue.splice(idx, 1);
+  return true;
+}
+
+// ---- Solari Exodus: buy the next Ark upgrade ----
+function upgradeArk(fac, e) {
+  if (!e || e.dead || e.fac !== fac || e.type !== 'ark') return false;
+  if (e.constructing) { localMsg(fac, 'Still being raised'); return false; }
+  const p = game.players[fac], tier = p.arkTier || 0;
+  if (tier >= ARK_UPGRADES.length) { localMsg(fac, 'The Ark is fully ascended'); return false; }
+  const up = ARK_UPGRADES[tier];
+  if (p.res < up.cost) { localMsg(fac, 'Need ' + up.cost + ' ' + FACTIONS[fac].res); return false; }
+  p.res -= up.cost;
+  p.arkTier = tier + 1;
+  refreshArk(fac);
+  addFx({ kind: 'shock', x: e.x, y: e.y, r: e.size + 30, ttl: 0.7, max: 0.7, color: '#ffe3a3' });
+  localMsg(fac, up.name + ' — the Ark grows');
+  return true;
+}
+
+// re-derive each Ark's size/HP/shields from the player's current tier, keeping
+// its health fraction. Runs when an upgrade is bought (and on guests per snapshot).
+function refreshArk(fac) {
+  const p = game.players[fac];
+  for (const e of ents(o => o.fac === fac && o.type === 'ark')) {
+    const hpFrac = e.hpMax > 0 ? clamp(e.hp / e.hpMax, 0, 1) : 1;
+    const shFrac = e.shieldMax > 0 ? clamp(e.shield / e.shieldMax, 0, 1) : 0;
+    e.size = baseSize(e);
+    e.hpMax = baseHp(e) * (p.hpBonusMul || 1); e.hp = e.hpMax * hpFrac;
+    e.shieldMax = baseShield(e) * (p.shBonusMul || 1); e.shield = e.shieldMax * shFrac;
+  }
 }
 
 // ---------------- placement ----------------

@@ -72,6 +72,30 @@ function currentCommands() {
           refreshCard();
         },
       });
+      // the Ark upgrade ladder — buffs the Ark and enlarges its model each tier
+      if (sel0.fac === fac) {
+        const tier = p.arkTier || 0;
+        if (tier < ARK_UPGRADES.length) {
+          const up = ARK_UPGRADES[tier];
+          cmds.push({
+            label: up.name, cat: 'upgrade', tag: 'UPGRADE', cost: up.cost,
+            sub: 'Ark tier ' + (tier + 1) + '/' + ARK_UPGRADES.length, desc: up.desc,
+            enabled: p.res >= up.cost && !sel0.constructing,
+            poor: p.res < up.cost,
+            onClick: () => {
+              if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'arkup', id: sel0.id });
+              else upgradeArk(game.localFac, sel0);
+              refreshCard();
+            },
+          });
+        } else {
+          cmds.push({
+            label: 'Ark Ascended', cat: 'upgrade', tag: 'MAX', cost: 0, enabled: false,
+            sub: 'Tier ' + ARK_UPGRADES.length + '/' + ARK_UPGRADES.length,
+            desc: 'The Ark has reached its ultimate form.',
+          });
+        }
+      }
     }
     // active targeted ability (the Worldbreaker's Gustav Strike)
     if (d.ability && sel0.fac === fac) {
@@ -116,7 +140,7 @@ function currentCommands() {
   // group like with like (buildings, then units, then abilities, research, sell)
   // — a stable sort, so order within each category is preserved. Both the card
   // render and the digit hotkeys read this same array, so they stay in sync.
-  const catOrder = { building: 0, unit: 1, ability: 2, research: 3, sell: 4 };
+  const catOrder = { building: 0, unit: 1, upgrade: 2, ability: 3, research: 4, sell: 5 };
   cmds.forEach((c, i) => { c._i = i; });
   cmds.sort((a, b) => ((catOrder[a.cat] ?? 8) - (catOrder[b.cat] ?? 8)) || (a._i - b._i));
   return cmds.slice(0, 14);
@@ -148,7 +172,8 @@ function showTip(c) {
   const cs = costStr(game.localFac, c.cost, c.cost2);
   const cat = c.cat || (d ? d.kind : null);
   const catLbl = cat === 'building' ? 'BUILDING' : cat === 'unit' ? 'UNIT'
-    : cat === 'research' ? 'RESEARCH' : cat === 'sell' ? 'SELL' : cat === 'ability' ? 'ABILITY' : '';
+    : cat === 'research' ? 'RESEARCH' : cat === 'sell' ? 'SELL' : cat === 'upgrade' ? 'UPGRADE'
+    : cat === 'ability' ? 'ABILITY' : '';
   let html = '<div class="tipname">'
     + (catLbl ? '<span class="tipcat tipcat-' + catClass(cat) + '">' + catLbl + '</span>' : '')
     + (d ? d.name : c.label)
@@ -193,10 +218,20 @@ function refreshCard() {
 }
 
 // command categories → CSS suffix + default corner tag
-const CAT_TAG = { building: 'BUILD', unit: 'TRAIN', research: 'TECH', ability: 'USE', sell: 'SELL' };
+const CAT_TAG = { building: 'BUILD', unit: 'TRAIN', research: 'TECH', ability: 'USE', sell: 'SELL', upgrade: 'UPGRADE' };
 function catClass(cat) {
   return cat === 'building' ? 'build' : cat === 'unit' ? 'unit'
-    : cat === 'research' ? 'tech' : cat === 'sell' ? 'sell' : 'ability';
+    : cat === 'research' ? 'tech' : cat === 'sell' ? 'sell'
+    : cat === 'upgrade' ? 'upg' : 'ability';
+}
+
+// cancel a queued item (from the clickable queue chips in the selection panel)
+function cancelQueueItem(id, idx) {
+  const e = byId(id);
+  if (!e || e.fac !== game.localFac) return;
+  if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'deq', id, idx });
+  else dequeue(e, idx);
+  updateHUD();
 }
 
 // ---------------- selection info panel ----------------
@@ -227,7 +262,8 @@ function renderSelInfo(si) {
     const notes = [];
     if (e.constructing) notes.push('Under construction ' + Math.floor(e.progress / e.def.time * 100) + '%');
     if (e.growing) notes.push('Growing ' + Math.floor(e.progress / e.def.time * 100) + '%');
-    if (e.queue && e.queue.length) {
+    // your own queues render as editable chips below; for others just a text note
+    if (e.queue && e.queue.length && e.fac !== game.localFac) {
       const it = e.queue[0];
       const what = it.research ? ('Researching ' + (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'))
         : ('Producing ' + DEFS[it.type].name);
@@ -240,8 +276,21 @@ function renderSelInfo(si) {
     if (e.def.ability) notes.push(e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — target via the command card'));
     if (e.fac === 'choir' && e.def.kind === 'unit') notes.push('Fades away from the lattice — heals by dealing damage');
     if (notes.length) h += '<div class="sel-status">' + notes.map(n => '<div>' + n + '</div>').join('') + '</div>';
-    const desc = meta(e.type).desc;
-    if (desc) h += '<div class="sel-desc">' + desc + '</div>';
+    // editable production queue — click a chip to cancel it (refunds its cost)
+    if (e.queue && e.queue.length && e.fac === game.localFac) {
+      h += '<div class="sel-qhead">QUEUE <span class="qcap">' + e.queue.length + '/' + MAX_QUEUE + '</span></div><div class="sel-queue">';
+      e.queue.forEach((it, i) => {
+        const nm = it.research ? (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…') : DEFS[it.type].name;
+        const pct = i === 0 ? Math.floor((1 - it.t / it.total) * 100) : 0;
+        h += '<button class="qchip' + (it.research ? ' q-research' : '') + '" title="Cancel (refunds cost)" onclick="cancelQueueItem(' + e.id + ',' + i + ')">'
+          + '<i class="qprog" style="width:' + pct + '%"></i>'
+          + '<span class="qn">' + nm + '</span><span class="qx">✕</span></button>';
+      });
+      h += '</div>';
+    } else {
+      const desc = meta(e.type).desc;
+      if (desc) h += '<div class="sel-desc">' + desc + '</div>';
+    }
     si.innerHTML = h;
     return;
   }

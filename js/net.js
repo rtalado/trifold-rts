@@ -33,16 +33,17 @@ function buildSnap() {
     if (e.owner) fl |= facIdx(e.owner) << 4;  // Obelisk captor (bits 4-7)
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
+    // full queue: each entry is a unit type index, or the research id string
+    const ql = (e.queue || []).map(it => it.research ? it.rid : TYPE_IDX[it.type]);
     return [e.id, TYPE_IDX[e.type], Math.round(e.x), Math.round(e.y),
       Math.ceil(e.hp), Math.ceil(e.shield), fl, prog,
-      q ? (q.research ? -1 : TYPE_IDX[q.type]) : 0, q ? Math.round((1 - q.t / q.total) * 100) : 0,
-      e.queue ? e.queue.length : 0, q && q.research ? q.rid : 0,
+      q ? Math.round((1 - q.t / q.total) * 100) : 0, ql,
       e.abilityCd ? Math.ceil(e.abilityCd) : 0];
   });
   const players = {};
   for (const f in game.players) {
     const p = game.players[f];
-    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1)];
+    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1), p.arkTier || 0];
   }
   return {
     t: 'snap', gt: +game.t.toFixed(2), players, units,
@@ -58,7 +59,8 @@ function applySnap(m) {
   for (const f in m.players) {
     const p = game.players[f], a = m.players[f];
     if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3];
-      p.research = new Set(a[4] || []); p.iron = a[5] || 0; p.ironInc = a[6] || 0; recalcMul(p); }
+      p.research = new Set(a[4] || []); p.iron = a[5] || 0; p.ironInc = a[6] || 0;
+      p.arkTier = a[7] || 0; recalcMul(p); }
   }
   game.nodes = m.nodes.map(a => ({ id: a[0], x: a[1], y: a[2], amount: a[3], max: a[4], r: 20 }));
   unrle(m.creep, game.creep);
@@ -71,7 +73,7 @@ function applySnap(m) {
   const byIdMap = new Map();
   for (const o of game.entities) byIdMap.set(o.id, o);
   for (const row of m.units) {
-    const [id, ti, x, y, hp, sh, fl, prog, qt, qp, qn, qrid, acd] = row;
+    const [id, ti, x, y, hp, sh, fl, prog, qp, ql, acd] = row;
     seen.add(id);
     let e = byIdMap.get(id);
     if (!e) {
@@ -81,11 +83,13 @@ function applySnap(m) {
         deployed: false, lastHurt: -99, cd: 0, tgt: 0 };
       game.entities.push(e);
     }
-    // reflect researched HP/shield upgrades so health bars read correctly
+    // reflect researched HP/shield upgrades (and the Ark's upgrade tier) so the
+    // health bars and the Ark's size read correctly on the guest
     if (e.def.kind === 'unit') {
       const pp = game.players[e.fac];
-      e.hpMax = e.def.hp * (pp ? pp.hpBonusMul : 1);
-      e.shieldMax = (e.def.shield || 0) * (pp ? pp.shBonusMul : 1);
+      e.hpMax = baseHp(e) * (pp ? pp.hpBonusMul : 1);
+      e.shieldMax = baseShield(e) * (pp ? pp.shBonusMul : 1);
+      if (e.type === 'ark') e.size = baseSize(e);
     }
     e.nx = x; e.ny = y;
     e.hp = hp; e.shield = sh;
@@ -95,10 +99,11 @@ function applySnap(m) {
     e.progress = prog / 100 * e.def.time;
     e.abilityCd = acd || 0;
     e.queue = [];
-    for (let i = 0; i < qn; i++) {
-      if (qt === -1) e.queue.push({ research: true, rid: qrid, type: 'research', t: 1 - qp / 100, total: 1 });
-      else e.queue.push({ type: TYPE_LIST[qt], t: 1 - qp / 100, total: 1 });
-    }
+    (ql || []).forEach((v, i) => {
+      const t0 = i === 0 ? (1 - qp / 100) : 1;       // only the front item shows progress
+      if (typeof v === 'string') e.queue.push({ research: true, rid: v, type: 'research', t: t0, total: 1 });
+      else e.queue.push({ type: TYPE_LIST[v], t: t0, total: 1 });
+    });
   }
   game.entities = game.entities.filter(e => seen.has(e.id));
   game.sel = game.sel.filter(e => seen.has(e.id));
@@ -285,6 +290,12 @@ function handleCmd(m) {
   } else if (m.kind === 'enq') {
     const e = byId(m.id);
     if (e && e.fac === fac && e.def.produces && e.def.produces.includes(m.type)) enqueue(e, m.type);
+  } else if (m.kind === 'deq') {
+    const e = byId(m.id);
+    if (e && e.fac === fac) dequeue(e, m.idx);
+  } else if (m.kind === 'arkup') {
+    const e = byId(m.id);
+    if (e && e.fac === fac && e.type === 'ark') upgradeArk(fac, e);
   } else if (m.kind === 'deploy') {
     const e = byId(m.id);
     if (e && e.fac === fac && e.type === 'ark') { e.deployed = m.on; if (m.on) e.order = { type: 'idle' }; }
