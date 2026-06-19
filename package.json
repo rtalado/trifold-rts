@@ -28,7 +28,8 @@
     "publish": {
       "provider": "github",
       "owner": "rtalado",
-      "repo": "trifold-rts"
+      "repo": "trifold-rts",
+      "releaseType": "release"
     },
     "files": [
       "electron/**",
