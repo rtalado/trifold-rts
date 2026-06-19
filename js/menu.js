@@ -76,6 +76,49 @@ $('mpStart').addEventListener('click', hostStart);
 $('mpAiMinus').addEventListener('click', () => { net.aiCount = Math.max(0, net.aiCount - 1); updateLobby(); });
 $('mpAiPlus').addEventListener('click', () => { net.aiCount = Math.min(4 - net.players.length, net.aiCount + 1); updateLobby(); });
 
+// ---------------- pause menu & settings ----------------
+let pauseOpen = false, settingsOpen = false;
+
+function openPauseMenu() {
+  if (!game || game.over) return;
+  pauseOpen = true;
+  if (game.mode === 'sp') game.paused = true;          // real pause only in single player
+  $('pauseMpNote').style.display = game.mode === 'sp' ? 'none' : 'block';
+  $('pausemenu').style.display = 'flex';
+}
+function resumeGame() {
+  pauseOpen = false;
+  if (game) game.paused = false;
+  $('pausemenu').style.display = 'none';
+}
+function quitToMenu() {
+  resumeGame();
+  if (net.peer) onDisconnect();   // leaving a multiplayer match disconnects us
+  backToMenu();
+}
+
+function syncSettingsUI() {
+  $('setEdgePan').checked = !!SETTINGS.edgePan;
+  $('setShowFps').checked = !!SETTINGS.showFps;
+  $('setPanSpeed').value = SETTINGS.panSpeed;
+  $('setPanSpeedVal').textContent = (+SETTINGS.panSpeed).toFixed(1) + '×';
+}
+function openSettings() { settingsOpen = true; syncSettingsUI(); $('settings').style.display = 'flex'; }
+function closeSettings() { settingsOpen = false; $('settings').style.display = 'none'; }
+
+$('btnSettings').addEventListener('click', openSettings);
+$('setClose').addEventListener('click', closeSettings);
+$('pauseResume').addEventListener('click', resumeGame);
+$('pauseSettings').addEventListener('click', openSettings);
+$('pauseQuit').addEventListener('click', quitToMenu);
+$('setEdgePan').addEventListener('change', e => { SETTINGS.edgePan = e.target.checked; saveSettings(); });
+$('setShowFps').addEventListener('change', e => { SETTINGS.showFps = e.target.checked; saveSettings(); });
+$('setPanSpeed').addEventListener('input', e => {
+  SETTINGS.panSpeed = +e.target.value;
+  $('setPanSpeedVal').textContent = SETTINGS.panSpeed.toFixed(1) + '×';
+  saveSettings();
+});
+
 // boot: cards live in the single-player holder; start on the home screen
 mountCards('cardsHolderSP');
 showScreen('home');

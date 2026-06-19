@@ -3,6 +3,19 @@ let game = null;
 let nextId = 1;
 let lastFrame = 0;
 
+// ---------------- persisted settings ----------------
+// Saved to localStorage so they survive across sessions. Wired into the
+// camera (input.js) and the FPS readout (loop.js); surfaced in the Settings
+// panel reachable from the main menu and the in-game pause menu.
+const SETTINGS = (() => {
+  const def = { edgePan: true, panSpeed: 1.0, showFps: false };
+  try { return Object.assign(def, JSON.parse(localStorage.getItem('trifold.settings') || '{}')); }
+  catch (e) { return def; }
+})();
+function saveSettings() {
+  try { localStorage.setItem('trifold.settings', JSON.stringify(SETTINGS)); } catch (e) {}
+}
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const mmCanvas = document.getElementById('minimap');

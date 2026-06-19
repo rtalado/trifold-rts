@@ -128,9 +128,22 @@ function applyOrder(fac, selEnts, wx, wy, amove) {
 
 addEventListener('keydown', ev => {
   keys[ev.key.toLowerCase()] = true;
-  if (!game || game.over) return;
   const k = ev.key.toLowerCase();
-  if (k === 'escape') { if (techOpen) closeTechTree(); game.placing = null; game.targeting = null; game.sel = []; refreshCard(); }
+  // overlays first — these work regardless of game state
+  if (k === 'escape') {
+    if (settingsOpen) { closeSettings(); return; }
+    if (pauseOpen) { resumeGame(); return; }
+  }
+  if (!game || game.over) return;
+  if (k === 'escape') {
+    // Esc cancels whatever you're doing; if there's nothing to cancel, it pauses
+    if (techOpen) { closeTechTree(); return; }
+    if (game.placing) { game.placing = null; return; }
+    if (game.targeting) { game.targeting = null; return; }
+    if (game.sel.length) { game.sel = []; refreshCard(); return; }
+    openPauseMenu(); return;
+  }
+  if (pauseOpen) return; // swallow game hotkeys while the pause menu is up
   if (k === 't') { ev.preventDefault(); toggleTechTree(); return; }
   if (k === ' ') {
     ev.preventDefault();
@@ -179,15 +192,17 @@ function centerCam(x, y) { game.cam.x = x - viewW() / 2; game.cam.y = y - viewH(
 function screenToWorld(sx, sy) { return { x: sx / game.cam.z + game.cam.x, y: sy / game.cam.z + game.cam.y }; }
 
 function panCamera(dt) {
-  const sp = 620 * dt / game.cam.z;  // constant on-screen speed regardless of zoom
+  const sp = 620 * (SETTINGS.panSpeed || 1) * dt / game.cam.z;  // constant on-screen speed regardless of zoom
   let dx = 0, dy = 0;
   if (keys['arrowleft'] || keys['a']) dx -= sp;
   if (keys['arrowright'] || keys['d']) dx += sp;
   if (keys['arrowup'] || keys['w']) dy -= sp;
   if (keys['arrowdown'] || keys['s']) dy += sp;
-  const M = 18;
-  if (mouse.x < M) dx -= sp; if (mouse.x > innerWidth - M) dx += sp;
-  if (mouse.y < M) dy -= sp; if (mouse.y > innerHeight - M) dy += sp;
+  if (SETTINGS.edgePan) {
+    const M = 18;
+    if (mouse.x < M) dx -= sp; if (mouse.x > innerWidth - M) dx += sp;
+    if (mouse.y < M) dy -= sp; if (mouse.y > innerHeight - M) dy += sp;
+  }
   game.cam.x += dx; game.cam.y += dy;
   clampCam();
   const w = screenToWorld(mouse.x, mouse.y); mouse.wx = w.x; mouse.wy = w.y;
