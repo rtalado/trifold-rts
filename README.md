@@ -1,21 +1,56 @@
 # TRIFOLD — an asymmetric RTS
 
-One war, **ten completely different ways to wage it.** A self-contained browser RTS
-(plain HTML5 canvas + vanilla JS, no build step, no framework) where every faction
-plays by its own rules — different economy, different production, different verbs.
-Every match is a free-for-all: destroy the enemy **cores** and the last one standing
-wins. When a core falls, that faction's entire army falls with it.
+One war, **ten completely different ways to wage it.** A self-contained desktop RTS
+(plain HTML5 canvas + vanilla JS wrapped in Electron, no build step, no framework)
+where every faction plays by its own rules — different economy, different
+production, different verbs. Every match is a free-for-all: destroy the enemy
+**cores** and the last one standing wins. When a core falls, that faction's entire
+army falls with it.
 
-## How to run
+## How to play
 
-- **Single player:** double-click `index.html` — it runs straight from disk, no
-  server needed. Or open the GitHub Pages link.
-- **To play with friends:** double-click `start.bat` (Windows) or run `./start.sh`
-  (Linux/macOS). It launches a tiny local web server and opens the game. The
-  GitHub Pages link works for multiplayer too.
+Install and run the desktop app — it runs in its own window (no browser, so browser
+shortcuts can never collide with the in-game controls) and **updates itself**: on
+launch it quietly checks GitHub Releases, downloads any new version in the
+background, and installs it on next start. No more re-downloading.
 
-Node.js is only needed for `start.bat` / `start.sh` (the local file server). The
-game itself has no dependencies — PeerJS is vendored in `libs/`.
+- **Windows:** run the `Trifold RTS Setup X.Y.Z.exe` installer from the latest
+  [GitHub Release](https://github.com/rtalado/trifold-rts/releases), then launch
+  **Trifold RTS** from the desktop / Start-menu shortcut.
+- **Linux:** download the `.AppImage` (or `.deb`) from the same Release and run it.
+
+The game itself has no dependencies — PeerJS is vendored in `libs/`. Multiplayer is
+peer-to-peer over WebRTC, so there's no server to run.
+
+### Running / building it yourself
+
+```
+npm install        # one-time: pulls in Electron + the build tools
+npm start          # run the desktop app from source (dev)
+
+npm run dist:win   # build a Windows installer  -> dist/Trifold RTS Setup X.Y.Z.exe
+npm run dist:linux # build Linux AppImage + .deb -> dist/
+```
+
+`npm run dist:win` must be run on Windows and `npm run dist:linux` on Linux —
+each OS builds its own installer. You normally don't run these by hand: see below.
+
+### Cutting a release (builds both OSes automatically)
+
+A GitHub Actions workflow (`.github/workflows/release.yml`) builds **both**
+Windows and Linux on every version tag and uploads the installers to a GitHub
+Release. To publish a new version:
+
+1. Bump `"version"` in `package.json` (e.g. `1.0.1`).
+2. `git tag v1.0.1 && git push origin v1.0.1`
+
+GitHub does the rest. Everyone running the desktop app auto-updates to it. The
+update feed is the repo's own GitHub Releases (configured under `build.publish`
+in `package.json`), so there's nothing extra to host.
+
+> **Icons:** the build currently uses Electron's default icon. To brand it, drop a
+> `build/icon.ico` (Windows, 256×256) and `build/icon.png` (Linux, 512×512) and
+> re-add the `icon` fields under `build.win` / `build.linux` in `package.json`.
 
 ## The menu
 
@@ -235,10 +270,13 @@ units draw a line to wherever they've been ordered. Select one of your buildings
   - `loop.js` — the `requestAnimationFrame` loop and background ticking.
   - `net.js` — snapshot serialization and peer-to-peer multiplayer + lobby.
   - `menu.js` — menu wiring (single-player / multiplayer setup).
-- `server.js` — a tiny dependency-free static file server (just serves the files;
-  multiplayer is peer-to-peer, not relayed).
 - `libs/peerjs.min.js` — vendored PeerJS (WebRTC) for multiplayer.
-- `start.bat` / `start.sh` — launch `server.js` and open the browser.
+- `electron/main.js` — the desktop wrapper: opens `index.html` in its own window
+  and runs the GitHub-Releases auto-updater.
+- `package.json` — Electron app metadata + `electron-builder` config (Windows &
+  Linux installers, update feed).
+- `.github/workflows/release.yml` — builds Windows + Linux and publishes a Release
+  on every version tag.
 
 Balance levers are concentrated in `js/defs.js`: `DEFS` (unit/building stats and
 costs), `ECON` (income rates), `RESEARCH` (upgrade effects) and `DIFFS` (AI difficulty).

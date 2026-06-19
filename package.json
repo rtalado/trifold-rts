@@ -1,0 +1,60 @@
+{
+  "name": "trifold-rts",
+  "version": "1.0.0",
+  "description": "Trifold — an asymmetric RTS. One war, ten ways to wage it.",
+  "author": "rtalado",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "publish": "electron-builder --win --linux --publish always"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.2.1"
+  },
+  "build": {
+    "appId": "com.rtalado.trifoldrts",
+    "productName": "Trifold RTS",
+    "publish": {
+      "provider": "github",
+      "owner": "rtalado",
+      "repo": "trifold-rts"
+    },
+    "files": [
+      "electron/**",
+      "index.html",
+      "css/**",
+      "js/**",
+      "libs/**",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Trifold RTS"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Game",
+      "synopsis": "An asymmetric RTS — one war, ten ways to wage it.",
+      "desktop": {
+        "Name": "Trifold RTS",
+        "Comment": "An asymmetric RTS — one war, ten ways to wage it.",
+        "Categories": "Game;StrategyGame;"
+      }
+    }
+  }
+}
