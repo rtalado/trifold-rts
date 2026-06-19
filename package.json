@@ -2,7 +2,10 @@
   "name": "trifold-rts",
   "version": "1.0.0",
   "description": "Trifold — an asymmetric RTS. One war, ten ways to wage it.",
-  "author": "rtalado",
+  "author": {
+    "name": "rtalado",
+    "email": "rtalado@users.noreply.github.com"
+  },
   "license": "MIT",
   "main": "electron/main.js",
   "scripts": {

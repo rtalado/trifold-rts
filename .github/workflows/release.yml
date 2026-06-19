@@ -19,6 +19,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false   # one OS failing shouldn't cancel the other build
       matrix:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
