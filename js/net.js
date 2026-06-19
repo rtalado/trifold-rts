@@ -33,11 +33,13 @@ function buildSnap() {
     if (e.owner) fl |= facIdx(e.owner) << 4;  // Obelisk captor (bits 4-7)
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
-    // full queue: each entry is a unit type index, or the research id string
-    const ql = (e.queue || []).map(it => it.research ? it.rid : TYPE_IDX[it.type]);
+    const rq = e.rqueue && e.rqueue.length ? e.rqueue[0] : null;
+    const ql = (e.queue || []).map(it => TYPE_IDX[it.type]);   // production: type indices
+    const rl = (e.rqueue || []).map(it => it.rid);             // research: rid strings
     return [e.id, TYPE_IDX[e.type], Math.round(e.x), Math.round(e.y),
       Math.ceil(e.hp), Math.ceil(e.shield), fl, prog,
       q ? Math.round((1 - q.t / q.total) * 100) : 0, ql,
+      rq ? Math.round((1 - rq.t / rq.total) * 100) : 0, rl,
       e.abilityCd ? Math.ceil(e.abilityCd) : 0];
   });
   const players = {};
@@ -73,13 +75,13 @@ function applySnap(m) {
   const byIdMap = new Map();
   for (const o of game.entities) byIdMap.set(o.id, o);
   for (const row of m.units) {
-    const [id, ti, x, y, hp, sh, fl, prog, qp, ql, acd] = row;
+    const [id, ti, x, y, hp, sh, fl, prog, qp, ql, rp, rl, acd] = row;
     seen.add(id);
     let e = byIdMap.get(id);
     if (!e) {
       const type = TYPE_LIST[ti], d = DEFS[type];
       e = { id, type, def: d, fac: d.fac, x, y, size: d.size, hpMax: d.hp,
-        shieldMax: d.shield || 0, order: { type: 'idle' }, queue: [], dead: false,
+        shieldMax: d.shield || 0, order: { type: 'idle' }, queue: [], rqueue: [], dead: false,
         deployed: false, lastHurt: -99, cd: 0, tgt: 0 };
       game.entities.push(e);
     }
@@ -98,12 +100,9 @@ function applySnap(m) {
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };
     e.progress = prog / 100 * e.def.time;
     e.abilityCd = acd || 0;
-    e.queue = [];
-    (ql || []).forEach((v, i) => {
-      const t0 = i === 0 ? (1 - qp / 100) : 1;       // only the front item shows progress
-      if (typeof v === 'string') e.queue.push({ research: true, rid: v, type: 'research', t: t0, total: 1 });
-      else e.queue.push({ type: TYPE_LIST[v], t: t0, total: 1 });
-    });
+    // production and research queues (only the front item shows live progress)
+    e.queue = (ql || []).map((v, i) => ({ type: TYPE_LIST[v], t: i === 0 ? (1 - qp / 100) : 1, total: 1 }));
+    e.rqueue = (rl || []).map((v, i) => ({ research: true, rid: v, type: 'research', t: i === 0 ? (1 - rp / 100) : 1, total: 1 }));
   }
   game.entities = game.entities.filter(e => seen.has(e.id));
   game.sel = game.sel.filter(e => seen.has(e.id));
@@ -292,7 +291,7 @@ function handleCmd(m) {
     if (e && e.fac === fac && e.def.produces && e.def.produces.includes(m.type)) enqueue(e, m.type);
   } else if (m.kind === 'deq') {
     const e = byId(m.id);
-    if (e && e.fac === fac) dequeue(e, m.idx);
+    if (e && e.fac === fac) dequeue(e, m.idx, m.r);
   } else if (m.kind === 'arkup') {
     const e = byId(m.id);
     if (e && e.fac === fac && e.type === 'ark') upgradeArk(fac, e);

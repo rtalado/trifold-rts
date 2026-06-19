@@ -129,7 +129,11 @@
   #minimapWrap { background:#0b0f16ee; border:1px solid #243247; border-radius:6px; padding:5px; pointer-events:auto; }
   #minimap { display:block; cursor:pointer; }
   #selinfo { flex:0 0 282px; height:142px; background:#0b0f16ee; border:1px solid #243247; border-radius:6px;
-    padding:9px 11px; font-size:12px; line-height:1.5; overflow:hidden; }
+    padding:9px 11px; font-size:12px; line-height:1.5; overflow:hidden; display:flex; flex-direction:column; }
+  #selinfo .si-main { flex:none; }
+  #selinfo .si-queues { flex:1 1 auto; min-height:0; overflow-y:auto; margin-top:3px; }
+  #selinfo .si-queues::-webkit-scrollbar { width:6px; }
+  #selinfo .si-queues::-webkit-scrollbar-thumb { background:#2a3954; border-radius:3px; }
   #selinfo .sel-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
   #selinfo .sel-name { font-size:14.5px; font-weight:700; color:#eef2f8; letter-spacing:.3px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -166,8 +170,7 @@
   /* editable production queue (in the selection panel) */
   #selinfo .sel-qhead { font-size:9px; font-weight:800; letter-spacing:1.5px; color:#7b8aa3; margin:2px 0 4px; }
   #selinfo .sel-qhead .qcap { color:#5d6b82; font-weight:600; }
-  #selinfo .sel-queue { display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start;
-    max-height:74px; overflow:hidden; }
+  #selinfo .sel-queue { display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start; margin-bottom:4px; }
   #selinfo .qchip { position:relative; display:flex; align-items:center; gap:5px; max-width:128px;
     padding:3px 6px; background:#141c2a; border:1px solid #2a3954; border-radius:4px; cursor:pointer;
     font-size:11px; color:#cdd6e4; overflow:hidden; }

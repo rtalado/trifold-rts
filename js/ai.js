@@ -14,7 +14,7 @@ function aiResearch(fac, p) {
     if (DEFS[labType].kind === 'building' && p.res >= DEFS[labType].cost) aiPlace(fac, labType, p.base);
     return;
   }
-  if (lab.constructing || lab.growing || lab.queue.length) return;
+  if (lab.constructing || lab.growing || (lab.rqueue && lab.rqueue.length)) return;
   let best = null;
   for (const rid of RESEARCH_BY_FAC[fac] || []) {
     const r = RESEARCH[rid];

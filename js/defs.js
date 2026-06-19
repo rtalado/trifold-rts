@@ -567,7 +567,7 @@ function cdOf(e) { const p = game.players[e.fac]; return e.def.cd * ((p && p.cdM
 function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1); }
 function capOf(fac) { const p = game.players[fac]; return FACTIONS[fac].cap + ((p && p.capBonus) || 0); }
 function researchQueued(fac, rid) {
-  return game.entities.some(e => !e.dead && e.fac === fac && e.queue && e.queue.some(q => q.research && q.rid === rid));
+  return game.entities.some(e => !e.dead && e.fac === fac && e.rqueue && e.rqueue.some(q => q.rid === rid));
 }
 // apply a finished research: record it, refresh multipliers, and retroactively
 // rescale existing units so the buff is immediate (preserving their health %).
@@ -592,10 +592,12 @@ function enqueueResearch(e, rid) {
   if (p.research.has(rid)) { localMsg(e.fac, 'Already researched'); return false; }
   if (researchQueued(e.fac, rid)) { localMsg(e.fac, 'Already researching ' + r.name); return false; }
   if (r.req && !p.research.has(r.req)) { localMsg(e.fac, 'Requires ' + RESEARCH[r.req].name); return false; }
-  if (e.queue.length >= 5) { localMsg(e.fac, 'Queue is full'); return false; }
+  if (!e.rqueue) e.rqueue = [];
+  if (e.rqueue.length >= 6) { localMsg(e.fac, 'Research queue is full'); return false; }
   if (p.res < r.cost) { localMsg(e.fac, 'Not enough ' + FACTIONS[e.fac].res); return false; }
   p.res -= r.cost;
-  e.queue.push({ research: true, rid, type: 'research', t: r.time, total: r.time });
+  // research has its own queue so it never blocks (or is blocked by) unit production
+  e.rqueue.push({ research: true, rid, type: 'research', t: r.time, total: r.time });
   return true;
 }
 

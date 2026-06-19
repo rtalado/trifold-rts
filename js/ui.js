@@ -226,12 +226,12 @@ function catClass(cat) {
 }
 
 // cancel a queued item (from the clickable queue chips in the selection panel)
-function cancelQueueItem(id, idx) {
+function cancelQueueItem(id, idx, research) {
   const e = byId(id);
   if (!e || e.fac !== game.localFac) return;
-  if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'deq', id, idx });
-  else dequeue(e, idx);
-  updateHUD();
+  if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'deq', id, idx, r: research ? 1 : 0 });
+  else dequeue(e, idx, research);
+  renderSelInfo(document.getElementById('selinfo'));
 }
 
 // ---------------- selection info panel ----------------
@@ -244,14 +244,38 @@ function statBar(label, cur, max, cls) {
   return '<div class="statbar"><i class="fill ' + cls + '" style="width:' + pct + '%"></i>'
     + '<b>' + label + ' ' + Math.ceil(cur) + '/' + max + '</b></div>';
 }
+// #selinfo is split into two persistent children: `.si-main` (rebuilt every
+// frame — non-interactive HP bars/notes) and `.si-queues` (rebuilt only when the
+// queue membership changes, with delegated clicks) so the queue chips stay
+// click-stable and keep their scroll position between frames.
+function ensureSelStructure(si) {
+  if (si.__main && si.__queues) return;
+  si.innerHTML = '';
+  const m = document.createElement('div'); m.className = 'si-main';
+  const q = document.createElement('div'); q.className = 'si-queues';
+  q.addEventListener('click', ev => {
+    const chip = ev.target.closest('.qchip'); if (!chip) return;
+    cancelQueueItem(+chip.dataset.eid, +chip.dataset.idx, chip.dataset.r === '1');
+  });
+  si.appendChild(m); si.appendChild(q);
+  si.__main = m; si.__queues = q; si.__qsig = null;
+}
+
 function renderSelInfo(si) {
+  ensureSelStructure(si);
+  si.__main.innerHTML = buildSelMainHTML();
+  const sig = queueSig();
+  if (sig !== si.__qsig) { si.__qsig = sig; si.__queues.innerHTML = buildQueuesHTML(); }
+  updateQueueProgress(si.__queues);
+}
+
+function buildSelMainHTML() {
   if (!game.sel.length) {
-    si.innerHTML = '<div class="sel-empty"><div class="sel-empty-t">NOTHING SELECTED</div>'
+    return '<div class="sel-empty"><div class="sel-empty-t">NOTHING SELECTED</div>'
       + '<div>Drag or click to select.</div>'
       + '<div>Right-click — move / attack / harvest</div>'
       + '<div>Shift+right-click — attack-move</div>'
       + '<div><b>F</b> select army &nbsp;·&nbsp; <b>Space</b> jump to core</div></div>';
-    return;
   }
   if (game.sel.length === 1) {
     const e = game.sel[0], cat = e.def.kind;
@@ -262,12 +286,10 @@ function renderSelInfo(si) {
     const notes = [];
     if (e.constructing) notes.push('Under construction ' + Math.floor(e.progress / e.def.time * 100) + '%');
     if (e.growing) notes.push('Growing ' + Math.floor(e.progress / e.def.time * 100) + '%');
-    // your own queues render as editable chips below; for others just a text note
-    if (e.queue && e.queue.length && e.fac !== game.localFac) {
+    // your own queues render as editable chips below; others just get a text note
+    if (e.fac !== game.localFac && e.queue && e.queue.length) {
       const it = e.queue[0];
-      const what = it.research ? ('Researching ' + (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'))
-        : ('Producing ' + DEFS[it.type].name);
-      notes.push(what + ' ' + Math.floor((1 - it.t / it.total) * 100) + '%'
+      notes.push('Producing ' + DEFS[it.type].name + ' ' + Math.floor((1 - it.t / it.total) * 100) + '%'
         + (e.queue.length > 1 ? ' (+' + (e.queue.length - 1) + ' queued)' : ''));
     }
     if (e.type === 'hive') notes.push('Right-click to set the swarm rally');
@@ -276,35 +298,63 @@ function renderSelInfo(si) {
     if (e.def.ability) notes.push(e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — target via the command card'));
     if (e.fac === 'choir' && e.def.kind === 'unit') notes.push('Fades away from the lattice — heals by dealing damage');
     if (notes.length) h += '<div class="sel-status">' + notes.map(n => '<div>' + n + '</div>').join('') + '</div>';
-    // editable production queue — click a chip to cancel it (refunds its cost)
-    if (e.queue && e.queue.length && e.fac === game.localFac) {
-      h += '<div class="sel-qhead">QUEUE <span class="qcap">' + e.queue.length + '/' + MAX_QUEUE + '</span></div><div class="sel-queue">';
-      e.queue.forEach((it, i) => {
-        const nm = it.research ? (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…') : DEFS[it.type].name;
-        const pct = i === 0 ? Math.floor((1 - it.t / it.total) * 100) : 0;
-        h += '<button class="qchip' + (it.research ? ' q-research' : '') + '" title="Cancel (refunds cost)" onclick="cancelQueueItem(' + e.id + ',' + i + ')">'
-          + '<i class="qprog" style="width:' + pct + '%"></i>'
-          + '<span class="qn">' + nm + '</span><span class="qx">✕</span></button>';
-      });
-      h += '</div>';
-    } else {
-      const desc = meta(e.type).desc;
-      if (desc) h += '<div class="sel-desc">' + desc + '</div>';
-    }
-    si.innerHTML = h;
-    return;
+    // description only when there's no editable queue taking the space
+    const ownsQueues = e.fac === game.localFac && ((e.queue && e.queue.length) || (e.rqueue && e.rqueue.length));
+    if (!ownsQueues) { const desc = meta(e.type).desc; if (desc) h += '<div class="sel-desc">' + desc + '</div>'; }
+    return h;
   }
   // multi-select: count, then a colour-dotted tally by type
   const counts = {};
   for (const e of game.sel) counts[e.type] = (counts[e.type] || 0) + 1;
-  let h = '<div class="sel-head"><span class="sel-name">' + game.sel.length + ' SELECTED</span></div>';
-  h += '<div class="sel-list">';
+  let h = '<div class="sel-head"><span class="sel-name">' + game.sel.length + ' SELECTED</span></div><div class="sel-list">';
   for (const t in counts) {
     const d = DEFS[t];
     h += '<div class="sel-li"><span class="dot dot-' + catClass(d.kind) + '"></span>'
       + '<span class="n">' + d.name + '</span><span class="x">×' + counts[t] + '</span></div>';
   }
-  si.innerHTML = h + '</div>';
+  return h + '</div>';
+}
+
+// a signature of which items are queued (not their progress) — when it changes
+// we rebuild the chips; otherwise we leave them be and just animate progress
+function queueSig() {
+  if (game.sel.length !== 1) return 'none';
+  const e = game.sel[0];
+  if (e.fac !== game.localFac) return 'foreign:' + e.id;
+  return e.id + '|P:' + (e.queue || []).map(it => it.type).join(',')
+    + '|R:' + (e.rqueue || []).map(it => it.rid).join(',');
+}
+
+function qchip(eid, idx, name, research) {
+  return '<button class="qchip' + (research ? ' q-research' : '') + '" title="Cancel (refunds cost)"'
+    + ' data-eid="' + eid + '" data-idx="' + idx + '" data-r="' + (research ? 1 : 0) + '">'
+    + '<i class="qprog" data-front="' + (idx === 0 ? 1 : 0) + '"></i>'
+    + '<span class="qn">' + name + '</span><span class="qx">✕</span></button>';
+}
+
+function buildQueuesHTML() {
+  if (game.sel.length !== 1) return '';
+  const e = game.sel[0];
+  if (e.fac !== game.localFac) return '';
+  let h = '';
+  if (e.queue && e.queue.length) {
+    h += '<div class="sel-qhead">PRODUCTION <span class="qcap">' + e.queue.length + '/' + MAX_QUEUE + '</span></div>'
+      + '<div class="sel-queue">' + e.queue.map((it, i) => qchip(e.id, i, DEFS[it.type].name, false)).join('') + '</div>';
+  }
+  if (e.rqueue && e.rqueue.length) {
+    h += '<div class="sel-qhead">RESEARCH <span class="qcap">' + e.rqueue.length + '/6</span></div>'
+      + '<div class="sel-queue">' + e.rqueue.map((it, i) => qchip(e.id, i, (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'), true)).join('') + '</div>';
+  }
+  return h;
+}
+
+function updateQueueProgress(q) {
+  if (game.sel.length !== 1) return;
+  const e = game.sel[0];
+  const pf = q.querySelector('.qchip[data-r="0"] .qprog[data-front="1"]');
+  if (pf && e.queue && e.queue[0]) pf.style.width = Math.floor((1 - e.queue[0].t / e.queue[0].total) * 100) + '%';
+  const rf = q.querySelector('.qchip[data-r="1"] .qprog[data-front="1"]');
+  if (rf && e.rqueue && e.rqueue[0]) rf.style.width = Math.floor((1 - e.rqueue[0].t / e.rqueue[0].total) * 100) + '%';
 }
 
 function updateHUD() {
@@ -334,11 +384,14 @@ function updateHUD() {
   if (btns.length === cmds.length) cmds.forEach((c, i) => { btns[i].disabled = !c.enabled; });
   else refreshCard();
 
-  if (techOpen) buildTechTree(); // keep the open tech tree live
+  if (techOpen) refreshTechTree(); // keep the open tech tree live (no DOM rebuild)
 }
 
 // ---------------- visual tech tree ----------------
 let techOpen = false;
+let techBuiltFor = null;        // which faction the current node DOM was built for
+const techNodeEls = {};         // rid -> persistent node element (kept stable so
+                                // hovering/clicking isn't interrupted by refreshes)
 // the player's standing research building (the Ark, for the base-less Exodus)
 function techLab() { return ents(e => e.fac === game.localFac && e.def.researchLab && !e.constructing && !e.growing)[0]; }
 function openTechTree() { if (!game) return; techOpen = true; document.getElementById('techtree').style.display = 'flex'; buildTechTree(); }
@@ -346,30 +399,35 @@ function closeTechTree() { techOpen = false; document.getElementById('techtree')
 function toggleTechTree() { techOpen ? closeTechTree() : openTechTree(); }
 
 function researchNode(rid) {
+  const fac = game.localFac, p = game.players[fac], r = RESEARCH[rid];
+  if (!r || p.research.has(rid) || researchQueued(fac, rid)) return; // done/queued — ignore
+  if (r.req && !p.research.has(r.req)) { floatMsg('Requires ' + RESEARCH[r.req].name); return; }
   const lab = techLab();
   if (!lab) { floatMsg('Build your research building first'); return; }
-  if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'research', id: lab.id, rid });
+  if (game.mode === 'guest') netSend({ t: 'cmd', fac, kind: 'research', id: lab.id, rid });
   else enqueueResearch(lab, rid);
-  buildTechTree();
+  refreshTechTree();
 }
 
 // grid layout: tier = column, branch = row
 const TECH_COLW = 188, TECH_ROWH = 104, TECH_PADX = 116, TECH_PADY = 14, TECH_NW = 150, TECH_NH = 70;
 function techPos(rid) { const r = RESEARCH[rid]; return { x: TECH_PADX + r.tier * TECH_COLW, y: TECH_PADY + r.branch * TECH_ROWH }; }
 
+// Build the tech-tree DOM once (per faction). Node elements are then kept and
+// only their *state* is updated by refreshTechTree, so hovering or clicking a
+// node is never interrupted by a rebuild.
 function buildTechTree() {
   if (!game || !techOpen) return;
-  const fac = game.localFac, p = game.players[fac], F = FACTIONS[fac], list = RESEARCH_BY_FAC[fac] || [];
+  const fac = game.localFac, F = FACTIONS[fac], list = RESEARCH_BY_FAC[fac] || [];
   const title = document.getElementById('techTitle');
   title.textContent = F.name + ' — TECH TREE'; title.style.color = F.color;
-  const done = list.filter(r => p.research.has(r)).length;
-  document.getElementById('techRes').innerHTML = F.res + ': <b>' + Math.floor(p.res) + '</b> &nbsp;·&nbsp; Researched ' + done + '/' + list.length;
 
   const W = TECH_PADX + 4 * TECH_COLW, H = TECH_PADY + 4 * TECH_ROWH;
   const nodes = document.getElementById('techNodes'), svg = document.getElementById('techLines');
   nodes.style.width = W + 'px'; nodes.style.height = H + 'px';
   svg.setAttribute('width', W); svg.setAttribute('height', H);
   nodes.innerHTML = '';
+  for (const k in techNodeEls) delete techNodeEls[k];
 
   // branch labels down the left
   TECH_BRANCHES.forEach((b, i) => {
@@ -378,7 +436,30 @@ function buildTechTree() {
     nodes.appendChild(lbl);
   });
 
-  // dependency curves
+  // nodes (static structure + one persistent click handler each)
+  for (const rid of list) {
+    const r = RESEARCH[rid];
+    const el = document.createElement('div'); el.className = 'technode';
+    const pp = techPos(rid); el.style.left = pp.x + 'px'; el.style.top = pp.y + 'px';
+    el.innerHTML = '<div class="tn-name">' + r.name + '</div><div class="tn-desc">' + r.desc + '</div><div class="tn-cost"></div>';
+    el.onclick = () => researchNode(rid);
+    techNodeEls[rid] = el;
+    nodes.appendChild(el);
+  }
+  techBuiltFor = fac;
+  refreshTechTree();
+}
+
+// Per-frame: update header, dependency-line colours and each node's class/cost
+// in place. No elements are created or destroyed here.
+function refreshTechTree() {
+  if (!game || !techOpen) return;
+  const fac = game.localFac;
+  if (techBuiltFor !== fac) { buildTechTree(); return; }
+  const p = game.players[fac], F = FACTIONS[fac], list = RESEARCH_BY_FAC[fac] || [];
+  const done = list.filter(r => p.research.has(r)).length;
+  document.getElementById('techRes').innerHTML = F.res + ': <b>' + Math.floor(p.res) + '</b> &nbsp;·&nbsp; Researched ' + done + '/' + list.length;
+
   let lines = '';
   for (const rid of list) {
     const r = RESEARCH[rid]; if (!r.req) continue;
@@ -387,21 +468,19 @@ function buildTechTree() {
     const col = p.research.has(rid) ? '#7dd87d' : (p.research.has(r.req) ? '#5b6b82' : '#2c3849');
     lines += '<path d="M' + x1 + ' ' + y1 + ' C ' + mx + ' ' + y1 + ' ' + mx + ' ' + y2 + ' ' + x2 + ' ' + y2 + '" fill="none" stroke="' + col + '" stroke-width="2"/>';
   }
-  svg.innerHTML = lines;
+  document.getElementById('techLines').innerHTML = lines;
 
-  // nodes
   for (const rid of list) {
+    const el = techNodeEls[rid]; if (!el) continue;
     const r = RESEARCH[rid];
     const has = p.research.has(rid), queued = researchQueued(fac, rid);
     const reqMet = !r.req || p.research.has(r.req), afford = p.res >= r.cost;
     let cls = 'technode';
     if (has) cls += ' done'; else if (queued) cls += ' queued'; else if (!reqMet) cls += ' locked'; else cls += afford ? ' avail' : ' poor';
-    const el = document.createElement('div'); el.className = cls;
-    const pp = techPos(rid); el.style.left = pp.x + 'px'; el.style.top = pp.y + 'px';
-    el.innerHTML = '<div class="tn-name">' + r.name + '</div><div class="tn-desc">' + r.desc + '</div>'
-      + '<div class="tn-cost">' + (has ? '✓ Researched' : queued ? '⚙ Researching…' : r.cost + ' ' + F.res) + '</div>';
-    if (!has && !queued && reqMet) el.onclick = () => researchNode(rid);
-    nodes.appendChild(el);
+    if (el.className !== cls) el.className = cls;
+    const costEl = el.querySelector('.tn-cost');
+    const costTxt = has ? '✓ Researched' : queued ? '⚙ Researching…' : (r.cost + ' ' + F.res);
+    if (costEl.textContent !== costTxt) costEl.textContent = costTxt;
   }
 }
 

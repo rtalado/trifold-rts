@@ -226,7 +226,7 @@ function spawnEnt(type, fac, x, y, opts = {}) {
     shield: bSh * shMul, shieldMax: bSh * shMul, lastHurt: -99,
     cd: 0, blinkCd: 0, scanT: Math.random() * 0.25, tgt: 0,
     order: { type: 'idle' }, dead: false,
-    queue: [], rally: null, deployed: false,
+    queue: [], rqueue: [], rally: null, deployed: false,
   };
   if (d.creepR) e.creepCur = opts.creepCur != null ? opts.creepCur : 2;
   if (d.spawns) e.spawnTimer = d.spawnEvery;
@@ -567,8 +567,8 @@ function updateBuilding(e, dt) {
       }
     }
   }
-  // production / research queue (research labs have no `produces` but still queue)
-  if (d.produces || (e.queue && e.queue.length)) tickQueue(e, dt);
+  // production / research queues (research labs have no `produces` but still queue)
+  if (d.produces || (e.queue && e.queue.length) || (e.rqueue && e.rqueue.length)) tickQueue(e, dt);
   // turret combat
   if (d.dmg) {
     e.cd = Math.max(0, e.cd - dt);
@@ -584,17 +584,26 @@ function updateBuilding(e, dt) {
 }
 
 function tickQueue(e, dt) {
-  if (!e.queue.length) return;
-  const item = e.queue[0];
-  item.t -= dt;
-  if (item.t <= 0) {
-    if (item.research) { e.queue.shift(); applyResearch(e.fac, item.rid); return; }
-    if (countUnits(e.fac) >= capOf(e.fac)) { item.t = 0; return; } // hold until supply frees
-    e.queue.shift();
-    const a = Math.random() * Math.PI * 2;
-    const u = spawnEnt(item.type, e.fac, e.x + Math.cos(a) * (e.size + 14), e.y + Math.sin(a) * (e.size + 14));
-    const r = e.rally || { x: e.x + 50, y: e.y + 50 };
-    u.order = u.def.harvester ? { type: 'move', x: r.x, y: r.y } : { type: 'amove', x: r.x, y: r.y };
+  // unit production
+  if (e.queue && e.queue.length) {
+    const item = e.queue[0];
+    item.t -= dt;
+    if (item.t <= 0) {
+      if (countUnits(e.fac) >= capOf(e.fac)) item.t = 0; // hold until supply frees
+      else {
+        e.queue.shift();
+        const a = Math.random() * Math.PI * 2;
+        const u = spawnEnt(item.type, e.fac, e.x + Math.cos(a) * (e.size + 14), e.y + Math.sin(a) * (e.size + 14));
+        const r = e.rally || { x: e.x + 50, y: e.y + 50 };
+        u.order = u.def.harvester ? { type: 'move', x: r.x, y: r.y } : { type: 'amove', x: r.x, y: r.y };
+      }
+    }
+  }
+  // research runs on its own track, in parallel with production
+  if (e.rqueue && e.rqueue.length) {
+    const it = e.rqueue[0];
+    it.t -= dt;
+    if (it.t <= 0) { e.rqueue.shift(); applyResearch(e.fac, it.rid); }
   }
 }
 
@@ -616,12 +625,14 @@ function enqueue(e, type) {
 }
 
 // cancel a queued item, refunding what it cost. idx 0 is the one in progress.
-function dequeue(e, idx) {
-  if (!e || !e.queue || idx < 0 || idx >= e.queue.length) return false;
-  const item = e.queue[idx], p = game.players[e.fac];
+// `research` true cancels from the research queue, else the production queue.
+function dequeue(e, idx, research) {
+  const q = research ? e.rqueue : e.queue;
+  if (!e || !q || idx < 0 || idx >= q.length) return false;
+  const item = q[idx], p = game.players[e.fac];
   if (item.research) { const r = RESEARCH[item.rid]; if (r) p.res += r.cost; }
   else { const d = DEFS[item.type]; if (d) { p.res += d.cost || 0; p.iron = (p.iron || 0) + (d.cost2 || 0); } }
-  e.queue.splice(idx, 1);
+  q.splice(idx, 1);
   return true;
 }
 
@@ -828,10 +839,19 @@ function tickCapture(dt) {
   }
 }
 
-// regen: swarm heals on creep, exodus shields recharge, choir spirits decay
+// regen: general out-of-combat healing, swarm creep-heal, exodus shields, choir decay
+const REGEN_DELAY = 8;     // seconds without taking damage before HP regen kicks in
+const REGEN_RATE = 0.03;   // fraction of max HP healed per second once regenerating
 function tickRegen(dt) {
   for (const e of game.entities) {
     if (e.dead) continue;
+    // general out-of-combat regeneration — anything that hasn't been hit for a
+    // while slowly heals. Skips neutral camps and Choir field-units (which fade
+    // by their own lattice rules below).
+    if (e.fac !== 'neutral' && !e.constructing && !e.growing && e.hp < e.hpMax
+        && !(e.fac === 'choir' && e.def.kind === 'unit')
+        && game.t - (e.lastHurt || -99) > REGEN_DELAY)
+      e.hp = Math.min(e.hpMax, e.hp + e.hpMax * REGEN_RATE * dt);
     if (e.fac === 'myriad' && e.hp < e.hpMax && onCreep(e.fac, e.x, e.y) && !e.constructing && !e.growing)
       e.hp = Math.min(e.hpMax, e.hp + 4 * dt);
     if (e.fac === 'exodus' && e.shieldMax > 0 && game.t - e.lastHurt > 2.5)
