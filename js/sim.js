@@ -358,6 +358,7 @@ function fireAt(e, t) {
     addFx({ kind: 'slash', x: t.x, y: t.y, ttl: 0.15, max: 0.15, color: facColor(e.fac) });
   } else if (d.shot === 'beam') {
     applyDamage(t, dmg, e);
+    if (d.splash) splash(e, t); // chaining/arcing beams (e.g. the Galvan) splash on hit
     addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: t.x, y2: t.y, ttl: 0.18, max: 0.18, color: facColor(e.fac) });
   } else {
     const speed = d.shot === 'shell' ? 240 : 380;
@@ -848,8 +849,10 @@ function tickEconomy(dt) {
       const blooms = ents(e => e.fac === fac && e.type === 'bloom' && !e.growing).length;
       gain = ECON.verdantBase + blooms * ECON.verdantPerBloom;
     } else if (fac === 'stormforge') {
+      // each standing Dynamo's payout ramps with elapsed time, so early Dynamos
+      // (and holding them) compound into a fortune — the engine that accelerates.
       const dynamos = ents(e => e.fac === fac && e.type === 'dynamo' && !e.growing).length;
-      gain = (ECON.stormBase + dynamos * ECON.stormPerDynamo) * (1 + game.t * ECON.stormRamp);
+      gain = ECON.stormBase + dynamos * ECON.stormPerDynamo * (1 + game.t * ECON.stormRamp);
     } else if (fac === 'pact') {
       gain = ECON.pactBase; // the rest is reaped from your own dying (see applyDamage)
     }
@@ -929,7 +932,8 @@ function tickRegen(dt) {
       }
     }
   }
-  // healing auras: exodus guardian (shields+hp), vanguard medic (hp)
+  // healing auras: exodus guardian (shields+hp), stormforge Charge Pylon (shields+hp),
+  // vanguard medic & verdant/pact apex (hp)
   for (const g of ents(e => e.def.aura)) {
     for (const o of game.entities) {
       if (o.dead || o.fac !== g.fac || o === g) continue;
@@ -937,6 +941,9 @@ function tickRegen(dt) {
         if (g.type === 'guardian') {
           if (o.shieldMax > 0) o.shield = Math.min(o.shieldMax, o.shield + 10 * dt);
           o.hp = Math.min(o.hpMax, o.hp + 2 * dt);
+        } else if (g.def.shieldHeal) {
+          if (o.shieldMax > 0) o.shield = Math.min(o.shieldMax, o.shield + g.def.shieldHeal * dt);
+          if (g.def.heal) o.hp = Math.min(o.hpMax, o.hp + g.def.heal * dt);
         } else if (g.def.heal) {
           o.hp = Math.min(o.hpMax, o.hp + g.def.heal * dt);
         }

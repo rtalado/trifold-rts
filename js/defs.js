@@ -41,7 +41,7 @@ const FACTIONS = {
   syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 40 },
   warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 60, res2: 'Iron', res3: 'Powder' },
   ember:     { name: 'EMBER NOMADS',     color: '#ff8a2a', dark: '#4a2a0e', res: 'Plunder',cap: 66 },
-  verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 84 },
+  verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 84, res2: 'Pollen', res3: 'Loam' },
   stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 36 },
   pact:      { name: 'OBSIDIAN PACT',    color: '#c0303a', dark: '#3a0e12', res: 'Blood',  cap: 72 },
 };
@@ -59,8 +59,8 @@ const HINTS = {
   syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
   warden: 'TWO resources: Stone from your buildings’ total mass (Quarries add a trickle), Iron only from Forges. Your tech tree is DISTRIBUTED — raise advanced structures FROM advanced ones: the War College builds the Bunker/Ballista/Hall, the War Foundry the Redoubt/Arsenal, the Arsenal the Bulwark and the doomsday WORLDBREAKER siege gun (map-spanning Gustav Strike). Slow, armoured, unstoppable. Hold the Keep.',
   ember: 'No mines, no farms — you fund the war by WAGING it. Every point of damage your warband deals to the enemy is paid back as Plunder. Fast, cheap, fragile raiders: keep attacking or starve. Guard the War Pyre.',
-  verdant: 'A slow, unstoppable garden. Plant Blooms — each mature Bloom pays Sap, so the more you grow the faster you snowball. Groves breed free Saplings forever. Patient early, overwhelming late. Protect the Heartwood.',
-  stormforge: 'An engine that only accelerates. Your income RAMPS the longer the game runs, supercharged by Dynamos — time is on your side. Few, expensive, devastating machines. Survive the early game and become unstoppable. Defend the Reactor.',
+  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds. A diverse garden snowballs — your grandest plants and beasts demand a MIX of all three. Groves breed free Saplings forever; Spore Vents gas a kill-zone; Thornwalls root into living barriers to funnel the foe onto your thorns. Patient early, unstoppable late. Protect the Heartwood.',
+  stormforge: 'An engine that only accelerates. Power RAMPS the longer your Dynamos stand — each one pays more every minute, so time and held ground compound into a fortune. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Survive the early game and bury them. Defend the Reactor.',
   pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Reckless by design. Keep the Altar.',
 };
 
@@ -193,23 +193,30 @@ const DEFS = {
   warlodge:  { fac:'ember', kind:'building', name:'War Lodge', hp:520, size:22, cost:140, time:12, researchLab:true },
   firewagon: { fac:'ember', kind:'unit', name:'Fire Wagon', hp:160, size:13, speed:110, cost:160, time:9, dmg:16, range:90, cd:0.7, aggro:175, shot:'glob', splash:36 },
 
-  // ----- VERDANT BLOOM (garden: Sap from mature Blooms; Groves breed free Saplings) -----
-  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','grove','bramble','arboretum','heartgrove'], spawns:'sapling', spawnEvery:8 },
+  // ----- VERDANT BLOOM (a 3-harvest garden: Sap from Blooms, Pollen from Pollen
+  //   Spires, Loam from Mulch Beds; the grandest plants & beasts demand a MIX) -----
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','petalspire','mulchbed','grove','bramble','sporevent','thornwall','arboretum','heartgrove'], spawns:'sapling', spawnEvery:8 },
   bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
+  petalspire:{ fac:'verdant', kind:'building', name:'Pollen Spire', hp:300, size:16, cost:110, time:12, ironPerSec:0.9 },
+  mulchbed:  { fac:'verdant', kind:'building', name:'Mulch Bed', hp:360, size:19, cost:120, time:12, powderPerSec:0.7 },
   grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6 },
   bramble:   { fac:'verdant', kind:'building', name:'Bramble', hp:360, size:13, cost:120, time:9, dmg:11, range:172, cd:0.9, aggro:190, shot:'glob' },
+  sporevent: { fac:'verdant', kind:'building', name:'Spore Vent', hp:380, size:15, cost:140, cost3:25, time:13, dmg:14, range:150, cd:1.4, aggro:175, shot:'glob', splash:42 },
+  thornwall: { fac:'verdant', kind:'building', name:'Thornwall', hp:1050, size:14, cost:35, cost3:22, time:7, dmg:7, range:52, cd:1.2, aggro:60, shot:'glob' },
   sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee' },
   thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:70, size:8, speed:74, cost:90, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
-  treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:300, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
+  treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:270, cost2:25, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
   arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true },
-  ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:420, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
+  ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:360, cost2:45, cost3:25, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
 
   // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
-  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','voltaic','gladius'], grows:['dynamo','tesla','foundry_s','stormlab','arcfoundry'] },
+  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','galvan','voltaic','gladius'], grows:['dynamo','pylon','tesla','foundry_s','stormlab','arcfoundry'] },
   dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
+  pylon:     { fac:'stormforge', kind:'building', name:'Charge Pylon', hp:460, size:16, cost:170, time:12, aura:140, shieldHeal:16, heal:2 },
   tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:16, range:195, cd:1.1, aggro:205, shot:'beam' },
   foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus'] },
   arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:90, shield:40, size:9, speed:118, cost:110, time:8, dmg:9, range:115, cd:0.4, aggro:205, shot:'bullet' },
+  galvan:    { fac:'stormforge', kind:'unit', name:'Galvan', hp:170, shield:120, size:12, speed:90, cost:180, time:11, dmg:18, range:64, cd:0.7, aggro:180, shot:'beam', splash:22 },
   voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:80, shield:60, size:9, speed:62, cost:210, time:13, dmg:30, range:230, cd:2.0, aggro:245, shot:'beam' },
   colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:520, shield:160, size:18, speed:48, cost:420, time:24, dmg:40, range:175, cd:2.4, aggro:200, shot:'shell', splash:55 },
   stormlab:  { fac:'stormforge', kind:'building', name:'Research Bay', hp:520, size:22, cost:150, time:14, researchLab:true },
@@ -266,8 +273,8 @@ const DEFS = {
                aux:{ dmg:10, range:130, cd:0.3, shot:'glob', guns:3 } },
 
   // VERDANT BLOOM — a world-tree: titanic HP, splashing blows, heals the garden
-  heartgrove:{ fac:'verdant', kind:'building', name:'Heart Grove', hp:1250, size:28, cost:540, time:18, apex:true, spawns:'sapling', spawnEvery:5, produces:['eldertree'] },
-  eldertree: { fac:'verdant', kind:'unit', name:'Eldertree', hp:1900, size:24, speed:36, cost:720, time:38, apex:true,
+  heartgrove:{ fac:'verdant', kind:'building', name:'Heart Grove', hp:1250, size:28, cost:520, cost2:60, cost3:40, time:18, apex:true, spawns:'sapling', spawnEvery:5, produces:['eldertree'] },
+  eldertree: { fac:'verdant', kind:'unit', name:'Eldertree', hp:1900, size:24, speed:36, cost:700, cost2:90, cost3:60, time:38, apex:true,
                dmg:40, range:32, cd:1.6, aggro:190, shot:'melee', splash:62, aura:170, heal:7 },
 
   // STORMFORGE DYNASTY — a storm titan: heavy shields, long beam + four arc turrets
@@ -379,19 +386,25 @@ const META = {
   firebrand: { desc: 'Splashing molotov thrower.', req: 'warcamp' },
   warbeast:  { desc: 'Fast heavy charger that bowls through lines.', req: 'warcamp' },
   // VERDANT BLOOM
-  heart:     { desc: 'Your core. Spawns free Saplings forever and grows the garden.' },
-  bloom:     { desc: 'Economy plant. Each mature Bloom pays Sap — the more you grow, the richer you get.' },
+  heart:     { desc: 'Your core. Spawns free Saplings forever and grows the garden. THREE harvests feed it: Sap, Pollen and Loam.' },
+  bloom:     { desc: 'Sap plant. Each mature Bloom pays Sap — your bulk economy.' },
+  petalspire:{ desc: 'Mints Pollen — the second harvest, demanded by your finer plants and beasts.', req: 'bloom' },
+  mulchbed:  { desc: 'Mints Loam — the third harvest, that feeds your great trees and roots your Thornwalls.', req: 'bloom' },
   grove:     { desc: 'Breeds free Saplings, forever.', req: 'bloom' },
-  bramble:   { desc: 'Static thorn turret.', req: 'bloom' },
+  bramble:   { desc: 'Static thorn turret — long-range single-target poke.', req: 'bloom' },
+  sporevent: { desc: 'Static plant that coughs corrosive spore-clouds — splash on anything clumped in front of it. Pairs with Thornwalls to gas a funnelled foe. Costs Sap + Loam.', req: 'grove' },
+  thornwall: { desc: 'A rooting wall-plant: dirt-cheap, super-tough, and thorny up close. Chain them into living barricades to seal your hold and funnel the enemy into a kill-zone. Costs Sap + Loam; needs an Arboretum.', req: 'arboretum' },
   sapling:   { desc: 'Free, weak melee swarm creature.' },
   thornling: { desc: 'Ranged thorn-spitter.' },
-  treant:    { desc: 'Towering splashing bruiser.', req: 'grove' },
+  treant:    { desc: 'Towering splashing bruiser. Costs Sap + Pollen.', req: 'grove' },
   // STORMFORGE DYNASTY
-  reactor:   { desc: 'Your core. Assembles machines. Income ramps with elapsed time — Dynamos accelerate it.' },
-  dynamo:    { desc: 'Accelerates your escalating income. Build several early.' },
+  reactor:   { desc: 'Your core. Assembles machines. Power ramps with elapsed time — each standing Dynamo pays more every minute.' },
+  dynamo:    { desc: 'Your engine. Each Dynamo’s output RAMPS the longer it stands — build them early and defend them; time turns them into a fortune.' },
+  pylon:     { desc: 'Projects a charge field that re-energises the shields (and slowly the hull) of nearby machines — so a defended push never runs out of shield.', req: 'dynamo' },
   tesla:     { desc: 'Static beam tower. Defence.', req: 'dynamo' },
   foundry_s: { desc: 'Assembles the towering Colossus.', req: 'dynamo' },
   arclight:  { desc: 'Fast shielded skirmisher with rapid fire.' },
+  galvan:    { desc: 'Fast, heavily-shielded shock-trooper — closes in and arcs a splashing short-range bolt. The Dynasty’s front line.', req: 'dynamo' },
   voltaic:   { desc: 'Long-range shielded beam platform.', req: 'dynamo' },
   colossus:  { desc: 'Huge shielded walker with a splashing siege cannon.' },
   // OBSIDIAN PACT
@@ -645,12 +658,14 @@ const ECON = {
   wardenObeliskPowder: 0.3,
   // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle
   emberBase: 1.2, emberLootPerDmg: 0.32,
-  // verdant: income per mature Bloom (grows slowly, snowballs hard)
+  // verdant: Sap income per mature Bloom (Pollen + Loam come from their own plants,
+  // minted generically via ironPerSec / powderPerSec). The garden snowballs on Sap;
+  // Pollen and Loam are the scarcer harvests that gate the diverse, late-game plants.
   verdantBase: 1.2, verdantPerBloom: 1.6,
-  // stormforge: income ramps with elapsed game time, accelerated by Dynamos. The
-  // raw time-ramp is gentler now so just turtling on Dynamos no longer wins by itself
-  // — holding ground (Obelisks) is meant to carry the mid-game.
-  stormBase: 1.6, stormPerDynamo: 1.1, stormRamp: 0.0012,
+  // stormforge: the engine that accelerates. Each standing Dynamo's output RAMPS with
+  // elapsed game time, so early Dynamos compound into a fortune — the longer you hold
+  // them (and the map), the more devastating the late game. Held Obelisks add on top.
+  stormBase: 1.8, stormPerDynamo: 1.0, stormRamp: 0.0022,
   // pact: Blood gained when your OWN units die (flat + a share of their max HP)
   pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
   // neutral capture points pay their holder a steady income. Obelisks now matter a

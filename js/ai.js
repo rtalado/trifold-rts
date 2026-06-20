@@ -267,37 +267,44 @@ function aiTick(fac) {
       if (u.order.type === 'idle') u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
   }
 
-  else if (fac === 'verdant') { // plant economy, snowball with free saplings
+  else if (fac === 'verdant') { // 3-harvest garden: Sap + Pollen + Loam, snowball with free saplings
     const heart = myCore;
-    const blooms = ents(e => e.fac === fac && e.type === 'bloom').length;
-    const groves = ents(e => e.fac === fac && e.type === 'grove').length;
-    const brambles = ents(e => e.fac === fac && e.type === 'bramble').length;
-    if (blooms < aiGrow(6, 2, 16) && p.res >= 90) aiPlace(fac, 'bloom', p.base);
-    else if (groves < aiGrow(3, 1, 8) && p.res >= 170) aiPlace(fac, 'grove', p.base);
-    else if (brambles < aiGrow(3, 1, 9) && p.res >= 120 && game.t > 90) aiPlace(fac, 'bramble', p.base);
-    else if (blooms < aiGrow(12, 3, 30) && p.res >= 300) aiPlace(fac, 'bloom', p.base);
+    const can = t => affordable(p, DEFS[t]);   // respects Sap, Pollen and Loam
+    const have = t => ents(e => e.fac === fac && e.type === t).length;
+    const blooms = have('bloom');
+    if (blooms < aiGrow(5, 2, 14) && p.res >= 90) aiPlace(fac, 'bloom', p.base);
+    else if (have('petalspire') < aiGrow(2, 1, 6) && p.res >= 110) aiPlace(fac, 'petalspire', p.base);
+    else if (have('mulchbed') < aiGrow(2, 1, 6) && p.res >= 120) aiPlace(fac, 'mulchbed', p.base);
+    else if (have('grove') < aiGrow(3, 1, 8) && p.res >= 170) aiPlace(fac, 'grove', p.base);
+    else if (have('bramble') < aiGrow(3, 1, 9) && p.res >= 120 && game.t > 90) aiPlace(fac, 'bramble', p.base);
+    else if (have('sporevent') < aiGrow(2, 1, 6) && can('sporevent') && techMet(fac, 'sporevent') && game.t > 120) aiPlace(fac, 'sporevent', p.base);
+    else if (blooms < aiGrow(11, 3, 28) && p.res >= 300) aiPlace(fac, 'bloom', p.base);
     if (heart && !heart.queue.length && p.res >= 90) {
-      const treants = ents(e => e.fac === fac && e.type === 'treant').length;
-      const ancients = ents(e => e.fac === fac && e.type === 'ancient').length;
-      if (ancients < 2 && p.res >= 420 && game.t > 220 && techMet(fac, 'ancient')) enqueue(heart, 'ancient');
-      else enqueue(heart, (treants < 3 && p.res >= 300 && game.t > 150 && techMet(fac, 'treant')) ? 'treant' : 'thornling');
+      const treants = have('treant');
+      const ancients = have('ancient');
+      if (ancients < 2 && can('ancient') && game.t > 220 && techMet(fac, 'ancient')) enqueue(heart, 'ancient');
+      else if (treants < 3 && can('treant') && game.t > 150 && techMet(fac, 'treant')) enqueue(heart, 'treant');
+      else enqueue(heart, 'thornling');
     }
   }
 
-  else if (fac === 'stormforge') { // ramp the engine, then field a few giants
+  else if (fac === 'stormforge') { // ramp the engine, shield the army, then field giants
     const reactor = myCore;
-    const dynamos = ents(e => e.fac === fac && e.type === 'dynamo').length;
-    const teslas = ents(e => e.fac === fac && e.type === 'tesla').length;
-    const foundries = ents(e => e.fac === fac && e.type === 'foundry_s').length;
+    const have = t => ents(e => e.fac === fac && e.type === t).length;
+    const dynamos = have('dynamo');
     if (dynamos < aiGrow(4, 1, 12) && p.res >= 200) aiPlace(fac, 'dynamo', p.base);
-    else if (teslas < aiGrow(3, 1, 8) && p.res >= 160 && game.t > 80) aiPlace(fac, 'tesla', p.base);
-    else if (foundries < aiGrow(1, 1, 3) && p.res >= 260 && game.t > 160) aiPlace(fac, 'foundry_s', p.base);
+    else if (have('pylon') < aiGrow(2, 1, 6) && p.res >= 170 && game.t > 70) aiPlace(fac, 'pylon', p.base);
+    else if (have('tesla') < aiGrow(3, 1, 8) && p.res >= 160 && game.t > 80) aiPlace(fac, 'tesla', p.base);
+    else if (have('foundry_s') < aiGrow(1, 1, 3) && p.res >= 260 && game.t > 160) aiPlace(fac, 'foundry_s', p.base);
     if (reactor && !reactor.queue.length && p.res >= 110) {
-      const volts = ents(e => e.fac === fac && e.type === 'voltaic').length;
-      const arcs = ents(e => e.fac === fac && e.type === 'arclight').length;
-      const glads = ents(e => e.fac === fac && e.type === 'gladius').length;
+      const volts = have('voltaic');
+      const arcs = have('arclight');
+      const glads = have('gladius');
+      const galvs = have('galvan');
       if (glads < arcs / 2 && p.res >= 230 && techMet(fac, 'gladius')) enqueue(reactor, 'gladius');
-      else enqueue(reactor, (volts < arcs / 2 && p.res >= 210 && techMet(fac, 'voltaic')) ? 'voltaic' : 'arclight');
+      else if (volts < arcs / 2 && p.res >= 210 && techMet(fac, 'voltaic')) enqueue(reactor, 'voltaic');
+      else if (galvs < arcs / 2 && p.res >= 180 && techMet(fac, 'galvan')) enqueue(reactor, 'galvan');
+      else enqueue(reactor, 'arclight');
     }
     for (const f of ents(e => e.fac === fac && e.type === 'foundry_s' && !e.growing))
       if (!f.queue.length && p.res >= 420) enqueue(f, 'colossus');

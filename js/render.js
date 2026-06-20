@@ -767,6 +767,31 @@ function drawEnt(e) {
         const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.6;
         ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
+      } else if (e.type === 'petalspire') { // pollen sacs on a spire
+        ctx.fillStyle = '#ffe27a';
+        for (let i = 0; i < 5; i++) {
+          const a = -Math.PI / 2 + (i - 2) * 0.5;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.55, y + Math.sin(a) * s * 0.55, s * 0.22, 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (e.type === 'mulchbed') { // dark loamy mound with fungus dots
+        ctx.fillStyle = '#caa46a';
+        for (let i = 0; i < 5; i++) {
+          const a = game.t * 0.1 + i * 1.3;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.45, s * 0.16, 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (e.type === 'sporevent') { // venting spore puffs
+        ctx.fillStyle = 'rgba(160,224,140,0.5)';
+        for (let i = 0; i < 4; i++) {
+          const ph = (game.t * 0.8 + i * 0.7) % 1;
+          ctx.beginPath(); ctx.arc(x, y - s * 0.2 - ph * s * 0.9, s * (0.18 + ph * 0.22), 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (e.type === 'thornwall') { // rooted spiky barricade
+        ctx.fillStyle = '#2f6b2a'; ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 1.6;
+        for (let i = 0; i < 6; i++) {
+          const a = i * Math.PI / 3 + 0.2;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.5);
+          ctx.lineTo(x + Math.cos(a) * (s + 6), y + Math.sin(a) * (s + 6)); ctx.stroke();
+        }
       }
     } else {
       ctx.fillStyle = e.type === 'treant' ? '#2f6b2a' : col;
@@ -786,6 +811,10 @@ function drawEnt(e) {
       if (e.type === 'dynamo') {
         ctx.strokeStyle = '#ffb3d9'; ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.arc(x, y, s * 0.62, game.t % (Math.PI * 2), game.t % (Math.PI * 2) + Math.PI * 1.3); ctx.stroke();
+      } else if (e.type === 'pylon') { // expanding charge field that re-energises shields
+        const ph = (game.t * 0.7) % 1;
+        ctx.strokeStyle = 'rgba(255,156,203,' + (0.6 * (1 - ph)).toFixed(2) + ')'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.5 + ph * s * 1.3, 0, Math.PI * 2); ctx.stroke();
       }
     } else {
       ctx.fillStyle = e.type === 'colossus' ? '#5a153f' : dark;

@@ -223,15 +223,19 @@ No mines — you fund the war by waging it: every point of damage you deal pays
 Plunder. Dirt-cheap, blazing-fast raiders; idleness is death. Units: Raiders,
 Slingers, Firebrands, War Beasts, and the splashing **Fire Wagon**.
 
-### VERDANT BLOOM — the Grove · *Sap* · core: **Heartwood**
-A slow, unstoppable garden. Each mature Bloom pays Sap (the more you grow, the harder
-you snowball); Groves breed free Saplings forever. Patient and weak early,
-overwhelming late. Units: Saplings, Thornlings, Treants, and the colossal **Ancient**.
+### VERDANT BLOOM — the Grove · *Sap · Pollen · Loam* · core: **Heartwood**
+A slow, unstoppable garden fed by **three harvests**: Sap from Blooms, Pollen from
+Pollen Spires, Loam from Mulch Beds. A *diverse* garden snowballs — the grandest plants
+and beasts demand a mix of all three. Groves breed free Saplings forever; **Spore Vents**
+gas a kill-zone; **Thornwalls** root into living barricades to funnel the foe onto your
+thorns. Units: Saplings, Thornlings, Treants, and the colossal **Ancient**.
 
 ### STORMFORGE DYNASTY — the Engine · *Power* · core: **Storm Reactor**
-An engine that only accelerates — income ramps the longer the game runs, supercharged
-by Dynamos. Few but devastating, **shielded** machines: Arclights, Voltaics, the
-mid-weight **Gladius**, and the towering Colossus.
+An engine that only accelerates — each standing **Dynamo** pays more every minute, so
+time and held ground compound into a fortune. Few but devastating, **shielded** machines,
+kept in the fight by **Charge Pylons** that re-energise their shields mid-battle:
+Arclights, the shock-trooper **Galvan**, Voltaics, the mid-weight **Gladius**, and the
+towering Colossus.
 
 ### OBSIDIAN PACT — the Martyrs · *Blood* · core: **Blood Altar**
 Death is your harvest — your *own*. Every unit you lose spills Blood for the next,
