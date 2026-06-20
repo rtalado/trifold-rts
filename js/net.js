@@ -31,6 +31,8 @@ function buildSnap() {
     if (e.growing) fl |= 4;
     if (e.order && e.order.type === 'harvest' && e.order.carry > 0) fl |= 8;
     if (e.owner) fl |= facIdx(e.owner) << 4;  // Obelisk captor (bits 4-7)
+    if (e.withered) fl |= 256;                // Necrotic husk (bit 8)
+    if (e.mutated) fl |= 512;                 // Wildgrowth mutated Sapling (bit 9)
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
     const rq = e.rqueue && e.rqueue.length ? e.rqueue[0] : null;
@@ -96,6 +98,8 @@ function applySnap(m) {
     e.nx = x; e.ny = y;
     e.hp = hp; e.shield = sh;
     e.deployed = !!(fl & 1); e.constructing = !!(fl & 2); e.growing = !!(fl & 4);
+    e.withered = !!(fl & 256); e.mutated = !!(fl & 512);
+    if (e.mutated && e.def.kind === 'unit') e.size = Math.round(baseSize(e) * VERD.mutSize);
     const ownIdx = (fl >> 4) & 15; e.owner = ownIdx ? Object.keys(FACTIONS)[ownIdx - 1] : null;
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };
     e.progress = prog / 100 * e.def.time;
@@ -114,6 +118,7 @@ function applySnap(m) {
 // guest per-frame: smooth positions toward the latest snapshot, age fx
 function guestTick(dt) {
   game.t += dt;
+  refreshGrafts();   // keep the local player's graft flags live (e.g. Moonsign fog reveal)
   const k = Math.min(1, dt * 12);
   for (const e of game.entities) {
     if (e.nx == null) continue;

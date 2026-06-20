@@ -278,6 +278,11 @@ function aiTick(fac) {
     else if (have('grove') < aiGrow(3, 1, 8) && p.res >= 170) aiPlace(fac, 'grove', p.base);
     else if (have('bramble') < aiGrow(3, 1, 9) && p.res >= 120 && game.t > 90) aiPlace(fac, 'bramble', p.base);
     else if (have('sporevent') < aiGrow(2, 1, 6) && can('sporevent') && techMet(fac, 'sporevent') && game.t > 120) aiPlace(fac, 'sporevent', p.base);
+    else if (have('fertpod') < aiGrow(1, 1, 4) && can('fertpod') && techMet(fac, 'fertpod') && game.t > 110) aiPlace(fac, 'fertpod', p.base);
+    else if (have('sporebloss') < aiGrow(1, 1, 3) && can('sporebloss') && techMet(fac, 'sporebloss') && game.t > 150) aiPlace(fac, 'sporebloss', p.base);
+    // weave one Heartwood Graft (Wildgrowth — fattens the free swarm), beside the core
+    else if (have('graft_wild') < 1 && can('graft_wild') && techMet(fac, 'graft_wild') && game.t > 180) aiPlaceAt(fac, 'graft_wild', heart ? heart.x : p.base.x, heart ? heart.y + 70 : p.base.y + 70);
+    else if (have('greatroot') < aiGrow(1, 1, 4) && can('greatroot') && techMet(fac, 'greatroot') && game.t > 200) aiPlace(fac, 'greatroot', p.base);
     else if (blooms < aiGrow(11, 3, 28) && p.res >= 300) aiPlace(fac, 'bloom', p.base);
     if (heart && !heart.queue.length && p.res >= 90) {
       const treants = have('treant');

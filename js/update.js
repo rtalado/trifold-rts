@@ -2,6 +2,8 @@
 function update(dt) {
   game.t += dt;
 
+  refreshGrafts();   // Verdant: which Heartwood Grafts are standing this tick
+
   game.creepTimer -= dt;
   if (game.creepTimer <= 0) { game.creepTimer = 0.5; recomputeCreep(); }
 
@@ -78,6 +80,16 @@ function update(dt) {
   if (alive.length <= 1 || (game.mode === 'sp' && game.defeated)) {
     endGame(alive[0] ? alive[0].fac : null);
   }
+}
+
+// Verdant Bloom: cache which Heartwood Grafts are standing, so the hot paths
+// (dmgOf/spd/cdOf, sapling caps, fog reveal) read a cheap per-player boolean.
+function refreshGrafts() {
+  const p = game.players.verdant;
+  if (!p) return;
+  p.gNecro = hasGraft('verdant', 'necro');
+  p.gMoon  = hasGraft('verdant', 'moon');
+  p.gWild  = hasGraft('verdant', 'wild');
 }
 
 function endGame(winner) {

@@ -195,15 +195,23 @@ const DEFS = {
 
   // ----- VERDANT BLOOM (a 3-harvest garden: Sap from Blooms, Pollen from Pollen
   //   Spires, Loam from Mulch Beds; the grandest plants & beasts demand a MIX) -----
-  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','petalspire','mulchbed','grove','bramble','sporevent','thornwall','arboretum','heartgrove'], spawns:'sapling', spawnEvery:8 },
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','petalspire','mulchbed','grove','bramble','sporevent','fertpod','sporebloss','thornwall','greatroot','heartsap','arboretum','graft_necro','graft_moon','graft_wild','heartgrove'], spawns:'sapling', spawnEvery:8 },
   bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
   petalspire:{ fac:'verdant', kind:'building', name:'Pollen Spire', hp:300, size:16, cost:110, time:12, ironPerSec:0.9 },
   mulchbed:  { fac:'verdant', kind:'building', name:'Mulch Bed', hp:360, size:19, cost:120, time:12, powderPerSec:0.7 },
   grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6 },
   bramble:   { fac:'verdant', kind:'building', name:'Bramble', hp:360, size:13, cost:120, time:9, dmg:11, range:172, cd:0.9, aggro:190, shot:'glob' },
   sporevent: { fac:'verdant', kind:'building', name:'Spore Vent', hp:380, size:15, cost:140, cost3:25, time:13, dmg:14, range:150, cd:1.4, aggro:175, shot:'glob', splash:42 },
+  fertpod:   { fac:'verdant', kind:'building', name:'Fertiliser Pod', hp:320, size:15, cost:140, cost3:20, time:11, aura:165, buffAura:true, heal:3 },
+  sporebloss:{ fac:'verdant', kind:'building', name:'Spore Blossom', hp:380, size:17, cost:170, cost2:30, time:13, slowAura:360 },
   thornwall: { fac:'verdant', kind:'building', name:'Thornwall', hp:1050, size:14, cost:35, cost3:22, time:7, dmg:7, range:52, cd:1.2, aggro:60, shot:'glob' },
-  sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee' },
+  greatroot: { fac:'verdant', kind:'building', name:'Great Root', hp:2800, size:30, cost:120, cost3:60, time:16, dmg:9, range:62, cd:1.3, aggro:66, shot:'glob' },
+  heartsap:  { fac:'verdant', kind:'building', name:'Heartwood Sapling', hp:1000, size:26, cost:200, cost2:20, time:16, connectR:460, spawns:'sapling', spawnEvery:9 },
+  // Heartwood Grafts — raised beside the Heartwood, each weaves a faction-wide mutation
+  graft_necro:{ fac:'verdant', kind:'building', name:'Necrotic Graft', hp:760, size:20, cost:240, cost2:40, cost3:40, time:18, graft:'necro' },
+  graft_moon: { fac:'verdant', kind:'building', name:'Moonsign Graft', hp:760, size:20, cost:240, cost2:60, cost3:20, time:18, graft:'moon' },
+  graft_wild: { fac:'verdant', kind:'building', name:'Wildgrowth Graft', hp:760, size:20, cost:240, cost2:20, cost3:60, time:18, graft:'wild' },
+  sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee', freeUnit:true },
   thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:70, size:8, speed:74, cost:90, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
   treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:270, cost2:25, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
   arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true },
@@ -393,7 +401,14 @@ const META = {
   grove:     { desc: 'Breeds free Saplings, forever.', req: 'bloom' },
   bramble:   { desc: 'Static thorn turret — long-range single-target poke.', req: 'bloom' },
   sporevent: { desc: 'Static plant that coughs corrosive spore-clouds — splash on anything clumped in front of it. Pairs with Thornwalls to gas a funnelled foe. Costs Sap + Loam.', req: 'grove' },
+  fertpod:   { desc: 'Pumps nutrients into a wide field: nearby friendly plants & beasts hit harder, attack faster and slowly heal — and it nurses withered buildings (Necrotic Graft) back to life. Costs Sap + Loam.', req: 'bloom' },
+  sporebloss:{ desc: 'Exhales a vast cloud of clinging spores that crawls the enemy to a slow drag across a huge radius. Costs Sap + Pollen.', req: 'grove' },
   thornwall: { desc: 'A rooting wall-plant: dirt-cheap, super-tough, and thorny up close. Chain them into living barricades to seal your hold and funnel the enemy into a kill-zone. Costs Sap + Loam; needs an Arboretum.', req: 'arboretum' },
+  greatroot: { desc: 'A colossal rooted barricade — a single titanic wall of living wood that simply will not move. The backbone of a great wall to block and funnel whole armies. Costs Sap + Loam; needs an Arboretum.', req: 'arboretum' },
+  heartsap:  { desc: 'A daughter of the Heartwood: an expansion that lets your garden spread far further (much greater build range) and trickles its own free Saplings. Plant it out toward the map. Costs Sap + Pollen.', req: 'grove' },
+  graft_necro:{ desc: 'HEARTWOOD GRAFT — must root beside the Heartwood. Your plants & beasts feed on the enemy dead nearby, growing permanently stronger; and your buildings no longer die — they collapse into withered husks you can nurse back with Fertiliser Pods. Needs an Arboretum.', req: 'arboretum' },
+  graft_moon: { desc: 'HEARTWOOD GRAFT — must root beside the Heartwood. The moon-sign lifts the fog of war from the whole map and quickens everything you grow — movement, attacks and growth all hasten. Needs an Arboretum.', req: 'arboretum' },
+  graft_wild: { desc: 'HEARTWOOD GRAFT — must root beside the Heartwood. Wild growth unbinds your Saplings: they no longer count against any cap and erupt as bigger, fiercer mutated Saplings. Needs an Arboretum.', req: 'arboretum' },
   sapling:   { desc: 'Free, weak melee swarm creature.' },
   thornling: { desc: 'Ranged thorn-spitter.' },
   treant:    { desc: 'Towering splashing bruiser. Costs Sap + Pollen.', req: 'grove' },
@@ -500,6 +515,37 @@ function costMsg(fac, d) {
 // flagged `forward:true` (the Syndicate's air-dropped Watchpost) bypass the rule.
 const CONNECT_R = 270;
 const NETWORKED = { vanguard: 1, warden: 1, syndicate: 1, ember: 1, verdant: 1, stormforge: 1, pact: 1 };
+// the Verdant Bloom's garden spreads further than most — and a building can override
+// the radius with its own `connectR` (the Heartwood Sapling reaches far out to expand).
+function connectBase(fac) { return fac === 'verdant' ? 360 : CONNECT_R; }
+
+// ---------------- Verdant Bloom: saplings, grafts, auras ----------------
+// Saplings are free swarm and keep their OWN cap, separate from the main unit cap, so
+// the garden's bodies never crowd out its real army. The Wildgrowth Graft lifts the cap.
+const SAPLING_CAP = 30;
+function countFree(fac) {
+  return game.entities.reduce((n, e) => n + (!e.dead && e.fac === fac && e.def.kind === 'unit' && e.def.freeUnit ? 1 : 0), 0);
+}
+function freeCapOf(fac) {
+  const p = game.players[fac];
+  if (p && p.gWild) return Infinity;          // Wildgrowth Graft: no sapling cap
+  return SAPLING_CAP + ((p && p.capBonus) || 0);
+}
+// is a finished Graft of this kind ('necro'|'moon'|'wild') standing for this faction?
+function hasGraft(fac, key) {
+  return game.entities.some(e => !e.dead && e.fac === fac && e.def.graft === key
+    && !e.constructing && !e.growing && !e.withered);
+}
+// Verdant tuning. Fertiliser buff (damage ×, faster cooldown), Spore Blossom slow,
+// Moonsign haste, Necrotic per-death buff, Wildgrowth sapling mutation.
+const VERD = {
+  fertDmg: 1.25, fertCd: 0.82, fertWindow: 0.45,
+  slowFactor: 0.5, slowWindow: 0.5,
+  moonSpeed: 1.4, moonCd: 0.75, moonProd: 1.6,
+  necroRange: 360, necroStackDmg: 0.04, necroStackHp: 0.04, necroMaxStacks: 12,
+  witherHp: 0.12, witherRepair: 0.85,
+  mutHp: 1.8, mutDmg: 2.0, mutSize: 1.35, mutSpeed: 1.15,
+};
 
 // ---------------- research / upgrades ----------------
 // Every faction shares the same four-branch tech tree (Offense / Defense / Mobility
@@ -590,13 +636,31 @@ function arkStatMul(e)  { return e.type === 'ark' ? arkTierData(e.fac).statMul :
 // effective stats of an entity, with its owner's researched upgrades applied.
 // (damage/range/cooldown/splash apply to buildings too; speed/cap only to units.)
 function dmgOf(e) {
-  const p = e.def.kind === 'unit' && game.players[e.fac];
-  return e.def.dmg * (p ? p.dmgMul : 1) * arkStatMul(e);
+  const pl = game.players[e.fac];
+  let m = arkStatMul(e);
+  if (e.def.kind === 'unit' && pl) m *= pl.dmgMul;
+  if (e.fertUntil > game.t) m *= VERD.fertDmg;                                  // Fertiliser Pod
+  if (e.necroStacks) m *= 1 + Math.min(e.necroStacks, VERD.necroMaxStacks) * VERD.necroStackDmg; // Necrotic Graft
+  if (e.mutated) m *= VERD.mutDmg;                                              // Wildgrowth mutation
+  return e.def.dmg * m;
 }
-function spd(e) { const p = game.players[e.fac]; return e.def.speed * ((p && p.speedMul) || 1); }
+function spd(e) {
+  const p = game.players[e.fac];
+  let m = (p && p.speedMul) || 1;
+  if (p && p.gMoon) m *= VERD.moonSpeed;          // Moonsign Graft: haste
+  if (e.mutated) m *= VERD.mutSpeed;
+  if (e.slowUntil > game.t) m *= VERD.slowFactor; // Spore Blossom: enemy slow
+  return e.def.speed * m;
+}
 function rangeOf(e) { const p = game.players[e.fac]; return e.def.range * ((p && p.rangeMul) || 1) * arkStatMul(e); }
 function aggroOf(e) { const p = game.players[e.fac]; return e.def.aggro * ((p && p.rangeMul) || 1); }
-function cdOf(e) { const p = game.players[e.fac]; return e.def.cd * ((p && p.cdMul) || 1); }
+function cdOf(e) {
+  const p = game.players[e.fac];
+  let m = (p && p.cdMul) || 1;
+  if (e.fertUntil > game.t) m *= VERD.fertCd;     // Fertiliser Pod: faster attacks
+  if (p && p.gMoon) m *= VERD.moonCd;             // Moonsign Graft: faster attacks
+  return e.def.cd * m;
+}
 function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1); }
 function capOf(fac) { const p = game.players[fac]; return FACTIONS[fac].cap + ((p && p.capBonus) || 0); }
 function researchQueued(fac, rid) {

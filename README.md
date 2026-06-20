@@ -226,9 +226,16 @@ Slingers, Firebrands, War Beasts, and the splashing **Fire Wagon**.
 ### VERDANT BLOOM — the Grove · *Sap · Pollen · Loam* · core: **Heartwood**
 A slow, unstoppable garden fed by **three harvests**: Sap from Blooms, Pollen from
 Pollen Spires, Loam from Mulch Beds. A *diverse* garden snowballs — the grandest plants
-and beasts demand a mix of all three. Groves breed free Saplings forever; **Spore Vents**
-gas a kill-zone; **Thornwalls** root into living barricades to funnel the foe onto your
-thorns. Units: Saplings, Thornlings, Treants, and the colossal **Ancient**.
+and beasts demand a mix of all three. Free **Saplings** keep their own separate cap, so
+they never crowd out your real army. Cultivate a sprawling estate: **Fertiliser Pods**
+buff and heal everything nearby, **Spore Blossoms** drag the enemy to a crawl across a
+huge radius, **Spore Vents** gas a kill-zone, and **Thornwalls** + the titanic **Great
+Root** wall the foe into it. Spread far with a **Heartwood Sapling** (a daughter-core
+with vast build range). Beside the Heartwood, weave a **Heartwood Graft** to mutate the
+whole garden — **Necrotic** (feed on the enemy dead; your buildings collapse into
+repairable husks instead of dying), **Moonsign** (lifts the fog and hastens everything),
+or **Wildgrowth** (uncaps your Saplings and erupts them as fierce mutants). Units:
+Saplings, Thornlings, Treants, and the colossal **Ancient**.
 
 ### STORMFORGE DYNASTY — the Engine · *Power* · core: **Storm Reactor**
 An engine that only accelerates — each standing **Dynamo** pays more every minute, so

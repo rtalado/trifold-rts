@@ -184,6 +184,7 @@ function setupFaction(fac, base, isAI, diff) {
     research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1,
     speedMul: 1, rangeMul: 1, cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0,
     arkTier: 0,   // Solari Exodus: how far the Ark has been upgraded
+    gMoon: false, gNecro: false, gWild: false,   // Verdant: standing Heartwood Grafts
 
     // difficulty handicaps (1 / neutral for humans)
     diff: isAI ? (diff || 'normal') : null,
@@ -268,6 +269,12 @@ function spawnEnt(type, fac, x, y, opts = {}) {
   if (d.creepR) e.creepCur = opts.creepCur != null ? opts.creepCur : 2;
   if (d.spawns) e.spawnTimer = d.spawnEvery;
   if (d.ability) e.abilityCd = 0;   // active-ability buildings start ready
+  // Wildgrowth Graft: free Saplings erupt as bigger, fiercer mutated Saplings
+  if (d.freeUnit && p && p.gWild) {
+    e.mutated = true;
+    e.size = Math.round(bSize * VERD.mutSize);
+    e.hpMax = bHp * hpMul * VERD.mutHp; e.hp = e.hpMax;
+  }
   if (opts.constructing) { e.constructing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.12); }
   if (opts.growing) { e.growing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.25); }
   game.entities.push(e);
@@ -297,7 +304,22 @@ function applyDamage(t, dmg, attacker) {
     t.order = { type: 'attack', id: attacker.id };
   }
   if (t.hp <= 0) {
+    // Necrotic Graft: your buildings don't die — they collapse into inert withered
+    // husks (still blocking) that a Fertiliser Pod can nurse back to life. Cores and
+    // the Grafts themselves are never spared (you can still lose them, and the mutation).
+    if (t.def.kind === 'building' && !t.def.core && !t.def.graft && !t.withered
+        && game.players[t.fac] && game.players[t.fac].gNecro) {
+      t.withered = true;
+      t.hp = Math.max(1, t.hpMax * VERD.witherHp);
+      t.tgt = 0; t.queue = []; t.rqueue = [];
+      addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size, ttl: 0.4, max: 0.4, color: '#6b4a22' });
+      return;
+    }
     t.dead = true;
+    // Necrotic Graft: the garden feeds on the enemy dead nearby, growing permanently stronger
+    if (t.def.kind === 'unit' && t.fac !== 'neutral')
+      for (const f in game.players)
+        if (f !== t.fac && game.players[f].gNecro) growNecrotic(f, t.x, t.y);
     if (attacker && game.players[attacker.fac]) game.players[attacker.fac].kills++;
     // every death anywhere pays the Choir essence — friend or foe
     const choirP = game.players.choir;
@@ -334,6 +356,22 @@ function applyDamage(t, dmg, attacker) {
 function addFx(f) {
   game.fx.push(f);
   if (game.mode === 'host') game.netFx.push(f); // forwarded in the next snapshot
+}
+
+// Necrotic Graft: when an enemy falls, every nearby (within build range) finished
+// plant/beast of faction `fac` gains a permanent stacking buff (+HP now, +damage via
+// dmgOf), up to a cap. Cores and withered husks don't feed.
+function growNecrotic(fac, x, y) {
+  const r2 = VERD.necroRange * VERD.necroRange;
+  for (const e of game.entities) {
+    if (e.dead || e.fac !== fac || e.constructing || e.growing || e.withered || e.def.core) continue;
+    if ((e.necroStacks || 0) >= VERD.necroMaxStacks) continue;
+    const dx = e.x - x, dy = e.y - y;
+    if (dx * dx + dy * dy > r2) continue;
+    e.necroStacks = (e.necroStacks || 0) + 1;
+    const add = (e.def.kind === 'unit' ? baseHp(e) : e.def.hp) * VERD.necroStackHp;
+    e.hpMax += add; e.hp += add;
+  }
 }
 
 // ---------------- combat ----------------
@@ -590,12 +628,18 @@ function harvestStep(e, dt) {
 function updateBuilding(e, dt) {
   const d = e.def;
   if (e.constructing) return;           // built by a worker, see 'build' order
+  if (e.withered) return;               // Necrotic husk: inert until a Fertiliser Pod heals it back
   if (e.growing) {
+    // Moonsign Graft hastens everything the garden grows
+    const p = game.players[e.fac];
+    if (p && p.gMoon) dt *= VERD.moonProd;
     e.progress += dt;
     e.hp = Math.min(e.hpMax, e.hpMax * (0.25 + 0.75 * e.progress / d.time));
     if (e.progress >= d.time) { e.growing = false; e.hp = e.hpMax; }
     return;
   }
+  // Moonsign Graft: quicken free-spawn timers and production queues
+  { const p = game.players[e.fac]; if (p && p.gMoon) dt *= VERD.moonProd; }
   // creep growth
   if (d.creepR) e.creepCur = Math.min(d.creepR, e.creepCur + dt * 0.35);
   // free auto-spawn
@@ -603,7 +647,8 @@ function updateBuilding(e, dt) {
     e.spawnTimer -= dt;
     if (e.spawnTimer <= 0) {
       e.spawnTimer = d.spawnEvery;
-      if (countUnits(e.fac) < capOf(e.fac)) {
+      const free = DEFS[d.spawns].freeUnit;   // Saplings draw on their own separate cap
+      if (free ? countFree(e.fac) < freeCapOf(e.fac) : countUnits(e.fac) < capOf(e.fac)) {
         const a = Math.random() * Math.PI * 2;
         const u = spawnEnt(d.spawns, e.fac, e.x + Math.cos(a) * (e.size + 12), e.y + Math.sin(a) * (e.size + 12));
         const r = game.players[e.fac].swarmRally;
@@ -633,7 +678,8 @@ function tickQueue(e, dt) {
     const item = e.queue[0];
     item.t -= dt;
     if (item.t <= 0) {
-      if (countUnits(e.fac) >= capOf(e.fac)) item.t = 0; // hold until supply frees
+      const free = DEFS[item.type].freeUnit;
+      if (free ? countFree(e.fac) >= freeCapOf(e.fac) : countUnits(e.fac) >= capOf(e.fac)) item.t = 0; // hold until supply frees
       else {
         e.queue.shift();
         const a = Math.random() * Math.PI * 2;
@@ -731,12 +777,22 @@ function placeValid(type, fac, x, y) {
       && !e.constructing && !e.growing && Math.hypot(e.x - x, e.y - y) < ECON.choirLattice);
     if (!ok) { placeErrMsg = 'Must build within the lattice — near another Choir structure'; return false; }
   }
-  // network rule: most factions must build within CONNECT_R of one of their own
-  // structures, so a base grows as a connected web rather than teleporting across
-  // the map. `forward` buildings (the Syndicate Watchpost) are exempt.
+  // Heartwood Grafts must root right beside the Heartwood (a core), so the mutation
+  // is woven into the heart of the garden — not flung out across the map.
+  if (d.graft) {
+    const beside = game.entities.some(e => !e.dead && e.fac === fac && e.def.core
+      && Math.hypot(e.x - x, e.y - y) < e.size + d.size + 90);
+    if (!beside) { placeErrMsg = 'A Graft must be raised beside the Heartwood'; return false; }
+  }
+  // network rule: most factions must build within their connection range of one of
+  // their own structures, so a base grows as a connected web rather than teleporting
+  // across the map. The Verdant garden reaches further, and a building may extend the
+  // reach further still with its own `connectR` (the Heartwood Sapling). `forward`
+  // buildings (the Syndicate Watchpost) are exempt.
   if (NETWORKED[fac] && !d.forward) {
+    const base = connectBase(fac);
     const linked = game.entities.some(e => !e.dead && e.fac === fac && e.def.kind === 'building'
-      && Math.hypot(e.x - x, e.y - y) < CONNECT_R + e.size);
+      && Math.hypot(e.x - x, e.y - y) < (e.def.connectR || base) + e.size);
     if (!linked) { placeErrMsg = 'Must connect to your base — build closer to your own structures'; return false; }
   }
   // no faction may build in enemy-held territory (no turret-rushing / walling the enemy base)
@@ -846,7 +902,7 @@ function tickEconomy(dt) {
     } else if (fac === 'ember') {
       gain = ECON.emberBase; // the rest is plundered through combat (see applyDamage)
     } else if (fac === 'verdant') {
-      const blooms = ents(e => e.fac === fac && e.type === 'bloom' && !e.growing).length;
+      const blooms = ents(e => e.fac === fac && e.type === 'bloom' && !e.growing && !e.withered).length;
       gain = ECON.verdantBase + blooms * ECON.verdantPerBloom;
     } else if (fac === 'stormforge') {
       // each standing Dynamo's payout ramps with elapsed time, so early Dynamos
@@ -865,14 +921,14 @@ function tickEconomy(dt) {
     // secondary resource: the Warden mints Iron from every finished Iron Forge
     let iron = 0;
     for (const e of game.entities)
-      if (!e.dead && e.fac === fac && e.def.ironPerSec && !e.constructing && !e.growing) iron += e.def.ironPerSec;
+      if (!e.dead && e.fac === fac && e.def.ironPerSec && !e.constructing && !e.growing && !e.withered) iron += e.def.ironPerSec;
     if (iron) { iron *= p.incomeMul * (p.econMul || 1); p.iron += iron * dt; p.ironAccum += iron * dt; }
 
     // tertiary resource: the Warden's Powder — a trickle from Powder Mills, plus a
     // flow from every Obelisk it holds, so the grand projects demand map control.
     let powder = 0;
     for (const e of game.entities)
-      if (!e.dead && e.fac === fac && e.def.powderPerSec && !e.constructing && !e.growing) powder += e.def.powderPerSec;
+      if (!e.dead && e.fac === fac && e.def.powderPerSec && !e.constructing && !e.growing && !e.withered) powder += e.def.powderPerSec;
     if (FACTIONS[fac].res3)
       powder += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.wardenObeliskPowder;
     if (powder) { powder *= p.incomeMul * (p.econMul || 1); p.powder += powder * dt; p.powderAccum += powder * dt; }
@@ -913,7 +969,7 @@ function tickRegen(dt) {
     // general out-of-combat regeneration — anything that hasn't been hit for a
     // while slowly heals. Skips neutral camps and Choir field-units (which fade
     // by their own lattice rules below).
-    if (e.fac !== 'neutral' && !e.constructing && !e.growing && e.hp < e.hpMax
+    if (e.fac !== 'neutral' && !e.constructing && !e.growing && !e.withered && e.hp < e.hpMax
         && !(e.fac === 'choir' && e.def.kind === 'unit')
         && game.t - (e.lastHurt || -99) > REGEN_DELAY)
       e.hp = Math.min(e.hpMax, e.hp + e.hpMax * REGEN_RATE * dt);
@@ -933,8 +989,8 @@ function tickRegen(dt) {
     }
   }
   // healing auras: exodus guardian (shields+hp), stormforge Charge Pylon (shields+hp),
-  // vanguard medic & verdant/pact apex (hp)
-  for (const g of ents(e => e.def.aura)) {
+  // verdant Fertiliser Pod (buff + hp + repairs withered husks), medic & apex (hp)
+  for (const g of ents(e => e.def.aura && !e.withered && !e.growing && !e.constructing)) {
     for (const o of game.entities) {
       if (o.dead || o.fac !== g.fac || o === g) continue;
       if (dist(g, o) < g.def.aura) {
@@ -944,10 +1000,25 @@ function tickRegen(dt) {
         } else if (g.def.shieldHeal) {
           if (o.shieldMax > 0) o.shield = Math.min(o.shieldMax, o.shield + g.def.shieldHeal * dt);
           if (g.def.heal) o.hp = Math.min(o.hpMax, o.hp + g.def.heal * dt);
+        } else if (g.def.buffAura) {
+          o.fertUntil = game.t + VERD.fertWindow;     // fortified: harder, faster (see dmgOf/cdOf)
+          if (o.withered) {                            // nurse a Necrotic husk back to life
+            o.hp = Math.min(o.hpMax, o.hp + o.hpMax * 0.05 * dt);
+            if (o.hp >= o.hpMax * VERD.witherRepair) { o.withered = false; o.lastHurt = game.t; }
+          } else if (g.def.heal) o.hp = Math.min(o.hpMax, o.hp + g.def.heal * dt);
         } else if (g.def.heal) {
           o.hp = Math.min(o.hpMax, o.hp + g.def.heal * dt);
         }
       }
+    }
+  }
+  // Spore Blossom: drag every enemy unit in a huge radius to a crawl (see spd)
+  for (const g of ents(e => e.def.slowAura && !e.withered && !e.growing && !e.constructing)) {
+    const r2 = g.def.slowAura * g.def.slowAura;
+    for (const o of game.entities) {
+      if (o.dead || o.def.kind !== 'unit' || o.fac === g.fac || o.fac === 'neutral') continue;
+      const dx = o.x - g.x, dy = o.y - g.y;
+      if (dx * dx + dy * dy < r2) o.slowUntil = game.t + VERD.slowWindow;
     }
   }
 }

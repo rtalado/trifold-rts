@@ -385,7 +385,13 @@ function updateHUD() {
   const incEl = document.getElementById('hudIncome');
   incEl.style.display = fac === 'myriad' ? '' : 'none';
   incEl.innerHTML = fac === 'myriad' ? 'Creep: <b>' + (p.creepTiles || 0) + '</b> tiles' : '';
-  document.getElementById('hudArmy').innerHTML = 'Units: <b>' + countUnits(fac) + '</b>/' + capOf(fac);
+  let armyHtml = 'Units: <b>' + countUnits(fac) + '</b>/' + capOf(fac);
+  // the Verdant Bloom's free Saplings keep their own separate cap
+  if (fac === 'verdant') {
+    const sc = freeCapOf(fac);
+    armyHtml += ' · Saplings: <b>' + countFree(fac) + '</b>/' + (sc === Infinity ? '∞' : sc);
+  }
+  document.getElementById('hudArmy').innerHTML = armyHtml;
 
   // selection info
   renderSelInfo(document.getElementById('selinfo'));

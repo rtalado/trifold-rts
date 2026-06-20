@@ -241,8 +241,13 @@ function sightOf(e) {
   if (d.creepR) s = Math.max(s, d.creepR * TILE + 50);
   return s;
 }
-// reveal the whole map when there's no active local player (spectating / match over)
-function fogRevealed() { return !game || !game.localFac || game.over || game.defeated; }
+// reveal the whole map when there's no active local player (spectating / match over),
+// or when the local player has woven the Moonsign Graft (which lifts the fog entirely)
+function fogRevealed() {
+  if (!game || !game.localFac || game.over || game.defeated) return true;
+  const p = game.players[game.localFac];
+  return !!(p && p.gMoon);
+}
 function ensureFog() {
   const n = GW * GH;
   if (!game.vis || game.vis.length !== n) { game.vis = new Uint8Array(n); game.explored = new Uint8Array(n); game.fogAt = -1; }
@@ -749,9 +754,17 @@ function drawEnt(e) {
 
   else if (e.fac === 'verdant') { // organic blooms & leaf creatures
     if (e.def.kind === 'building') {
-      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = e.def.core ? 2.5 : 1.8;
+      const wither = e.withered;   // Necrotic husk: a dead, repairable shell
+      ctx.fillStyle = wither ? '#332d20' : dark;
+      ctx.strokeStyle = wither ? '#6b5a3a' : col; ctx.lineWidth = e.def.core ? 2.5 : 1.8;
       ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      if (e.type === 'bloom') {
+      if (wither) {
+        ctx.strokeStyle = '#5a4a30'; ctx.lineWidth = 1.4;
+        for (let i = 0; i < 5; i++) {
+          const a = i * 1.45 + 0.4;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * s * 0.8, y + Math.sin(a) * s * 0.78); ctx.stroke();
+        }
+      } else if (e.type === 'bloom') {
         ctx.fillStyle = '#b8f0a0';
         for (let i = 0; i < 6; i++) {
           const a = game.t * 0.3 + i * Math.PI / 3;
@@ -785,20 +798,50 @@ function drawEnt(e) {
           const ph = (game.t * 0.8 + i * 0.7) % 1;
           ctx.beginPath(); ctx.arc(x, y - s * 0.2 - ph * s * 0.9, s * (0.18 + ph * 0.22), 0, Math.PI * 2); ctx.fill();
         }
-      } else if (e.type === 'thornwall') { // rooted spiky barricade
-        ctx.fillStyle = '#2f6b2a'; ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 1.6;
-        for (let i = 0; i < 6; i++) {
-          const a = i * Math.PI / 3 + 0.2;
+      } else if (e.type === 'thornwall' || e.type === 'greatroot') { // rooted spiky barricade
+        const n = e.type === 'greatroot' ? 9 : 6;
+        ctx.fillStyle = '#2f6b2a'; ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = e.type === 'greatroot' ? 2.4 : 1.6;
+        for (let i = 0; i < n; i++) {
+          const a = i * Math.PI * 2 / n + 0.2;
           ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.5);
-          ctx.lineTo(x + Math.cos(a) * (s + 6), y + Math.sin(a) * (s + 6)); ctx.stroke();
+          ctx.lineTo(x + Math.cos(a) * (s + (e.type === 'greatroot' ? 9 : 6)), y + Math.sin(a) * (s + (e.type === 'greatroot' ? 9 : 6))); ctx.stroke();
         }
+        if (e.type === 'greatroot') { ctx.strokeStyle = '#3f8a36'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, s * 0.62, 0, Math.PI * 2); ctx.stroke(); }
+      } else if (e.type === 'heartsap') { // a young Heartwood — twin rings + saplings
+        ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.62, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, s * 0.34, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#ffe27a'; ctx.beginPath(); ctx.arc(x, y, s * 0.16, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'fertpod') { // pulsing nutrient field
+        const ph = (game.t * 0.6) % 1;
+        ctx.strokeStyle = 'rgba(184,240,160,' + (0.55 * (1 - ph)).toFixed(2) + ')'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.5 + ph * s * 1.4, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#caa46a'; ctx.beginPath(); ctx.arc(x, y, s * 0.32, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'sporebloss') { // a vast drifting slow-cloud
+        ctx.fillStyle = 'rgba(150,210,140,0.16)';
+        ctx.beginPath(); ctx.arc(x, y, s * 0.9, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#9fe06a';
+        for (let i = 0; i < 7; i++) {
+          const a = game.t * 0.25 + i * (Math.PI * 2 / 7);
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.55, y + Math.sin(a) * s * 0.55, s * 0.16, 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (e.def.graft) { // Heartwood Graft — a glowing rune-sigil
+        const gc = e.def.graft === 'necro' ? '#9b7ad6' : e.def.graft === 'moon' ? '#bfe0ff' : '#ffe27a';
+        ctx.strokeStyle = gc; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.6, 0, Math.PI * 2); ctx.stroke();
+        const pul = 0.5 + 0.5 * Math.sin(game.t * 2 + e.id);
+        ctx.fillStyle = gc; ctx.globalAlpha = 0.5 + 0.5 * pul;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.26, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
       }
     } else {
-      ctx.fillStyle = e.type === 'treant' ? '#2f6b2a' : col;
-      ctx.strokeStyle = '#2f6b2a'; ctx.lineWidth = 1.3;
+      const mut = e.mutated;   // Wildgrowth mutated Sapling
+      ctx.fillStyle = mut ? '#46871f' : (e.type === 'treant' ? '#2f6b2a' : col);
+      ctx.strokeStyle = mut ? '#d6ff8a' : '#2f6b2a'; ctx.lineWidth = mut ? 1.8 : 1.3;
       ctx.beginPath();
       ctx.moveTo(x, y - s - 1); ctx.quadraticCurveTo(x + s, y, x, y + s + 1); ctx.quadraticCurveTo(x - s, y, x, y - s - 1);
       ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (mut) { ctx.fillStyle = '#d6ff8a'; ctx.beginPath(); ctx.arc(x, y, s * 0.28, 0, Math.PI * 2); ctx.fill(); }
     }
   }
 

@@ -36,6 +36,8 @@ const facIdx = fac => Object.keys(FACTIONS).indexOf(fac) + 1;
 const onCreep = (fac, x, y) => game.creep[tileIdx(x, y)] === facIdx(fac);
 
 function ents(filter) { return game.entities.filter(e => !e.dead && filter(e)); }
-function countUnits(fac) { return game.entities.reduce((n, e) => n + (!e.dead && e.fac === fac && e.def.kind === 'unit' ? 1 : 0), 0); }
+// `freeUnit` swarm (Verdant Saplings) keep their own separate cap (see freeCapOf),
+// so they never count against — or get blocked by — the faction's main unit cap.
+function countUnits(fac) { return game.entities.reduce((n, e) => n + (!e.dead && e.fac === fac && e.def.kind === 'unit' && !e.def.freeUnit ? 1 : 0), 0); }
 function armyOf(fac) { return ents(e => e.fac === fac && e.def.kind === 'unit' && (e.def.dmg > 0 || e.def.aura) && !e.def.harvester && !e.def.core); }
 
