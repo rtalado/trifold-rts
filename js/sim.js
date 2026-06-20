@@ -127,20 +127,6 @@ function genLayout(rng, bases) {
   node(cx - 170, cy, 3200); node(cx, cy - 170, 3200);
 }
 
-// purely-visual world dressing (rocks, rubble, craters, scrub) so the map reads as
-// a real place. Deterministic from the same rng, so every peer draws the same scene.
-function genDecor(rng, bases) {
-  game.decor = [];
-  const kinds = ['rock', 'rubble', 'crater', 'scrub', 'shard'];
-  const n = 60 + 40 * bases.length;
-  for (let i = 0; i < n; i++) {
-    const x = 40 + rng() * (WORLD_W - 80);
-    const y = 40 + rng() * (WORLD_H - 80);
-    if (bases.some(b => Math.hypot(b.x - x, b.y - y) < 130)) continue;  // keep cores clear
-    game.decor.push({ x, y, k: kinds[Math.floor(rng() * kinds.length)], s: 6 + rng() * 16, r: rng() * Math.PI * 2 });
-  }
-}
-
 // roster: [{ fac, ai }] in spawn order. localFac = this client's faction.
 // All peers call buildMatch with the same roster + seed so entity ids line up.
 function buildMatch(roster, localFac, mode, seed) {
@@ -148,7 +134,7 @@ function buildMatch(roster, localFac, mode, seed) {
   nextId = 1;
   const rng = makeRng(seed);
   game = {
-    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], strikes: [], nodes: [], decor: [], obstacles: [],
+    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], strikes: [], nodes: [], obstacles: [],
     creep: new Uint8Array(GW * GH),
     roster, localFac, mode, seed, players: {},
     aiFacs: roster.filter(r => r.ai).map(r => r.fac),
@@ -166,7 +152,6 @@ function buildMatch(roster, localFac, mode, seed) {
   roster.forEach((r, i) => { r.base = bases[i]; setupFaction(r.fac, bases[i], r.ai, r.diff); });
   genObstacles(rng, bases);   // impassable terrain (before the layout, so loot avoids it)
   genLayout(rng, bases);
-  genDecor(rng, bases);
 
   const me = roster.find(r => r.fac === localFac) || roster[0];
   centerCam(me.base.x, me.base.y);

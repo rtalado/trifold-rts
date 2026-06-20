@@ -366,7 +366,8 @@ function updateHUD() {
     const hf = document.getElementById('hudFac');
     hf.textContent = 'DEFEATED — spectating'; hf.style.color = '#ff7d7d';
   }
-  document.getElementById('hudRes').innerHTML = FACTIONS[fac].res + ': <b>' + Math.floor(p.res) + '</b>';
+  document.getElementById('hudRes').innerHTML = FACTIONS[fac].res + ': <b>' + Math.floor(p.res) + '</b>'
+    + ' <span style="opacity:.7">+' + p.income.toFixed(1) + '/s</span>';
   const res2El = document.getElementById('hudRes2');
   if (FACTIONS[fac].res2) {
     res2El.style.display = '';
@@ -379,8 +380,11 @@ function updateHUD() {
     res3El.innerHTML = FACTIONS[fac].res3 + ': <b>' + Math.floor(p.powder || 0) + '</b>'
       + ' <span style="opacity:.7">+' + (p.powderInc || 0).toFixed(1) + '/s</span>';
   } else res3El.style.display = 'none';
-  document.getElementById('hudIncome').innerHTML = '+' + p.income.toFixed(1) + '/s'
-    + (fac === 'myriad' ? ' · Creep: <b>' + (p.creepTiles || 0) + '</b> tiles' : '');
+  // the main resource now shows its +/s inline (like Iron/Powder); this slot keeps
+  // only the Myriad's creep readout
+  const incEl = document.getElementById('hudIncome');
+  incEl.style.display = fac === 'myriad' ? '' : 'none';
+  incEl.innerHTML = fac === 'myriad' ? 'Creep: <b>' + (p.creepTiles || 0) + '</b> tiles' : '';
   document.getElementById('hudArmy').innerHTML = 'Units: <b>' + countUnits(fac) + '</b>/' + capOf(fac);
 
   // selection info

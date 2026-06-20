@@ -79,12 +79,14 @@ careless human and pushes almost immediately. Your own economy is never handicap
 
 ## The map
 
-A large battlefield strewn with crystal nodes, neutral camps and scenery, all
+A large battlefield strewn with crystal nodes, neutral camps and cliff terrain, all
 seeded so every peer builds the identical map. Each player gets a small fair
 starter economy by their base; the rest of the world is scattered with objectives
 in random spots (League-of-Legends style) so the map feels alive instead of a
 single lane of stuff aimed at your foe. The more players, the more the map fills
-out. Objectives worth fighting over:
+out. A **fog of war** hides the map beyond what your own units and buildings can
+see — dark where you've never been, dimmed where you've been but aren't looking now —
+so scouting matters. Objectives worth fighting over:
 
 - **Crystal nodes** — the mineable resource (Vanguard Workers, Exodus Collectors
   and the deployed Ark feed on them). Dozens are scattered across the map.
@@ -287,7 +289,7 @@ units draw a line to wherever they've been ordered. Select one of your buildings
   - `update.js` — the main simulation step and win/lose handling.
   - `input.js` — mouse/keyboard, selection, orders and the camera.
   - `ui.js` — the command card, tooltips and HUD.
-  - `render.js` — the canvas renderer (`draw`, `drawEnt`, scenery, minimap).
+  - `render.js` — the canvas renderer (`draw`, `drawEnt`, fog of war, minimap).
   - `loop.js` — the `requestAnimationFrame` loop and background ticking.
   - `net.js` — snapshot serialization and peer-to-peer multiplayer + lobby.
   - `menu.js` — menu wiring (single-player / multiplayer setup).

@@ -3,6 +3,7 @@ function draw() {
   ctx.fillStyle = '#0d1117';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!game) return;
+  computeVision();
   ctx.save();
   ctx.scale(game.cam.z, game.cam.z);
   ctx.translate(-game.cam.x, -game.cam.y);
@@ -29,9 +30,6 @@ function draw() {
   ctx.strokeStyle = '#2a3954'; ctx.lineWidth = 3;
   ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
 
-  // scenery (drawn under everything else)
-  if (game.decor) for (const d of game.decor) drawDecor(d);
-
   // impassable terrain — rocky cliffs that block movement and building
   if (game.obstacles) for (const ob of game.obstacles) drawObstacle(ob);
 
@@ -54,13 +52,14 @@ function draw() {
   // selection overlays: range rings + order lines, under the entity sprites
   drawSelectionOverlays();
 
-  // entities (buildings first, then units, sorted by y)
+  // entities (buildings first, then units, sorted by y) — hidden by fog of war
   const sorted = [...game.entities].sort((a, b) =>
     (a.def.kind === 'building' ? 0 : 1) - (b.def.kind === 'building' ? 0 : 1) || a.y - b.y);
-  for (const e of sorted) drawEnt(e);
+  for (const e of sorted) if (visibleEnt(e)) drawEnt(e);
 
   // siphon tether (derived from proximity so it renders identically on guest)
   for (const e of ents(o => o.type === 'ark' && o.deployed)) {
+    if (!visibleEnt(e)) continue;
     const n = game.nodes.find(n => n.amount > 0 && dist(e, n) < e.size + n.r + 30);
     if (n) {
       ctx.strokeStyle = 'rgba(110,231,255,' + (0.4 + 0.3 * Math.sin(game.t * 6)) + ')';
@@ -69,14 +68,17 @@ function draw() {
     }
   }
 
-  // projectiles
+  // projectiles (hidden if they're flying through unseen territory)
   for (const pr of game.proj) {
+    if (!tileVis(pr.x, pr.y)) continue;
     ctx.fillStyle = pr.color;
     ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.r, 0, Math.PI * 2); ctx.fill();
   }
 
   // fx
   for (const f of game.fx) {
+    const ox = f.x != null ? f.x : f.x1, oy = f.y != null ? f.y : f.y1;
+    if (ox != null && !tileVis(ox, oy)) continue;
     const a = f.ttl / f.max;
     if (f.kind === 'boom') {
       ctx.strokeStyle = f.color; ctx.globalAlpha = a; ctx.lineWidth = 2.5;
@@ -138,6 +140,24 @@ function draw() {
     ctx.globalAlpha = 1;
   }
 
+  // fog of war overlay: dark over never-explored tiles, a dim veil over explored
+  // ground that's currently out of sight. Drawn over the world but under the
+  // local-player UI (placement ghost / ability targeting). Horizontal runs of the
+  // same shade are merged into one rect so an unexplored map is cheap to cover.
+  if (game.vis && !fogRevealed()) {
+    for (let ty = 0; ty < GH; ty++) {
+      let runStart = 0, runStyle = null;
+      for (let tx = 0; tx <= GW; tx++) {
+        const style = tx < GW && !game.vis[ty * GW + tx]
+          ? (game.explored[ty * GW + tx] ? FOG_DIM : FOG_DARK) : null;
+        if (style !== runStyle) {
+          if (runStyle) { ctx.fillStyle = runStyle; ctx.fillRect(runStart * TILE, ty * TILE, (tx - runStart) * TILE, TILE); }
+          runStyle = style; runStart = tx;
+        }
+      }
+    }
+  }
+
   // placement ghost
   if (game.placing) {
     const d = DEFS[game.placing];
@@ -185,46 +205,8 @@ function draw() {
   drawMinimap();
 }
 
-// a single piece of background scenery — muted, low-contrast so it never competes
-// with units or buildings for attention
-function drawDecor(d) {
-  const x = d.x, y = d.y, s = d.s;
-  ctx.save();
-  ctx.translate(x, y); ctx.rotate(d.r);
-  if (d.k === 'rock') {
-    ctx.fillStyle = '#1b2533'; ctx.strokeStyle = '#2c3a4f'; ctx.lineWidth = 1.5;
-    poly(0, 0, s, 5, 0.3); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#243042'; poly(-s * 0.18, -s * 0.18, s * 0.5, 5, 0.9); ctx.fill();
-  } else if (d.k === 'rubble') {
-    ctx.fillStyle = '#202b3a';
-    for (let i = 0; i < 5; i++) {
-      const a = i * 1.3, rr = s * (0.4 + 0.5 * ((i * 7) % 3) / 3);
-      ctx.beginPath(); ctx.arc(Math.cos(a) * s * 0.5, Math.sin(a) * s * 0.5, rr * 0.4, 0, Math.PI * 2); ctx.fill();
-    }
-  } else if (d.k === 'crater') {
-    ctx.fillStyle = '#11171f'; ctx.beginPath(); ctx.arc(0, 0, s, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#2a3954'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, s * 0.92, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = '#0c1016'; ctx.beginPath(); ctx.arc(0, 0, s * 0.55, 0, Math.PI * 2); ctx.fill();
-  } else if (d.k === 'scrub') {
-    ctx.strokeStyle = '#234027'; ctx.lineWidth = 1.6; ctx.fillStyle = '#1a3320';
-    ctx.beginPath(); ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2); ctx.fill();
-    for (let i = 0; i < 6; i++) {
-      const a = i * Math.PI / 3;
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s); ctx.stroke();
-    }
-  } else { // shard — a dull rocky crystal cluster (not harvestable)
-    ctx.fillStyle = '#243a44'; ctx.strokeStyle = '#34525e'; ctx.lineWidth = 1.2;
-    for (let i = 0; i < 3; i++) {
-      const a = i * 2.1, px = Math.cos(a) * s * 0.4, py = Math.sin(a) * s * 0.4;
-      ctx.beginPath(); ctx.moveTo(px, py - s * 0.7); ctx.lineTo(px + s * 0.3, py); ctx.lineTo(px, py + s * 0.4); ctx.lineTo(px - s * 0.3, py); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-// an impassable cliff — a chunky rock that blocks movement and building. Drawn with
-// more contrast than background decor so the chokepoints it forms read clearly.
+// an impassable cliff — a chunky rock that blocks movement and building, drawn with
+// enough contrast that the chokepoints it forms read clearly.
 function drawObstacle(ob) {
   const x = ob.x, y = ob.y, s = ob.r;
   ctx.save();
@@ -240,6 +222,68 @@ function drawObstacle(ob) {
   ctx.fillStyle = '#222b37'; poly(s * 0.26, s * 0.22, s * 0.4, 5, 0.2); ctx.fill();
   ctx.restore();
 }
+
+// ---------------- fog of war (client-side vision) ----------------
+// The local player only sees the world around their own units and buildings; the
+// rest is dark (never-explored) or dimmed (explored, currently out of sight). This
+// is a pure rendering filter — the simulation/AI are unaffected — so it costs nothing
+// in the sim and works identically in single-player and as a multiplayer guest.
+const FOG_DARK = 'rgba(7,9,13,0.97)';   // never explored
+const FOG_DIM  = 'rgba(10,13,19,0.5)';  // explored but not currently visible
+
+// sight radius (world units) of one entity. Buildings see a generous bubble (the
+// core widest), combat things at least as far as they can shoot/aggro.
+function sightOf(e) {
+  const d = e.def;
+  let s = d.kind === 'building' ? (d.core ? 480 : 320) : 250;
+  if (d.range) s = Math.max(s, rangeOf(e) + 80);
+  if (d.aggro) s = Math.max(s, aggroOf(e) + 60);
+  if (d.creepR) s = Math.max(s, d.creepR * TILE + 50);
+  return s;
+}
+// reveal the whole map when there's no active local player (spectating / match over)
+function fogRevealed() { return !game || !game.localFac || game.over || game.defeated; }
+function ensureFog() {
+  const n = GW * GH;
+  if (!game.vis || game.vis.length !== n) { game.vis = new Uint8Array(n); game.explored = new Uint8Array(n); game.fogAt = -1; }
+}
+// recompute the currently-visible tile grid from the local player's entities, and
+// accumulate the sticky "explored" grid. Throttled — vision lagging a frame or two
+// is invisible to the eye but saves stamping circles every single frame.
+function computeVision() {
+  ensureFog();
+  if (fogRevealed()) { game.vis.fill(1); game.explored.fill(1); return; }
+  if (game.fogAt >= 0 && game.t - game.fogAt < 0.12) return;
+  game.fogAt = game.t;
+  game.vis.fill(0);
+  const fac = game.localFac;
+  for (const e of game.entities) {
+    if (e.dead || e.fac !== fac) continue;
+    const r = sightOf(e) / TILE, r2 = r * r;
+    const cx = e.x / TILE, cy = e.y / TILE;
+    const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(GW - 1, Math.ceil(cx + r));
+    const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(GH - 1, Math.ceil(cy + r));
+    for (let ty = y0; ty <= y1; ty++)
+      for (let tx = x0; tx <= x1; tx++) {
+        const dx = tx + 0.5 - cx, dy = ty + 0.5 - cy;
+        if (dx * dx + dy * dy <= r2) { const i = ty * GW + tx; game.vis[i] = 1; game.explored[i] = 1; }
+      }
+  }
+}
+function tileVis(x, y) {
+  if (!game.vis || fogRevealed()) return true;
+  const tx = x / TILE | 0, ty = y / TILE | 0;
+  if (tx < 0 || ty < 0 || tx >= GW || ty >= GH) return true;
+  return game.vis[ty * GW + tx] === 1;
+}
+function tileExplored(x, y) {
+  if (!game.explored || fogRevealed()) return true;
+  const tx = x / TILE | 0, ty = y / TILE | 0;
+  if (tx < 0 || ty < 0 || tx >= GW || ty >= GH) return true;
+  return game.explored[ty * GW + tx] === 1;
+}
+// is an entity currently shown? Own things always; enemy/neutral only while in sight.
+function visibleEnt(e) { return e.fac === game.localFac || tileVis(e.x, e.y); }
 
 // the local player's researched range multiplier (range is shown/used with upgrades)
 function rangeMulOf(fac) { const p = game.players[fac]; return (p && p.rangeMul) || 1; }
@@ -904,15 +948,29 @@ function drawMinimap() {
     mmCtx.fillStyle = '#3a4757';
     for (const ob of game.obstacles) mmCtx.fillRect(ob.x * sx - 1.5, ob.y * sy - 1.5, 3, 3);
   }
-  // nodes
+  // nodes (only ones you've discovered)
   mmCtx.fillStyle = '#6ee7ff';
-  for (const n of game.nodes) mmCtx.fillRect(n.x * sx - 1.5, n.y * sy - 1.5, 3, 3);
-  // entities (Obelisks show their captor's colour)
+  for (const n of game.nodes) if (tileExplored(n.x, n.y)) mmCtx.fillRect(n.x * sx - 1.5, n.y * sy - 1.5, 3, 3);
+  // entities (Obelisks show their captor's colour) — enemies hidden by fog of war
   for (const e of game.entities) {
-    if (e.dead) continue;
+    if (e.dead || !visibleEnt(e)) continue;
     mmCtx.fillStyle = facColor(e.owner || e.fac);
     const r = e.def.core ? 3 : e.def.kind === 'building' ? 2 : 1.2;
     mmCtx.fillRect(e.x * sx - r, e.y * sy - r, r * 2, r * 2);
+  }
+  // fog of war veil over the minimap (horizontal runs merged, like the main view)
+  if (game.vis && !fogRevealed()) {
+    for (let ty = 0; ty < GH; ty++) {
+      let runStart = 0, runStyle = null;
+      for (let tx = 0; tx <= GW; tx++) {
+        const style = tx < GW && !game.vis[ty * GW + tx]
+          ? (game.explored[ty * GW + tx] ? 'rgba(10,13,19,0.5)' : 'rgba(7,9,13,0.92)') : null;
+        if (style !== runStyle) {
+          if (runStyle) { mmCtx.fillStyle = runStyle; mmCtx.fillRect(runStart * TILE * sx, ty * TILE * sy, (tx - runStart) * TILE * sx + 1, TILE * sy + 1); }
+          runStyle = style; runStart = tx;
+        }
+      }
+    }
   }
   // camera
   mmCtx.strokeStyle = '#cdd6e4'; mmCtx.lineWidth = 1;
