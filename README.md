@@ -88,18 +88,35 @@ out. Objectives worth fighting over:
 
 - **Crystal nodes** — the mineable resource (Vanguard Workers, Exodus Collectors
   and the deployed Ark feed on them). Dozens are scattered across the map.
-- **Obelisks** — capture points. Hold the ground around one (with no enemies in
-  range) for ~6 s to claim it; each obelisk pays its owner **+1.4 resources/s** in
-  whatever your faction's currency is. They can be recaptured.
+- **Obelisks** — capture points, and now the main reason to fight over the map. Hold
+  the ground around one (with no enemies in range) for ~6 s to claim it; each obelisk
+  pays its owner **+2.6 resources/s** in whatever your faction's currency is (and a
+  trickle of **Powder** to the Warden — see below). They can be recaptured, and there
+  are more of them than before.
 - **Supply Caches** — small, lightly-guarded jungle camps dotted everywhere.
   Crack one open for a quick **+160 bounty**.
+- **Munitions Bunkers** — heavily-guarded strongpoints, several of them, often sat
+  behind a chokepoint. Crack one for a big **+450 bounty** — and if you're the **Warden**
+  it also yields a cache of **Powder** for your grand projects.
 - **Wild camps** — neutral guards around **Ancient Hoards**. Destroy a hoard and
   whoever lands the kill pockets a **+550 bounty**. The biggest camp sits dead
-  centre, wrapped around the middle obelisk.
+  centre, wrapped around the middle obelisk, hoard and bunker.
+
+**Chokepoints** — the map is broken up by impassable rocky cliffs. A ring of them
+rings the central prize, leaving a lane toward each base corner, so the middle
+objectives sit behind real chokepoints; more clusters scatter the open field. You
+can't build on rough terrain.
 
 **No faction may build in enemy territory** — you cannot drop turrets, walls, or any
 structure within an enemy core/building's keep-out radius. No base-rushing with
 buildings.
+
+**Build a connected base** — most factions can no longer plant structures anywhere on
+the map: a new building must sit within range of one you already own, so your base
+grows as a connected web and reaching distant nodes or objectives means chaining
+buildings out toward them. (The Myriad's creep and the Choir's lattice already worked
+this way; the base-less Exodus is exempt, and the Syndicate can still air-drop its
+Watchposts anywhere.)
 
 ## Research — the tech tree
 
@@ -187,14 +204,18 @@ Gold breeds gold: your treasury earns **compound interest**. Mercenaries arrive
 into enemy territory) and Countinghouses to raise your interest cap. Units:
 Enforcers, Arbalests, Juggernauts, **Marauders**.
 
-### WARDEN COVENANT — the Bulwark · *Stone* + *Iron* · core: **Bastion Keep**
-The most intricate faction in the game, on **two resources**: Stone scales with the
-total HP of your standing buildings (and a flat trickle from **Stone Quarries**),
-while Iron is minted only by **Iron Forges** and pays for everything heavier than
-Tier 1. Crucially the tech tree is **distributed** — advanced structures are raised
-from *other* advanced structures, not all from the Keep:
+### WARDEN COVENANT — the Bulwark · *Stone* + *Iron* + *Powder* · core: **Bastion Keep**
+The most intricate faction in the game, on **three resources**: Stone scales with the
+total HP of your standing buildings (and a flat trickle from **Stone Quarries**);
+Iron is minted only by **Iron Forges** and pays for everything heavier than Tier 1;
+and **Powder** — burned only by your grandest projects (the Grand Arsenal, Castellan,
+Trebuchet, Bulwark and Worldbreaker) — comes from a trickle at **Powder Mills** but
+mostly from the *map*: every **Obelisk** you hold pays Powder, and cracking a
+**Munitions Bunker** drops a cache of it. So the doomsday tech demands you march out
+and seize ground, not just turtle. Crucially the tech tree is **distributed** —
+advanced structures are raised from *other* advanced structures, not all from the Keep:
 
-- **Keep** → Ramparts, Bastions, Quarries, Forges, **Oil Cauldrons**, War Foundry, War College.
+- **Keep** → Ramparts, Bastions, Quarries, Forges, **Powder Mills**, **Oil Cauldrons**, War Foundry, War College.
 - **War College** (your research hall) → **Bunkers, Ballista Towers, Hall of Oaths**.
 - **War Foundry** → **Redoubts** and the **Grand Arsenal**.
 - **Grand Arsenal** → **The Bulwark** and **The Worldbreaker**.

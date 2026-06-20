@@ -32,6 +32,9 @@ function draw() {
   // scenery (drawn under everything else)
   if (game.decor) for (const d of game.decor) drawDecor(d);
 
+  // impassable terrain — rocky cliffs that block movement and building
+  if (game.obstacles) for (const ob of game.obstacles) drawObstacle(ob);
+
   // crystal nodes
   for (const n of game.nodes) {
     const f = 0.45 + 0.55 * (n.amount / n.max);
@@ -217,6 +220,24 @@ function drawDecor(d) {
       ctx.fill(); ctx.stroke();
     }
   }
+  ctx.restore();
+}
+
+// an impassable cliff — a chunky rock that blocks movement and building. Drawn with
+// more contrast than background decor so the chokepoints it forms read clearly.
+function drawObstacle(ob) {
+  const x = ob.x, y = ob.y, s = ob.r;
+  ctx.save();
+  ctx.translate(x, y);
+  // shadow base
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.ellipse(0, s * 0.18, s * 1.02, s * 0.78, 0, 0, Math.PI * 2); ctx.fill();
+  // main rock body
+  ctx.fillStyle = '#2b3543'; ctx.strokeStyle = '#3d4c5f'; ctx.lineWidth = 2.5;
+  poly(0, 0, s, 7, 0.5); ctx.fill(); ctx.stroke();
+  // lighter facets to give it volume
+  ctx.fillStyle = '#3a4757'; poly(-s * 0.2, -s * 0.22, s * 0.62, 6, 1.1); ctx.fill();
+  ctx.fillStyle = '#222b37'; poly(s * 0.26, s * 0.22, s * 0.4, 5, 0.2); ctx.fill();
   ctx.restore();
 }
 
@@ -490,6 +511,24 @@ function drawEnt(e) {
         const a = Math.atan2(t.y - y, t.x - x);
         ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 7), y + Math.sin(a) * (s + 7)); ctx.stroke();
+      }
+    } else if (e.type === 'bunker') { // heavily-armoured munitions blockhouse
+      ctx.fillStyle = '#26303a'; ctx.strokeStyle = '#7d8a99'; ctx.lineWidth = 3;
+      roundRect(x - s, y - s * 0.85, s * 2, s * 1.7, 4); ctx.fill(); ctx.stroke();
+      // corner reinforcements
+      ctx.fillStyle = '#39444f';
+      for (const [cx2, cy2] of [[-s, -s * 0.85], [s, -s * 0.85], [-s, s * 0.85], [s, s * 0.85]]) {
+        ctx.beginPath(); ctx.arc(x + cx2, y + cy2, s * 0.26, 0, Math.PI * 2); ctx.fill();
+      }
+      // central firing slit + munitions emblem (sulphur yellow = Powder)
+      ctx.fillStyle = '#11161c'; roundRect(x - s * 0.55, y - s * 0.18, s * 1.1, s * 0.36, 2); ctx.fill();
+      ctx.fillStyle = '#e0c24a';
+      ctx.beginPath(); ctx.arc(x, y - s * 0.42, s * 0.22, 0, Math.PI * 2); ctx.fill();
+      const tb = e.tgt ? byId(e.tgt) : null;
+      if (tb) {
+        const a = Math.atan2(tb.y - y, tb.x - x);
+        ctx.strokeStyle = '#9aa6b8'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
       }
     } else { // hoard: a fortified treasure tower
       ctx.fillStyle = '#2a2014'; ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 2.5;
@@ -860,6 +899,11 @@ function drawMinimap() {
   for (let ty = 0; ty < GH; ty++)
     for (let tx = 0; tx < GW; tx++)
       if (game.creep[ty * GW + tx]) mmCtx.fillRect(tx * TILE * sx, ty * TILE * sy, TILE * sx + 1, TILE * sy + 1);
+  // impassable terrain
+  if (game.obstacles) {
+    mmCtx.fillStyle = '#3a4757';
+    for (const ob of game.obstacles) mmCtx.fillRect(ob.x * sx - 1.5, ob.y * sy - 1.5, 3, 3);
+  }
   // nodes
   mmCtx.fillStyle = '#6ee7ff';
   for (const n of game.nodes) mmCtx.fillRect(n.x * sx - 1.5, n.y * sy - 1.5, 3, 3);

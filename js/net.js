@@ -45,7 +45,7 @@ function buildSnap() {
   const players = {};
   for (const f in game.players) {
     const p = game.players[f];
-    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1), p.arkTier || 0];
+    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1), p.arkTier || 0, Math.round(p.powder || 0), +(p.powderInc || 0).toFixed(1)];
   }
   return {
     t: 'snap', gt: +game.t.toFixed(2), players, units,
@@ -62,7 +62,7 @@ function applySnap(m) {
     const p = game.players[f], a = m.players[f];
     if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3];
       p.research = new Set(a[4] || []); p.iron = a[5] || 0; p.ironInc = a[6] || 0;
-      p.arkTier = a[7] || 0; recalcMul(p); }
+      p.arkTier = a[7] || 0; p.powder = a[8] || 0; p.powderInc = a[9] || 0; recalcMul(p); }
   }
   game.nodes = m.nodes.map(a => ({ id: a[0], x: a[1], y: a[2], amount: a[3], max: a[4], r: 20 }));
   unrle(m.creep, game.creep);

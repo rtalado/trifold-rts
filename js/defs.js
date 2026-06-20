@@ -39,7 +39,7 @@ const FACTIONS = {
   exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 28 },
   choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 45 },
   syndicate: { name: 'GILDED SYNDICATE', color: '#ff6b52', dark: '#4a1a12', res: 'Gold',   cap: 40 },
-  warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 60, res2: 'Iron' },
+  warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 60, res2: 'Iron', res3: 'Powder' },
   ember:     { name: 'EMBER NOMADS',     color: '#ff8a2a', dark: '#4a2a0e', res: 'Plunder',cap: 66 },
   verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 84 },
   stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 36 },
@@ -127,7 +127,7 @@ const DEFS = {
 
   // ----- GILDED SYNDICATE -----
   haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut','marauder'], grows:['watchpost','countinghouse','blackmarket','exchange'] },
-  watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet' },
+  watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet', forward:true },
   countinghouse: { fac:'syndicate', kind:'building', name:'Countinghouse', hp:500, size:24, cost:200, time:8 },
   enforcer:      { fac:'syndicate', kind:'unit', name:'Enforcer', hp:90, size:8, speed:80, cost:90, time:0.5, dmg:9, range:105, cd:0.75, aggro:180, shot:'bullet' },
   arbalest:      { fac:'syndicate', kind:'unit', name:'Arbalest', hp:60, size:8, speed:62, cost:160, time:0.5, dmg:26, range:225, cd:2.0, aggro:240, shot:'beam' },
@@ -142,13 +142,16 @@ const DEFS = {
   // all from the Keep — select a War College to place its halls, a War Foundry to
   // place siege works, a Grand Arsenal to raise the doomsday engines. The chain ends
   // at the Bulwark and, beyond even that, the world-ending Worldbreaker siege gun.
-  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g','pikeman'], grows:['rampart','bastion','quarry','forge','cauldron','foundry_w','college'] },
+  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g','pikeman'], grows:['rampart','bastion','quarry','forge','powdermill','cauldron','foundry_w','college'] },
   // -- Tier 1: Stone only --
   rampart:   { fac:'warden', kind:'building', name:'Rampart', hp:1100, size:15, cost:70, time:6 },
   bastion:   { fac:'warden', kind:'building', name:'Bastion', hp:640, size:15, cost:150, time:10, dmg:12, range:200, cd:0.7, aggro:210, shot:'bullet' },
   quarry:    { fac:'warden', kind:'building', name:'Stone Quarry', hp:680, size:18, cost:120, time:10, stonePerSec:1.6 },
   cauldron:  { fac:'warden', kind:'building', name:'Oil Cauldron', hp:560, size:14, cost:110, time:9, dmg:22, range:120, cd:1.1, aggro:140, shot:'glob', splash:40 },
   forge:     { fac:'warden', kind:'building', name:'Iron Forge', hp:760, size:18, cost:130, time:11, ironPerSec:1.0 },
+  // mints Powder — the Covenant's THIRD resource, burned only by its grand projects.
+  // A trickle here; the fast Powder is out on the map (held Obelisks + cracked Bunkers).
+  powdermill:{ fac:'warden', kind:'building', name:'Powder Mill', hp:620, size:18, cost:170, cost2:20, time:13, powderPerSec:0.4 },
   sentinel:  { fac:'warden', kind:'unit', name:'Sentinel', hp:170, size:10, speed:54, cost:80, time:7, dmg:11, range:24, cd:0.9, aggro:170, shot:'melee' },
   warden_g:  { fac:'warden', kind:'unit', name:'Warden Guard', hp:120, size:9, speed:50, cost:120, time:9, dmg:16, range:165, cd:1.2, aggro:200, shot:'bullet' },
   pikeman:   { fac:'warden', kind:'unit', name:'Pikeman', hp:210, size:11, speed:52, cost:110, cost2:10, time:9, dmg:24, range:34, cd:1.3, aggro:175, shot:'melee' },
@@ -164,16 +167,16 @@ const DEFS = {
   halberd:   { fac:'warden', kind:'unit', name:'Halberdier', hp:330, size:12, speed:50, cost:140, cost2:25, time:12, dmg:42, range:32, cd:1.5, aggro:180, shot:'melee', splash:18 },
   marshal:   { fac:'warden', kind:'unit', name:'Marshal', hp:380, size:12, speed:52, cost:170, cost2:30, time:14, dmg:14, range:150, cd:1.1, aggro:190, shot:'bullet', aura:165, heal:6 },
   // -- Tier 3: heavy Iron investment --
-  arsenal:   { fac:'warden', kind:'building', name:'Grand Arsenal', hp:1100, size:30, cost:320, cost2:90, time:24, produces:['castellan','trebuchet'], grows:['citadel','worldbreaker'] },
-  castellan: { fac:'warden', kind:'unit', name:'Castellan', hp:940, size:20, speed:38, cost:380, cost2:130, time:26, dmg:46, range:215, cd:2.4, aggro:210, shot:'shell', splash:62 },
-  trebuchet: { fac:'warden', kind:'unit', name:'Trebuchet', hp:220, size:15, speed:30, cost:280, cost2:70, time:20, dmg:72, range:325, cd:4.2, aggro:355, shot:'shell', splash:74 },
-  citadel:   { fac:'warden', kind:'building', name:'The Bulwark', hp:7200, size:56, cost:2400, cost2:450, time:80,
+  arsenal:   { fac:'warden', kind:'building', name:'Grand Arsenal', hp:1100, size:30, cost:320, cost2:90, cost3:60, time:24, produces:['castellan','trebuchet'], grows:['citadel','worldbreaker'] },
+  castellan: { fac:'warden', kind:'unit', name:'Castellan', hp:940, size:20, speed:38, cost:380, cost2:130, cost3:35, time:26, dmg:46, range:215, cd:2.4, aggro:210, shot:'shell', splash:62 },
+  trebuchet: { fac:'warden', kind:'unit', name:'Trebuchet', hp:220, size:15, speed:30, cost:280, cost2:70, cost3:30, time:20, dmg:72, range:325, cd:4.2, aggro:355, shot:'shell', splash:74 },
+  citadel:   { fac:'warden', kind:'building', name:'The Bulwark', hp:7200, size:56, cost:2400, cost2:450, cost3:320, time:80,
                dmg:175, range:445, cd:4.6, aggro:475, shot:'shell', splash:96,
                aux:{ dmg:13, range:215, cd:0.4, shot:'bullet', guns:4 } },
   // -- Tier 4: the doomsday siege gun — a colossal long-range artillery emplacement
   // with an active, map-spanning bombardment strike (see `ability`). The single most
   // expensive, most heavily gated thing the Covenant — or anyone — can build.
-  worldbreaker: { fac:'warden', kind:'building', name:'The Worldbreaker', hp:9000, size:150, cost:17000, cost2:4250, time:100,
+  worldbreaker: { fac:'warden', kind:'building', name:'The Worldbreaker', hp:9000, size:150, cost:17000, cost2:4250, cost3:900, time:100,
                dmg:230, range:560, cd:5.4, aggro:590, shot:'shell', splash:120,
                aux:{ dmg:15, range:230, cd:0.35, shot:'bullet', guns:6 },
                ability:{ key:'gustav', name:'Gustav Strike', range:3800, cd:55, delay:2.4, dmg:820, splash:165,
@@ -285,6 +288,10 @@ const DEFS = {
   hoard:         { fac:'neutral', kind:'building', name:'Ancient Hoard', hp:1500, size:30, dmg:16, range:215, cd:1.0, aggro:240, shot:'shell', splash:34, bounty:550 },
   // Cache: a small, lightly-guarded jungle camp; quick to crack for a little bounty.
   cache:         { fac:'neutral', kind:'building', name:'Supply Cache', hp:520, size:17, dmg:8, range:150, cd:1.1, aggro:160, shot:'bullet', bounty:160 },
+  // Bunker: a heavily-guarded strongpoint guarding a chokepoint. Cracking it pays a
+  // big bounty to anyone — but it holds a hoard of Powder the Warden alone can use,
+  // so it's a prize the Covenant must march out to seize for its grand projects.
+  bunker:        { fac:'neutral', kind:'building', name:'Munitions Bunker', hp:2000, size:24, dmg:15, range:205, cd:0.85, aggro:235, shot:'bullet', splash:18, bounty:450, powder:90 },
 };
 
 // Per-thing flavour + tech tree. `desc` shows on hover; `req` is a building that
@@ -344,6 +351,7 @@ const META = {
   quarry:    { desc: 'Mints a steady flow of Stone each second. Stack them to fund the war.' },
   cauldron:  { desc: 'Short-range tower that dumps burning splash on anything near the wall.', req: 'rampart' },
   forge:     { desc: 'Your only Iron source — mints Iron each second. Build many for the higher tiers.' },
+  powdermill:{ desc: 'Mints a trickle of Powder — the third resource your grandest projects burn. The real haul is on the map: held Obelisks and cracked Munitions Bunkers.' },
   sentinel:  { desc: 'Tough, slow melee line-holder.' },
   warden_g:  { desc: 'Armoured ranged trooper.', req: 'bastion' },
   pikeman:   { desc: 'Cheap anti-armour spearman; hits hard in melee.' },
@@ -436,6 +444,7 @@ const META = {
   obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
   cache:     { desc: 'Lightly-guarded neutral supply cache. Crack it open for a small bounty.' },
+  bunker:    { desc: 'A heavily-guarded neutral strongpoint holding a hoard of munitions. Crack it for a big bounty — and a cache of Powder if you are the Warden.' },
 };
 const meta = t => META[t] || {};
 // has this faction met the tech requirement (a finished prerequisite building) for `type`?
@@ -458,15 +467,26 @@ function reqMsg(fac, type) {
   return miss.length ? 'Requires ' + miss.join(', ') : 'Requirements met';
 }
 
-// secondary resource: some factions (the Warden) spend a second currency (`cost2`,
-// held in p.iron) alongside their primary `res`. `cost2` is absent for everyone else.
-function affordable(p, d) { return p.res >= (d.cost || 0) && (p.iron || 0) >= (d.cost2 || 0); }
-function payFor(p, d) { p.res -= (d.cost || 0); p.iron = (p.iron || 0) - (d.cost2 || 0); }
+// extra resources: the Warden spends a second currency (`cost2`, held in p.iron) and
+// a third (`cost3`, held in p.powder — for its grandest projects) alongside its
+// primary `res`. `cost2`/`cost3` are absent for everyone else.
+function affordable(p, d) { return p.res >= (d.cost || 0) && (p.iron || 0) >= (d.cost2 || 0) && (p.powder || 0) >= (d.cost3 || 0); }
+function payFor(p, d) { p.res -= (d.cost || 0); p.iron = (p.iron || 0) - (d.cost2 || 0); p.powder = (p.powder || 0) - (d.cost3 || 0); }
 function costMsg(fac, d) {
   const F = FACTIONS[fac], p = game.players[fac];
+  if ((d.cost3 || 0) > 0 && (p.powder || 0) < d.cost3 && p.res >= (d.cost || 0) && (p.iron || 0) >= (d.cost2 || 0)) return 'Not enough ' + F.res3;
   if ((d.cost2 || 0) > 0 && (p.iron || 0) < d.cost2 && p.res >= (d.cost || 0)) return 'Not enough ' + F.res2;
   return 'Not enough ' + F.res;
 }
+
+// Building connection: most factions can no longer drop structures anywhere on the
+// map — a new building must sit within CONNECT_R of one they already own, so a base
+// grows as a contiguous network and reaching distant nodes / control points means
+// physically chaining buildings out toward them. Myriad (creep) and Choir (lattice)
+// already have their own network rules; Exodus has no base and is exempt. Buildings
+// flagged `forward:true` (the Syndicate's air-dropped Watchpost) bypass the rule.
+const CONNECT_R = 270;
+const NETWORKED = { vanguard: 1, warden: 1, syndicate: 1, ember: 1, verdant: 1, stormforge: 1, pact: 1 };
 
 // ---------------- research / upgrades ----------------
 // Every faction shares the same four-branch tech tree (Offense / Defense / Mobility
@@ -616,18 +636,27 @@ const ECON = {
   // no building (turret, wall, anything) may be placed within this radius of an enemy structure
   enemyKeepout: 300,
   // warden: income scales with the total HP of standing (finished) buildings,
-  // plus a flat trickle from each Stone Quarry
-  wardenBase: 1.0, wardenPerHp: 0.0012, wardenQuarry: 1.6,
+  // plus a flat trickle from each Stone Quarry. The per-HP scaling is deliberately
+  // small so a clump of walls no longer self-funds the war — map control (Obelisks,
+  // Bunkers) is where the real Stone and Powder come from.
+  wardenBase: 1.0, wardenPerHp: 0.0009, wardenQuarry: 1.6,
+  // warden's third resource: Powder. Minted slowly at Powder Mills and, crucially,
+  // trickled by every Obelisk the Covenant holds — so the doomsday tech demands map control.
+  wardenObeliskPowder: 0.3,
   // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle
   emberBase: 1.2, emberLootPerDmg: 0.32,
   // verdant: income per mature Bloom (grows slowly, snowballs hard)
   verdantBase: 1.2, verdantPerBloom: 1.6,
-  // stormforge: income ramps with elapsed game time, accelerated by Dynamos
-  stormBase: 1.6, stormPerDynamo: 1.1, stormRamp: 0.0016,
+  // stormforge: income ramps with elapsed game time, accelerated by Dynamos. The
+  // raw time-ramp is gentler now so just turtling on Dynamos no longer wins by itself
+  // — holding ground (Obelisks) is meant to carry the mid-game.
+  stormBase: 1.6, stormPerDynamo: 1.1, stormRamp: 0.0012,
   // pact: Blood gained when your OWN units die (flat + a share of their max HP)
   pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
-  // neutral capture points pay their holder a steady income
-  obeliskIncome: 1.4,
+  // neutral capture points pay their holder a steady income. Obelisks now matter a
+  // lot more — they're the main reason to march out and fight over the map rather
+  // than clump at home and scale forever off a single base.
+  obeliskIncome: 2.6,
 };
 
 // AI difficulty. `incomeMul` is the dominant lever (the bot's whole economy is

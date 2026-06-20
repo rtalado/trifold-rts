@@ -17,7 +17,7 @@ function currentCommands() {
   const prodBtn = (host, type) => {
     const d = DEFS[type], tech = techMet(fac, type);
     cmds.push({
-      type, label: d.name, cost: d.cost, cost2: d.cost2, cat: 'unit',
+      type, label: d.name, cost: d.cost, cost2: d.cost2, cost3: d.cost3, cat: 'unit',
       poor: tech && !affordable(p, d),
       enabled: tech && affordable(p, d) && !host.constructing && !host.growing,
       onClick: () => {
@@ -32,7 +32,7 @@ function currentCommands() {
     cmds.push({
       type, label: d.name, cat: 'building',
       tag: (BUILD_VERB[fac] || 'Build').trim().toUpperCase(),
-      cost: d.cost, cost2: d.cost2, enabled: tech && affordable(p, d),
+      cost: d.cost, cost2: d.cost2, cost3: d.cost3, enabled: tech && affordable(p, d),
       poor: tech && !affordable(p, d),
       onClick: () => { game.placing = type; },
     });
@@ -127,7 +127,9 @@ function currentCommands() {
       const ref = Math.round((d.cost || 0) * SELL_REFUND);
       cmds.push({
         label: '✖ Sell', cost: 0, enabled: true, cat: 'sell',
-        sub: '+' + ref + ' ' + FACTIONS[fac].res + ((d.cost2 ? ' +' + Math.round(d.cost2 * SELL_REFUND) + ' ' + FACTIONS[fac].res2 : '')),
+        sub: '+' + ref + ' ' + FACTIONS[fac].res
+          + (d.cost2 ? ' +' + Math.round(d.cost2 * SELL_REFUND) + ' ' + FACTIONS[fac].res2 : '')
+          + (d.cost3 ? ' +' + Math.round(d.cost3 * SELL_REFUND) + ' ' + FACTIONS[fac].res3 : ''),
         desc: 'Demolish this building and recover half of what it cost. Handy for fixing a bad placement.',
         onClick: () => {
           if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'sell', id: sel0.id });
@@ -148,10 +150,11 @@ function currentCommands() {
 
 // compact stat readout for a definition, shown in the build tooltip
 // "120 Stone + 30 Iron" — renders a primary (and optional secondary) cost
-function costStr(fac, cost, cost2) {
+function costStr(fac, cost, cost2, cost3) {
   const F = FACTIONS[fac];
   let s = cost ? cost + ' ' + F.res : '';
   if (cost2) s += (s ? ' + ' : '') + cost2 + ' ' + (F.res2 || '');
+  if (cost3) s += (s ? ' + ' : '') + cost3 + ' ' + (F.res3 || '');
   return s;
 }
 
@@ -169,7 +172,7 @@ function showTip(c) {
   const tip = document.getElementById('tooltip');
   if (!c || (!c.type && !c.desc)) { tip.style.display = 'none'; return; }
   const d = c.type ? DEFS[c.type] : null;
-  const cs = costStr(game.localFac, c.cost, c.cost2);
+  const cs = costStr(game.localFac, c.cost, c.cost2, c.cost3);
   const cat = c.cat || (d ? d.kind : null);
   const catLbl = cat === 'building' ? 'BUILDING' : cat === 'unit' ? 'UNIT'
     : cat === 'research' ? 'RESEARCH' : cat === 'sell' ? 'SELL' : cat === 'upgrade' ? 'UPGRADE'
@@ -202,7 +205,7 @@ function refreshCard() {
     b.disabled = !c.enabled;
     const cat = c.cat || 'ability';
     b.className = 'cmd-' + catClass(cat);
-    const cs = costStr(game.localFac, c.cost, c.cost2);
+    const cs = costStr(game.localFac, c.cost, c.cost2, c.cost3);
     const tag = c.tag || CAT_TAG[cat] || 'USE';
     const sub = cs || c.sub || '';
     b.innerHTML =
@@ -370,6 +373,12 @@ function updateHUD() {
     res2El.innerHTML = FACTIONS[fac].res2 + ': <b>' + Math.floor(p.iron || 0) + '</b>'
       + ' <span style="opacity:.7">+' + (p.ironInc || 0).toFixed(1) + '/s</span>';
   } else res2El.style.display = 'none';
+  const res3El = document.getElementById('hudRes3');
+  if (FACTIONS[fac].res3) {
+    res3El.style.display = '';
+    res3El.innerHTML = FACTIONS[fac].res3 + ': <b>' + Math.floor(p.powder || 0) + '</b>'
+      + ' <span style="opacity:.7">+' + (p.powderInc || 0).toFixed(1) + '/s</span>';
+  } else res3El.style.display = 'none';
   document.getElementById('hudIncome').innerHTML = '+' + p.income.toFixed(1) + '/s'
     + (fac === 'myriad' ? ' · Creep: <b>' + (p.creepTiles || 0) + '</b> tiles' : '');
   document.getElementById('hudArmy').innerHTML = 'Units: <b>' + countUnits(fac) + '</b>/' + capOf(fac);

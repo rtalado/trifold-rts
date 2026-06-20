@@ -201,6 +201,7 @@ function aiTick(fac) {
     const have = t => ents(e => e.fac === fac && e.type === t).length;
     const ramparts = have('rampart'), forges = have('forge');
     if (forges < 2 && can('forge')) aiPlace(fac, 'forge', p.base);
+    else if (have('powdermill') < aiGrow(1, 1, 4) && can('powdermill') && game.t > 70) aiPlace(fac, 'powdermill', p.base);
     else if (have('quarry') < aiGrow(2, 1, 8) && can('quarry')) aiPlace(fac, 'quarry', p.base);
     else if (ramparts < aiGrow(8, 3, 32) && can('rampart')) aiPlace(fac, 'rampart', p.base);
     else if (have('bastion') < aiGrow(3, 1, 8) && can('bastion')) aiPlace(fac, 'bastion', p.base);

@@ -26,6 +26,7 @@ function update(dt) {
     if (p.incomeT >= 1) {
       p.income = p.gainAccum / p.incomeT; p.gainAccum = 0;
       p.ironInc = p.ironAccum / p.incomeT; p.ironAccum = 0;
+      p.powderInc = p.powderAccum / p.incomeT; p.powderAccum = 0;
       p.incomeT = 0;
     }
   }

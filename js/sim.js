@@ -21,6 +21,49 @@ function cornerBases(n) {
 }
 const signTo = b => ({ sx: b.x < WORLD_W / 2 ? 1 : -1, sy: b.y < WORLD_H / 2 ? 1 : -1 });
 
+// is (x,y) within `pad` of any impassable terrain obstacle?
+function onObstacle(x, y, pad = 0) {
+  for (const o of game.obstacles) if (Math.hypot(o.x - x, o.y - y) < o.r + pad) return true;
+  return false;
+}
+
+// impassable rock/cliff terrain, seeded deterministically. The centrepiece is a
+// broken ring of cliffs around the central prize, leaving a lane toward each base
+// corner — so the middle Obelisk, Hoard and Bunker sit behind real chokepoints.
+// A scatter of boulder clusters breaks up the open field elsewhere. The cliffs are
+// spaced (not a solid wall) so units flow around them without needing pathfinding.
+function genObstacles(rng, bases) {
+  game.obstacles = [];
+  const cx = WORLD_W / 2, cy = WORLD_H / 2;
+  const clearOf = (x, y, pad) => bases.every(b => Math.hypot(b.x - x, b.y - y) > 360 + pad)
+    && Math.hypot(cx - x, cy - y) > 150;
+  const add = (x, y, r) => { if (clearOf(x, y, 0)) game.obstacles.push({ x: clamp(x, 40, WORLD_W - 40), y: clamp(y, 40, WORLD_H - 40), r }); };
+  // wide lanes left open toward each map corner (every base sits in a corner)
+  const lanes = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
+  const ringR = Math.min(WORLD_W, WORLD_H) * 0.27;
+  const steps = 30;
+  for (let i = 0; i < steps; i++) {
+    const a = i / steps * Math.PI * 2;
+    if (lanes.some(L => Math.abs(((a - L + Math.PI) % (Math.PI * 2)) - Math.PI) < 0.34)) continue;
+    const jr = ringR + (rng() - 0.5) * 50;
+    add(cx + Math.cos(a) * jr, cy + Math.sin(a) * jr, 34 + rng() * 18);
+  }
+  // scattered boulder clusters across the open field (minor cover / chokepoints)
+  const clusters = 4 + bases.length;
+  for (let c = 0; c < clusters; c++) {
+    let bx = 0, by = 0, ok = false;
+    for (let k = 0; k < 30 && !ok; k++) {
+      bx = 120 + rng() * (WORLD_W - 240);
+      by = 120 + rng() * (WORLD_H - 240);
+      ok = clearOf(bx, by, 90) && Math.hypot(cx - bx, cy - by) > ringR + 140;
+    }
+    if (!ok) continue;
+    const rocks = 2 + (rng() * 3 | 0);
+    for (let j = 0; j < rocks; j++)
+      add(bx + (rng() - 0.5) * 120, by + (rng() - 0.5) * 120, 26 + rng() * 22);
+  }
+}
+
 // seeded, deterministic map. Every player gets a small fair starter economy by
 // their base, then the rest of the world is strewn with crystal nodes and neutral
 // "jungle" camps in random spots (League-of-Legends style) so the map feels alive
@@ -34,6 +77,7 @@ function genLayout(rng, bases) {
 
   const farFromBases = (x, y, d) => bases.every(b => Math.hypot(b.x - x, b.y - y) > d);
   const occupied = (x, y, d) =>
+    onObstacle(x, y, d) ||
     game.nodes.some(n => Math.hypot(n.x - x, n.y - y) < d) ||
     game.entities.some(e => e.fac === 'neutral' && Math.hypot(e.x - x, e.y - y) < d);
   // try up to 60 seeded random spots; return the first that clears the spacing rules
@@ -63,17 +107,23 @@ function genLayout(rng, bases) {
     if (s) node(s.x, s.y, 1500 + Math.floor(rng() * 2200));
   }
 
-  // 3) neutral "jungle": lots of small caches, a scatter of Hoards & capture Obelisks
-  const caches = 12 + 9 * P;          // 2p:30  3p:39  4p:48
-  const hoards = 3 + P;               // 2p:5   3p:6   4p:7
-  const obs    = 2 + P;               // 2p:4   3p:5   4p:6
-  for (let i = 0; i < caches; i++) { const s = findSpot(90, 300, 160);  if (s) spawnEnt('cache',   'neutral', s.x, s.y); }
-  for (let i = 0; i < hoards; i++) { const s = findSpot(120, 420, 240); if (s) spawnEnt('hoard',   'neutral', s.x, s.y); }
-  for (let i = 0; i < obs;    i++) { const s = findSpot(120, 420, 260); if (s) spawnEnt('obelisk', 'neutral', s.x, s.y); }
+  // 3) neutral "jungle": lots of small caches, a scatter of Hoards, capture Obelisks,
+  // and a few heavily-guarded Munitions Bunkers (a big bounty for anyone, a Powder
+  // cache for the Warden). More Obelisks now — map control is the main way to scale.
+  const caches  = 12 + 9 * P;          // 2p:30  3p:39  4p:48
+  const hoards  = 3 + P;               // 2p:5   3p:6   4p:7
+  const obs     = 3 + P;               // 2p:5   3p:6   4p:7  (more control points)
+  const bunkers = 1 + P;               // 2p:3   3p:4   4p:5
+  for (let i = 0; i < caches;  i++) { const s = findSpot(90, 300, 160);  if (s) spawnEnt('cache',   'neutral', s.x, s.y); }
+  for (let i = 0; i < hoards;  i++) { const s = findSpot(120, 420, 240); if (s) spawnEnt('hoard',   'neutral', s.x, s.y); }
+  for (let i = 0; i < obs;     i++) { const s = findSpot(120, 420, 260); if (s) spawnEnt('obelisk', 'neutral', s.x, s.y); }
+  for (let i = 0; i < bunkers; i++) { const s = findSpot(140, 520, 300); if (s) spawnEnt('bunker',  'neutral', s.x, s.y); }
 
-  // 4) central contested prize: a guarded Hoard + Obelisk ringed by rich nodes
+  // 4) central contested prize, behind the cliff-ring chokepoints: a guarded Hoard,
+  // an Obelisk, a Munitions Bunker and rich crystal nodes — worth marching for.
   spawnEnt('obelisk', 'neutral', cx, cy);
   spawnEnt('hoard', 'neutral', cx + 150, cy);
+  spawnEnt('bunker', 'neutral', cx, cy + 175);
   node(cx - 170, cy, 3200); node(cx, cy - 170, 3200);
 }
 
@@ -98,7 +148,7 @@ function buildMatch(roster, localFac, mode, seed) {
   nextId = 1;
   const rng = makeRng(seed);
   game = {
-    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], strikes: [], nodes: [], decor: [],
+    t: 0, over: false, defeated: false, entities: [], proj: [], fx: [], strikes: [], nodes: [], decor: [], obstacles: [],
     creep: new Uint8Array(GW * GH),
     roster, localFac, mode, seed, players: {},
     aiFacs: roster.filter(r => r.ai).map(r => r.fac),
@@ -114,6 +164,7 @@ function buildMatch(roster, localFac, mode, seed) {
 
   const bases = cornerBases(roster.length);
   roster.forEach((r, i) => { r.base = bases[i]; setupFaction(r.fac, bases[i], r.ai, r.diff); });
+  genObstacles(rng, bases);   // impassable terrain (before the layout, so loot avoids it)
   genLayout(rng, bases);
   genDecor(rng, bases);
 
@@ -141,6 +192,7 @@ function setupFaction(fac, base, isAI, diff) {
   const p = {
     res: 0, isAI, base, kills: 0,
     iron: 0, ironAccum: 0, ironInc: 0,   // secondary resource (Warden: Iron)
+    powder: 0, powderAccum: 0, powderInc: 0,   // tertiary resource (Warden: Powder)
     gainAccum: 0, income: 0,
     swarmRally: towardCenter(0.18),
     lastAttack: null, waveSize: 0,
@@ -182,7 +234,7 @@ function setupFaction(fac, base, isAI, diff) {
     for (let i = 0; i < 2; i++) spawnEnt('enforcer', fac, base.x - 40 + i * 80, base.y + 70);
     p.waveSize = 8;
   } else if (fac === 'warden') {
-    p.res = 250; p.iron = 40;
+    p.res = 250; p.iron = 40; p.powder = 0;
     spawnEnt('keep', fac, base.x, base.y);
     for (let i = 0; i < 3; i++) spawnEnt('sentinel', fac, base.x - 50 + i * 50, base.y + 72);
     p.waveSize = 10;
@@ -278,11 +330,17 @@ function applyDamage(t, dmg, attacker) {
       const g = (ECON.pactMartyrFlat + t.hpMax * ECON.pactMartyrPct) * game.players.pact.incomeMul;
       game.players.pact.res += g; game.players.pact.gainAccum += g;
     }
-    // cracking open a neutral Hoard pays its destroyer a one-time bounty
+    // cracking open a neutral Hoard / Bunker pays its destroyer a one-time bounty —
+    // and a Bunker also yields a cache of Powder to a Warden, for its grand projects
     if (t.def.bounty && attacker && game.players[attacker.fac]) {
-      const p = game.players[attacker.fac];
+      const p = game.players[attacker.fac], af = attacker.fac;
       p.res += t.def.bounty; p.gainAccum += t.def.bounty;
-      localMsg(attacker.fac, 'Hoard plundered: +' + t.def.bounty + ' ' + FACTIONS[attacker.fac].res);
+      let msg = (t.type === 'bunker' ? 'Bunker cracked: +' : 'Hoard plundered: +') + t.def.bounty + ' ' + FACTIONS[af].res;
+      if (t.def.powder && FACTIONS[af].res3) {
+        p.powder = (p.powder || 0) + t.def.powder; p.powderAccum += t.def.powder;
+        msg += ' +' + t.def.powder + ' ' + FACTIONS[af].res3;
+      }
+      localMsg(af, msg);
     }
     addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.6, ttl: 0.5, max: 0.5, color: facColor(t.fac) });
   }
@@ -631,7 +689,7 @@ function dequeue(e, idx, research) {
   if (!e || !q || idx < 0 || idx >= q.length) return false;
   const item = q[idx], p = game.players[e.fac];
   if (item.research) { const r = RESEARCH[item.rid]; if (r) p.res += r.cost; }
-  else { const d = DEFS[item.type]; if (d) { p.res += d.cost || 0; p.iron = (p.iron || 0) + (d.cost2 || 0); } }
+  else { const d = DEFS[item.type]; if (d) { p.res += d.cost || 0; p.iron = (p.iron || 0) + (d.cost2 || 0); p.powder = (p.powder || 0) + (d.cost3 || 0); } }
   q.splice(idx, 1);
   return true;
 }
@@ -680,11 +738,20 @@ function placeValid(type, fac, x, y) {
     if (n.amount > 0 && Math.hypot(n.x - x, n.y - y) < n.r + d.size + 10) {
       placeErrMsg = 'Too close to a crystal node'; return false;
     }
+  if (onObstacle(x, y, d.size + 8)) { placeErrMsg = 'Cannot build on rough terrain'; return false; }
   if (fac === 'myriad' && !onCreep(fac, x, y)) { placeErrMsg = 'Must grow on your creep'; return false; }
   if (fac === 'choir') { // lattice rule: must be near an existing finished Choir structure
     const ok = game.entities.some(e => !e.dead && e.fac === fac && e.def.kind === 'building'
       && !e.constructing && !e.growing && Math.hypot(e.x - x, e.y - y) < ECON.choirLattice);
     if (!ok) { placeErrMsg = 'Must build within the lattice — near another Choir structure'; return false; }
+  }
+  // network rule: most factions must build within CONNECT_R of one of their own
+  // structures, so a base grows as a connected web rather than teleporting across
+  // the map. `forward` buildings (the Syndicate Watchpost) are exempt.
+  if (NETWORKED[fac] && !d.forward) {
+    const linked = game.entities.some(e => !e.dead && e.fac === fac && e.def.kind === 'building'
+      && Math.hypot(e.x - x, e.y - y) < CONNECT_R + e.size);
+    if (!linked) { placeErrMsg = 'Must connect to your base — build closer to your own structures'; return false; }
   }
   // no faction may build in enemy-held territory (no turret-rushing / walling the enemy base)
   const enemyNear = game.entities.some(o => !o.dead && o.fac !== fac && o.fac !== 'neutral'
@@ -723,6 +790,7 @@ function sellBuilding(fac, id) {
   const p = game.players[fac], d = e.def;
   p.res += Math.round((d.cost || 0) * SELL_REFUND);
   p.iron = (p.iron || 0) + Math.round((d.cost2 || 0) * SELL_REFUND);
+  p.powder = (p.powder || 0) + Math.round((d.cost3 || 0) * SELL_REFUND);
   e.dead = true;
   addFx({ kind: 'boom', x: e.x, y: e.y, r: e.size * 1.4, ttl: 0.4, max: 0.4, color: facColor(fac) });
   localMsg(fac, 'Sold ' + d.name + ' (+' + Math.round((d.cost || 0) * SELL_REFUND) + ' ' + FACTIONS[fac].res + ')');
@@ -811,6 +879,15 @@ function tickEconomy(dt) {
     for (const e of game.entities)
       if (!e.dead && e.fac === fac && e.def.ironPerSec && !e.constructing && !e.growing) iron += e.def.ironPerSec;
     if (iron) { iron *= p.incomeMul * (p.econMul || 1); p.iron += iron * dt; p.ironAccum += iron * dt; }
+
+    // tertiary resource: the Warden's Powder — a trickle from Powder Mills, plus a
+    // flow from every Obelisk it holds, so the grand projects demand map control.
+    let powder = 0;
+    for (const e of game.entities)
+      if (!e.dead && e.fac === fac && e.def.powderPerSec && !e.constructing && !e.growing) powder += e.def.powderPerSec;
+    if (FACTIONS[fac].res3)
+      powder += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.wardenObeliskPowder;
+    if (powder) { powder *= p.incomeMul * (p.econMul || 1); p.powder += powder * dt; p.powderAccum += powder * dt; }
   }
 }
 
@@ -917,6 +994,12 @@ function separation() {
       const dx = a.x - n.x, dy = a.y - n.y, rr = a.size + n.r - 4;
       const d = Math.hypot(dx, dy);
       if (d < rr && d > 0.01) { a.x = n.x + dx / d * rr; a.y = n.y + dy / d * rr; }
+    }
+    // shove units out of impassable terrain (radial push, like buildings/nodes)
+    for (const ob of game.obstacles) {
+      const dx = a.x - ob.x, dy = a.y - ob.y, rr = a.size + ob.r;
+      const d = Math.hypot(dx, dy);
+      if (d < rr && d > 0.01) { a.x = ob.x + dx / d * rr; a.y = ob.y + dy / d * rr; }
     }
     a.x = clamp(a.x, a.size, WORLD_W - a.size);
     a.y = clamp(a.y, a.size, WORLD_H - a.size);
