@@ -35,23 +35,6 @@ npm run dist:linux # build Linux AppImage + .deb -> dist/
 `npm run dist:win` must be run on Windows and `npm run dist:linux` on Linux —
 each OS builds its own installer. You normally don't run these by hand: see below.
 
-### Cutting a release (builds both OSes automatically)
-
-A GitHub Actions workflow (`.github/workflows/release.yml`) builds **both**
-Windows and Linux on every version tag and uploads the installers to a GitHub
-Release. To publish a new version:
-
-1. Bump `"version"` in `package.json` (e.g. `1.0.1`).
-2. `git tag v1.0.1 && git push origin v1.0.1`
-
-GitHub does the rest. Everyone running the desktop app auto-updates to it. The
-update feed is the repo's own GitHub Releases (configured under `build.publish`
-in `package.json`), so there's nothing extra to host.
-
-> **Icons:** the build currently uses Electron's default icon. To brand it, drop a
-> `build/icon.ico` (Windows, 256×256) and `build/icon.png` (Linux, 512×512) and
-> re-add the `icon` fields under `build.win` / `build.linux` in `package.json`.
-
 ## The menu
 
 The main menu has two screens:
