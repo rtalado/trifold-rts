@@ -117,13 +117,13 @@ function genLayout(rng, bases) {
   for (let i = 0; i < caches;  i++) { const s = findSpot(90, 300, 160);  if (s) spawnEnt('cache',   'neutral', s.x, s.y); }
   for (let i = 0; i < hoards;  i++) { const s = findSpot(120, 420, 240); if (s) spawnEnt('hoard',   'neutral', s.x, s.y); }
   for (let i = 0; i < obs;     i++) { const s = findSpot(120, 420, 260); if (s) spawnEnt('obelisk', 'neutral', s.x, s.y); }
-  for (let i = 0; i < bunkers; i++) { const s = findSpot(140, 520, 300); if (s) spawnEnt('bunker',  'neutral', s.x, s.y); }
+  for (let i = 0; i < bunkers; i++) { const s = findSpot(140, 520, 300); if (s) spawnEnt('munitions', 'neutral', s.x, s.y); }
 
   // 4) central contested prize, behind the cliff-ring chokepoints: a guarded Hoard,
   // an Obelisk, a Munitions Bunker and rich crystal nodes — worth marching for.
   spawnEnt('obelisk', 'neutral', cx, cy);
   spawnEnt('hoard', 'neutral', cx + 150, cy);
-  spawnEnt('bunker', 'neutral', cx, cy + 175);
+  spawnEnt('munitions', 'neutral', cx, cy + 175);
   node(cx - 170, cy, 3200); node(cx, cy - 170, 3200);
 }
 
@@ -284,6 +284,7 @@ function spawnEnt(type, fac, x, y, opts = {}) {
 // ---------------- damage / death ----------------
 function applyDamage(t, dmg, attacker) {
   if (t.dead || t.def.noTarget) return;  // Obelisks are captured, never destroyed
+  if (t.def.invuln && !t.constructing && !t.growing) return;  // the Erdtree: an indestructible living wall
   const dmg0 = dmg;
   t.lastHurt = game.t;
   const p = game.players[t.fac];
@@ -342,7 +343,7 @@ function applyDamage(t, dmg, attacker) {
     if (t.def.bounty && attacker && game.players[attacker.fac]) {
       const p = game.players[attacker.fac], af = attacker.fac;
       p.res += t.def.bounty; p.gainAccum += t.def.bounty;
-      let msg = (t.type === 'bunker' ? 'Bunker cracked: +' : 'Hoard plundered: +') + t.def.bounty + ' ' + FACTIONS[af].res;
+      let msg = (t.type === 'munitions' ? 'Bunker cracked: +' : 'Hoard plundered: +') + t.def.bounty + ' ' + FACTIONS[af].res;
       if (t.def.powder && FACTIONS[af].res3) {
         p.powder = (p.powder || 0) + t.def.powder; p.powderAccum += t.def.powder;
         msg += ' +' + t.def.powder + ' ' + FACTIONS[af].res3;

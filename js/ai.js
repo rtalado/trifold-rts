@@ -283,11 +283,18 @@ function aiTick(fac) {
     // weave one Heartwood Graft (Wildgrowth — fattens the free swarm), beside the core
     else if (have('graft_wild') < 1 && can('graft_wild') && techMet(fac, 'graft_wild') && game.t > 180) aiPlaceAt(fac, 'graft_wild', heart ? heart.x : p.base.x, heart ? heart.y + 70 : p.base.y + 70);
     else if (have('greatroot') < aiGrow(1, 1, 4) && can('greatroot') && techMet(fac, 'greatroot') && game.t > 200) aiPlace(fac, 'greatroot', p.base);
+    // one indestructible Erdtree to anchor the hold, once the garden is rich
+    else if (have('erdtree') < 1 && can('erdtree') && techMet(fac, 'erdtree') && game.t > 300) aiPlace(fac, 'erdtree', p.base);
     else if (blooms < aiGrow(11, 3, 28) && p.res >= 300) aiPlace(fac, 'bloom', p.base);
     if (heart && !heart.queue.length && p.res >= 90) {
       const treants = have('treant');
       const ancients = have('ancient');
-      if (ancients < 2 && can('ancient') && game.t > 220 && techMet(fac, 'ancient')) enqueue(heart, 'ancient');
+      const horns = have('bramblehorn');
+      const callers = have('sporecaller');
+      // once the Arboretum is up, lean on the heavier beasts as the army's backbone
+      if (horns < 3 && can('bramblehorn') && techMet(fac, 'bramblehorn') && game.t > 240) enqueue(heart, 'bramblehorn');
+      else if (callers < 3 && can('sporecaller') && techMet(fac, 'sporecaller') && game.t > 220) enqueue(heart, 'sporecaller');
+      else if (ancients < 2 && can('ancient') && game.t > 220 && techMet(fac, 'ancient')) enqueue(heart, 'ancient');
       else if (treants < 3 && can('treant') && game.t > 150 && techMet(fac, 'treant')) enqueue(heart, 'treant');
       else enqueue(heart, 'thornling');
     }

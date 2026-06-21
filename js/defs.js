@@ -195,7 +195,7 @@ const DEFS = {
 
   // ----- VERDANT BLOOM (a 3-harvest garden: Sap from Blooms, Pollen from Pollen
   //   Spires, Loam from Mulch Beds; the grandest plants & beasts demand a MIX) -----
-  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient'], grows:['bloom','petalspire','mulchbed','grove','bramble','sporevent','fertpod','sporebloss','thornwall','greatroot','heartsap','arboretum','graft_necro','graft_moon','graft_wild','heartgrove'], spawns:'sapling', spawnEvery:8 },
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient','bramblehorn','sporecaller'], grows:['bloom','petalspire','mulchbed','grove','bramble','sporevent','fertpod','sporebloss','thornwall','greatroot','erdtree','heartsap','arboretum','graft_necro','graft_moon','graft_wild','heartgrove'], spawns:'sapling', spawnEvery:8 },
   bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
   petalspire:{ fac:'verdant', kind:'building', name:'Pollen Spire', hp:300, size:16, cost:110, time:12, ironPerSec:0.9 },
   mulchbed:  { fac:'verdant', kind:'building', name:'Mulch Bed', hp:360, size:19, cost:120, time:12, powderPerSec:0.7 },
@@ -206,6 +206,10 @@ const DEFS = {
   sporebloss:{ fac:'verdant', kind:'building', name:'Spore Blossom', hp:380, size:17, cost:170, cost2:30, time:13, slowAura:360 },
   thornwall: { fac:'verdant', kind:'building', name:'Thornwall', hp:1050, size:14, cost:35, cost3:22, time:7, dmg:7, range:52, cd:1.2, aggro:60, shot:'glob' },
   greatroot: { fac:'verdant', kind:'building', name:'Great Root', hp:2800, size:30, cost:120, cost3:60, time:16, dmg:9, range:62, cd:1.3, aggro:66, shot:'glob' },
+  // The Erdtree: one colossal, INDESTRUCTIBLE world-tree — a single, enormously
+  // expensive living wall that can never be destroyed (invuln) and shells anything
+  // that comes near. The ultimate anchor of the garden. Needs an Arboretum.
+  erdtree:   { fac:'verdant', kind:'building', name:'Erdtree', hp:30000, size:110, cost:2200, cost2:320, cost3:280, time:75, invuln:true, dmg:34, range:255, cd:1.0, aggro:285, shot:'glob', splash:64 },
   heartsap:  { fac:'verdant', kind:'building', name:'Heartwood Sapling', hp:1000, size:26, cost:200, cost2:20, time:16, connectR:460, spawns:'sapling', spawnEvery:9 },
   // Heartwood Grafts — raised beside the Heartwood, each weaves a faction-wide mutation
   graft_necro:{ fac:'verdant', kind:'building', name:'Necrotic Graft', hp:760, size:20, cost:240, cost2:40, cost3:40, time:18, graft:'necro' },
@@ -216,6 +220,10 @@ const DEFS = {
   treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:270, cost2:25, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
   arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true },
   ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:360, cost2:45, cost3:25, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
+  // -- heavier beasts of the garden: a charging bruiser and a long-range spore-thrower,
+  // both gated behind the Arboretum so they arrive as a real mid/late power spike --
+  bramblehorn:{ fac:'verdant', kind:'unit', name:'Bramblehorn', hp:1100, size:19, speed:50, cost:360, cost2:40, cost3:20, time:22, dmg:50, range:30, cd:1.5, aggro:190, shot:'melee', splash:48 },
+  sporecaller:{ fac:'verdant', kind:'unit', name:'Spore Caller', hp:320, size:14, speed:42, cost:300, cost2:50, time:18, dmg:38, range:255, cd:2.3, aggro:275, shot:'glob', splash:50 },
 
   // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
   reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','galvan','voltaic','gladius'], grows:['dynamo','pylon','tesla','foundry_s','stormlab','arcfoundry'] },
@@ -306,7 +314,7 @@ const DEFS = {
   // Bunker: a heavily-guarded strongpoint guarding a chokepoint. Cracking it pays a
   // big bounty to anyone — but it holds a hoard of Powder the Warden alone can use,
   // so it's a prize the Covenant must march out to seize for its grand projects.
-  bunker:        { fac:'neutral', kind:'building', name:'Munitions Bunker', hp:2000, size:24, dmg:15, range:205, cd:0.85, aggro:235, shot:'bullet', splash:18, bounty:450, powder:90 },
+  munitions:     { fac:'neutral', kind:'building', name:'Munitions Bunker', hp:2000, size:24, dmg:15, range:205, cd:0.85, aggro:235, shot:'bullet', splash:18, bounty:450, powder:90 },
 };
 
 // Per-thing flavour + tech tree. `desc` shows on hover; `req` is a building that
@@ -405,6 +413,7 @@ const META = {
   sporebloss:{ desc: 'Exhales a vast cloud of clinging spores that crawls the enemy to a slow drag across a huge radius. Costs Sap + Pollen.', req: 'grove' },
   thornwall: { desc: 'A rooting wall-plant: dirt-cheap, super-tough, and thorny up close. Chain them into living barricades to seal your hold and funnel the enemy into a kill-zone. Costs Sap + Loam; needs an Arboretum.', req: 'arboretum' },
   greatroot: { desc: 'A colossal rooted barricade — a single titanic wall of living wood that simply will not move. The backbone of a great wall to block and funnel whole armies. Costs Sap + Loam; needs an Arboretum.', req: 'arboretum' },
+  erdtree:   { desc: 'The Erdtree — one colossal, INDESTRUCTIBLE world-tree. It can never be destroyed and shells all who near it: the ultimate living wall and anchor of the garden. Enormously expensive (Sap + Pollen + Loam); needs an Arboretum.', req: 'arboretum' },
   heartsap:  { desc: 'A daughter of the Heartwood: an expansion that lets your garden spread far further (much greater build range) and trickles its own free Saplings. Plant it out toward the map. Costs Sap + Pollen.', req: 'grove' },
   graft_necro:{ desc: 'HEARTWOOD GRAFT — must root beside the Heartwood. Your plants & beasts feed on the enemy dead nearby, growing permanently stronger; and your buildings no longer die — they collapse into withered husks you can nurse back with Fertiliser Pods. Needs an Arboretum.', req: 'arboretum' },
   graft_moon: { desc: 'HEARTWOOD GRAFT — must root beside the Heartwood. The moon-sign lifts the fog of war from the whole map and quickens everything you grow — movement, attacks and growth all hasten. Needs an Arboretum.', req: 'arboretum' },
@@ -412,6 +421,8 @@ const META = {
   sapling:   { desc: 'Free, weak melee swarm creature.' },
   thornling: { desc: 'Ranged thorn-spitter.' },
   treant:    { desc: 'Towering splashing bruiser. Costs Sap + Pollen.', req: 'grove' },
+  bramblehorn:{ desc: 'Heavy thorn-wreathed beast — a wall of HP that charges in and cleaves with splashing blows. Needs an Arboretum.', req: 'arboretum' },
+  sporecaller:{ desc: 'Long-range walking plant that lobs caustic spore-bombs with wide splash. The garden’s siege artillery. Needs an Arboretum.', req: 'arboretum' },
   // STORMFORGE DYNASTY
   reactor:   { desc: 'Your core. Assembles machines. Power ramps with elapsed time — each standing Dynamo pays more every minute.' },
   dynamo:    { desc: 'Your engine. Each Dynamo’s output RAMPS the longer it stands — build them early and defend them; time turns them into a fortune.' },
@@ -440,8 +451,6 @@ const META = {
   lich:      { desc: 'Ranged caster spirit with a piercing death-beam. Fragile but hits hard.' },
   blackmarket:{ desc: 'Air-dropped research den. Brokers the Syndicate’s upgrades.' },
   marauder:  { desc: 'Instant-hire mercenary bruiser with a short-range grenade launcher.' },
-  bunker:    { desc: 'Hugely armoured gun emplacement — the backbone of an impenetrable wall. Needs a Bastion.', req: 'bastion' },
-  redoubt:   { desc: 'Long-range static artillery with splash. Shells anything that nears your line. Needs a War Foundry.', req: 'foundry_w' },
   warlodge:  { desc: 'Research building. Hones the warband’s edge & upgrades.' },
   firewagon: { desc: 'Fast vehicle that flings flaming pitch in a splash. Needs a War Camp.', req: 'warcamp' },
   arboretum: { desc: 'Research building. Cultivates the garden’s upgrades.' },
@@ -472,7 +481,7 @@ const META = {
   obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
   cache:     { desc: 'Lightly-guarded neutral supply cache. Crack it open for a small bounty.' },
-  bunker:    { desc: 'A heavily-guarded neutral strongpoint holding a hoard of munitions. Crack it for a big bounty — and a cache of Powder if you are the Warden.' },
+  munitions: { desc: 'A heavily-guarded neutral strongpoint holding a hoard of munitions. Crack it for a big bounty — and a cache of Powder if you are the Warden.' },
 };
 const meta = t => META[t] || {};
 // has this faction met the tech requirement (a finished prerequisite building) for `type`?

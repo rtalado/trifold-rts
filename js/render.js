@@ -561,7 +561,7 @@ function drawEnt(e) {
         ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 7), y + Math.sin(a) * (s + 7)); ctx.stroke();
       }
-    } else if (e.type === 'bunker') { // heavily-armoured munitions blockhouse
+    } else if (e.type === 'munitions') { // heavily-armoured munitions blockhouse
       ctx.fillStyle = '#26303a'; ctx.strokeStyle = '#7d8a99'; ctx.lineWidth = 3;
       roundRect(x - s, y - s * 0.85, s * 2, s * 1.7, 4); ctx.fill(); ctx.stroke();
       // corner reinforcements
@@ -764,6 +764,39 @@ function drawEnt(e) {
           const a = i * 1.45 + 0.4;
           ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * s * 0.8, y + Math.sin(a) * s * 0.78); ctx.stroke();
         }
+      } else if (e.type === 'erdtree') { // the massive, indestructible golden world-tree
+        const pul = 0.5 + 0.5 * Math.sin(game.t * 1.2 + e.id);
+        // radiant golden halo
+        const grad = ctx.createRadialGradient(x, y - s * 0.2, s * 0.2, x, y - s * 0.2, s * 1.5);
+        grad.addColorStop(0, 'rgba(255,226,122,' + (0.45 + 0.25 * pul).toFixed(2) + ')');
+        grad.addColorStop(1, 'rgba(255,226,122,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(x, y - s * 0.2, s * 1.5, 0, Math.PI * 2); ctx.fill();
+        // slow-turning light shafts
+        ctx.strokeStyle = 'rgba(255,236,150,0.3)'; ctx.lineWidth = 3;
+        for (let i = 0; i < 12; i++) {
+          const a = i * Math.PI / 6 + game.t * 0.05;
+          ctx.beginPath(); ctx.moveTo(x, y - s * 0.2);
+          ctx.lineTo(x + Math.cos(a) * s * 1.4, y - s * 0.2 + Math.sin(a) * s * 1.4); ctx.stroke();
+        }
+        // trunk
+        ctx.fillStyle = '#5a4326'; ctx.strokeStyle = '#3a2c18'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.16, y + s * 0.95);
+        ctx.lineTo(x - s * 0.10, y - s * 0.15);
+        ctx.lineTo(x + s * 0.10, y - s * 0.15);
+        ctx.lineTo(x + s * 0.16, y + s * 0.95);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // layered golden canopy
+        for (let i = 0; i < 5; i++) {
+          const ry = y - s * 0.2 - i * s * 0.16;
+          const rr = s * (0.95 - i * 0.13);
+          ctx.fillStyle = i % 2 ? '#7bbf4a' : '#c8e87a';
+          ctx.beginPath(); ctx.arc(x, ry, rr, 0, Math.PI * 2); ctx.fill();
+        }
+        // glowing crown
+        ctx.fillStyle = '#ffe27a';
+        ctx.beginPath(); ctx.arc(x, y - s * 0.95, s * 0.28 * (0.9 + 0.2 * pul), 0, Math.PI * 2); ctx.fill();
       } else if (e.type === 'bloom') {
         ctx.fillStyle = '#b8f0a0';
         for (let i = 0; i < 6; i++) {
@@ -836,12 +869,24 @@ function drawEnt(e) {
       }
     } else {
       const mut = e.mutated;   // Wildgrowth mutated Sapling
-      ctx.fillStyle = mut ? '#46871f' : (e.type === 'treant' ? '#2f6b2a' : col);
-      ctx.strokeStyle = mut ? '#d6ff8a' : '#2f6b2a'; ctx.lineWidth = mut ? 1.8 : 1.3;
+      const heavy = e.type === 'treant' || e.type === 'bramblehorn';
+      ctx.fillStyle = mut ? '#46871f' : (heavy ? '#2f6b2a' : col);
+      ctx.strokeStyle = mut ? '#d6ff8a' : '#2f6b2a'; ctx.lineWidth = mut || heavy ? 1.8 : 1.3;
       ctx.beginPath();
       ctx.moveTo(x, y - s - 1); ctx.quadraticCurveTo(x + s, y, x, y + s + 1); ctx.quadraticCurveTo(x - s, y, x, y - s - 1);
       ctx.closePath(); ctx.fill(); ctx.stroke();
       if (mut) { ctx.fillStyle = '#d6ff8a'; ctx.beginPath(); ctx.arc(x, y, s * 0.28, 0, Math.PI * 2); ctx.fill(); }
+      if (e.type === 'bramblehorn') { // wreath of thorns around the beast
+        ctx.strokeStyle = '#d6ff8a'; ctx.lineWidth = 1.6;
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 + 0.2;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.6, y + Math.sin(a) * s * 0.6);
+          ctx.lineTo(x + Math.cos(a) * (s + 5), y + Math.sin(a) * (s + 5)); ctx.stroke();
+        }
+      } else if (e.type === 'sporecaller') { // glowing spore sac
+        ctx.fillStyle = '#cdb6ff';
+        ctx.beginPath(); ctx.arc(x, y - s * 0.1, s * 0.34, 0, Math.PI * 2); ctx.fill();
+      }
     }
   }
 
