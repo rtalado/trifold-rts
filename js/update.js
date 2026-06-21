@@ -1,6 +1,7 @@
 // ---------------- main update ----------------
 function update(dt) {
   game.t += dt;
+  game.pathCalls = 0;   // per-frame A* search budget (see nav.js)
 
   refreshGrafts();   // Verdant: which Heartwood Grafts are standing this tick
 

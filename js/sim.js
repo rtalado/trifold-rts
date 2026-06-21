@@ -143,6 +143,7 @@ function buildMatch(roster, localFac, mode, seed) {
     cam: { x: 0, y: 0, z: 1 },
     creepTimer: 0, hudTimer: 0, aiTimer: 0, aiCursor: 0, netTimer: 0, netFx: [],
     aiInterval: 1.0,
+    nav: null, navDirty: true, navBuilt: -9, pathCalls: 0,   // pathfinding state (nav.js)
   };
   // bots re-plan as often as the toughest of them demands
   const reacts = roster.filter(r => r.ai).map(r => (DIFFS[r.diff] || DIFFS.normal).react);
@@ -277,6 +278,7 @@ function spawnEnt(type, fac, x, y, opts = {}) {
   }
   if (opts.constructing) { e.constructing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.12); }
   if (opts.growing) { e.growing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.25); }
+  if (d.kind === 'building') game.navDirty = true;   // new blocker → re-plan paths
   game.entities.push(e);
   return e;
 }
@@ -317,6 +319,7 @@ function applyDamage(t, dmg, attacker) {
       return;
     }
     t.dead = true;
+    if (t.def.kind === 'building') game.navDirty = true;   // blocker gone → re-plan paths
     // Necrotic Graft: the garden feeds on the enemy dead nearby, growing permanently stronger
     if (t.def.kind === 'unit' && t.fac !== 'neutral')
       for (const f in game.players)
@@ -497,7 +500,7 @@ function engage(e, t, dt) {
       e.y = clamp(t.y + Math.sin(a) * (t.size + 22), 10, WORLD_H - 10);
       e.blinkCd = 6;
     } else {
-      moveToward(e, t.x, t.y, dt);
+      navMove(e, t.x, t.y, dt);
     }
   }
 }
@@ -544,7 +547,7 @@ function updateUnit(e, dt) {
       break;
     }
     case 'move': {
-      if (moveToward(e, o.x, o.y, dt)) e.order = { type: 'idle' };
+      if (navMove(e, o.x, o.y, dt)) e.order = { type: 'idle' };
       break;
     }
     case 'amove': {
@@ -554,7 +557,7 @@ function updateUnit(e, dt) {
         const t = e.tgt ? byId(e.tgt) : null;
         if (t) { engage(e, t, dt); break; }
       }
-      if (moveToward(e, o.x, o.y, dt)) e.order = { type: 'idle' };
+      if (navMove(e, o.x, o.y, dt)) e.order = { type: 'idle' };
       break;
     }
     case 'attack': {
@@ -567,7 +570,7 @@ function updateUnit(e, dt) {
     case 'build': {
       const site = byId(o.id);
       if (!site || !site.constructing) { e.order = { type: 'idle' }; break; }
-      if (dist(e, site) > site.size + e.size + 8) { moveToward(e, site.x, site.y, dt); break; }
+      if (dist(e, site) > site.size + e.size + 8) { navMove(e, site.x, site.y, dt); break; }
       site.progress += dt;
       site.hp = Math.min(site.hpMax, site.hpMax * (0.12 + 0.88 * site.progress / site.def.time));
       if (site.progress >= site.def.time) { site.constructing = false; site.hp = site.hpMax; e.order = { type: 'idle' }; }
@@ -602,7 +605,7 @@ function harvestStep(e, dt) {
   if (o.phase === 'go') {
     if (!node || node.amount <= 0) { e.order = { type: 'idle' }; return; }
     if (dist(e, node) <= node.r + e.size + 4) { o.phase = 'mine'; o.timer = ECON.workerMine; }
-    else moveToward(e, node.x, node.y, dt);
+    else navMove(e, node.x, node.y, dt);
   } else if (o.phase === 'mine') {
     if (!node || node.amount <= 0) { e.order = { type: 'idle' }; return; }
     o.timer -= dt;
@@ -621,7 +624,7 @@ function harvestStep(e, dt) {
       o.carry = 0;
       if (node && node.amount > 0) o.phase = 'go';
       else { e.order = { type: 'idle' }; }
-    } else moveToward(e, drop.x, drop.y, dt);
+    } else navMove(e, drop.x, drop.y, dt);
   }
 }
 
@@ -835,6 +838,7 @@ function sellBuilding(fac, id) {
   p.iron = (p.iron || 0) + Math.round((d.cost2 || 0) * SELL_REFUND);
   p.powder = (p.powder || 0) + Math.round((d.cost3 || 0) * SELL_REFUND);
   e.dead = true;
+  game.navDirty = true;   // blocker gone → re-plan paths
   addFx({ kind: 'boom', x: e.x, y: e.y, r: e.size * 1.4, ttl: 0.4, max: 0.4, color: facColor(fac) });
   localMsg(fac, 'Sold ' + d.name + ' (+' + Math.round((d.cost || 0) * SELL_REFUND) + ' ' + FACTIONS[fac].res + ')');
   return true;

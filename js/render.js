@@ -797,6 +797,15 @@ function drawEnt(e) {
         // glowing crown
         ctx.fillStyle = '#ffe27a';
         ctx.beginPath(); ctx.arc(x, y - s * 0.95, s * 0.28 * (0.9 + 0.2 * pul), 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'erdwall') { // chunky golden root-wall block
+        ctx.fillStyle = '#4a3a1e'; ctx.strokeStyle = '#d8b24a'; ctx.lineWidth = 2.5;
+        roundRect(x - s, y - s, s * 2, s * 2, 4); ctx.fill(); ctx.stroke();
+        // interlocking root grain
+        ctx.strokeStyle = '#caa44a'; ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.6, y - s * 0.5); ctx.lineTo(x + s * 0.6, y - s * 0.5);
+        ctx.moveTo(x - s * 0.6, y + s * 0.1); ctx.lineTo(x + s * 0.6, y + s * 0.1);
+        ctx.moveTo(x - s * 0.6, y + s * 0.6); ctx.lineTo(x + s * 0.6, y + s * 0.6); ctx.stroke();
       } else if (e.type === 'bloom') {
         ctx.fillStyle = '#b8f0a0';
         for (let i = 0; i < 6; i++) {
@@ -1019,8 +1028,8 @@ function drawEnt(e) {
 
   ctx.globalAlpha = 1;
 
-  // hp bar
-  if (sel || e.hp < e.hpMax || e.constructing || e.growing) {
+  // hp bar (suppressed for finished indestructible structures — HP is meaningless)
+  if ((sel || e.hp < e.hpMax || e.constructing || e.growing) && !(e.def.invuln && !e.constructing && !e.growing)) {
     const w = Math.max(20, s * 2), hpf = clamp(e.hp / e.hpMax, 0, 1);
     const by = y - s - 10;
     ctx.fillStyle = '#000a'; ctx.fillRect(x - w / 2, by, w, 4);

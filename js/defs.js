@@ -59,7 +59,7 @@ const HINTS = {
   syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
   warden: 'TWO resources: Stone from your buildings’ total mass (Quarries add a trickle), Iron only from Forges. Your tech tree is DISTRIBUTED — raise advanced structures FROM advanced ones: the War College builds the Bunker/Ballista/Hall, the War Foundry the Redoubt/Arsenal, the Arsenal the Bulwark and the doomsday WORLDBREAKER siege gun (map-spanning Gustav Strike). Slow, armoured, unstoppable. Hold the Keep.',
   ember: 'No mines, no farms — you fund the war by WAGING it. Every point of damage your warband deals to the enemy is paid back as Plunder. Fast, cheap, fragile raiders: keep attacking or starve. Guard the War Pyre.',
-  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds. A diverse garden snowballs — your grandest plants and beasts demand a MIX of all three. Groves breed free Saplings forever; Spore Vents gas a kill-zone; Thornwalls root into living barriers to funnel the foe onto your thorns. Patient early, unstoppable late. Protect the Heartwood.',
+  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds. A diverse garden snowballs — your grandest plants and beasts demand a MIX of all three. Groves breed free Saplings forever; the Arboretum unlocks heavier beasts (Bramblehorn, Spore Caller); Spore Vents gas a kill-zone. The colossal, INDESTRUCTIBLE Erdtree raises impassable Erdtree Walls — chain them to funnel the foe (enemies must path around). Patient early, unstoppable late. Protect the Heartwood.',
   stormforge: 'An engine that only accelerates. Power RAMPS the longer your Dynamos stand — each one pays more every minute, so time and held ground compound into a fortune. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Survive the early game and bury them. Defend the Reactor.',
   pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Reckless by design. Keep the Altar.',
 };
@@ -209,7 +209,10 @@ const DEFS = {
   // The Erdtree: one colossal, INDESTRUCTIBLE world-tree — a single, enormously
   // expensive living wall that can never be destroyed (invuln) and shells anything
   // that comes near. The ultimate anchor of the garden. Needs an Arboretum.
-  erdtree:   { fac:'verdant', kind:'building', name:'Erdtree', hp:30000, size:110, cost:2200, cost2:320, cost3:280, time:75, invuln:true, dmg:34, range:255, cd:1.0, aggro:285, shot:'glob', splash:64 },
+  erdtree:   { fac:'verdant', kind:'building', name:'Erdtree', hp:30000, size:110, cost:2200, cost2:320, cost3:280, time:75, invuln:true, dmg:34, range:255, cd:1.0, aggro:285, shot:'glob', splash:64, grows:['erdwall'] },
+  // Erdtree Wall: a chunky, INDESTRUCTIBLE root-segment the Erdtree raises. Cheap so
+  // you can chain a whole rampart; impassable once grown (units must path around it).
+  erdwall:   { fac:'verdant', kind:'building', name:'Erdtree Wall', hp:8000, size:18, cost:55, cost3:18, time:5, invuln:true, connectR:300 },
   heartsap:  { fac:'verdant', kind:'building', name:'Heartwood Sapling', hp:1000, size:26, cost:200, cost2:20, time:16, connectR:460, spawns:'sapling', spawnEvery:9 },
   // Heartwood Grafts — raised beside the Heartwood, each weaves a faction-wide mutation
   graft_necro:{ fac:'verdant', kind:'building', name:'Necrotic Graft', hp:760, size:20, cost:240, cost2:40, cost3:40, time:18, graft:'necro' },
@@ -413,7 +416,8 @@ const META = {
   sporebloss:{ desc: 'Exhales a vast cloud of clinging spores that crawls the enemy to a slow drag across a huge radius. Costs Sap + Pollen.', req: 'grove' },
   thornwall: { desc: 'A rooting wall-plant: dirt-cheap, super-tough, and thorny up close. Chain them into living barricades to seal your hold and funnel the enemy into a kill-zone. Costs Sap + Loam; needs an Arboretum.', req: 'arboretum' },
   greatroot: { desc: 'A colossal rooted barricade — a single titanic wall of living wood that simply will not move. The backbone of a great wall to block and funnel whole armies. Costs Sap + Loam; needs an Arboretum.', req: 'arboretum' },
-  erdtree:   { desc: 'The Erdtree — one colossal, INDESTRUCTIBLE world-tree. It can never be destroyed and shells all who near it: the ultimate living wall and anchor of the garden. Enormously expensive (Sap + Pollen + Loam); needs an Arboretum.', req: 'arboretum' },
+  erdtree:   { desc: 'The Erdtree — one colossal, INDESTRUCTIBLE world-tree. It can never be destroyed and shells all who near it: the ultimate living wall and anchor of the garden. Enormously expensive (Sap + Pollen + Loam); needs an Arboretum. Raises Erdtree Walls.', req: 'arboretum' },
+  erdwall:   { desc: 'An INDESTRUCTIBLE root-wall segment raised by the Erdtree. Cheap — chain them into an impassable rampart that funnels the enemy (they must path around). Needs an Erdtree.', req: 'erdtree' },
   heartsap:  { desc: 'A daughter of the Heartwood: an expansion that lets your garden spread far further (much greater build range) and trickles its own free Saplings. Plant it out toward the map. Costs Sap + Pollen.', req: 'grove' },
   graft_necro:{ desc: 'HEARTWOOD GRAFT — must root beside the Heartwood. Your plants & beasts feed on the enemy dead nearby, growing permanently stronger; and your buildings no longer die — they collapse into withered husks you can nurse back with Fertiliser Pods. Needs an Arboretum.', req: 'arboretum' },
   graft_moon: { desc: 'HEARTWOOD GRAFT — must root beside the Heartwood. The moon-sign lifts the fog of war from the whole map and quickens everything you grow — movement, attacks and growth all hasten. Needs an Arboretum.', req: 'arboretum' },
