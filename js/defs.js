@@ -59,7 +59,7 @@ const HINTS = {
   syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
   warden: 'TWO resources: Stone from your buildings’ total mass (Quarries add a trickle), Iron only from Forges. Your tech tree is DISTRIBUTED — raise advanced structures FROM advanced ones: the War College builds the Bunker/Ballista/Hall, the War Foundry the Redoubt/Arsenal, the Arsenal the Bulwark and the doomsday WORLDBREAKER siege gun (map-spanning Gustav Strike). Slow, armoured, unstoppable. Hold the Keep.',
   ember: 'No mines, no farms — you fund the war by WAGING it. Every point of damage your warband deals to the enemy is paid back as Plunder. Fast, cheap, fragile raiders: keep attacking or starve. Guard the War Pyre.',
-  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. The Heartwood musters the whole army (heavier beasts — Bramblehorn, Spore Caller — need an Arboretum) and raises the three Grafts. Groves breed free Saplings and grow your advanced defences; the Arboretum raises the apex Heart Grove and the colossal, INDESTRUCTIBLE Erdtree, which builds impassable Erdtree Walls to funnel the foe. Patient early, unstoppable late. Protect the Heartwood.',
+  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. The Heartwood musters the whole army (heavier beasts — Bramblehorn, Spore Caller — need an Arboretum). Groves breed free Saplings and grow your defences; the Arboretum cultivates the three Grafts, the apex Heart Grove and the colossal, INDESTRUCTIBLE Erdtree, which builds impassable Erdtree Walls to funnel the foe. Patient early, unstoppable late. Protect the Heartwood.',
   stormforge: 'An engine that only accelerates. Power RAMPS the longer your Dynamos stand — each one pays more every minute, so time and held ground compound into a fortune. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Survive the early game and bury them. Defend the Reactor.',
   pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Reckless by design. Keep the Altar.',
 };
@@ -195,14 +195,14 @@ const DEFS = {
 
   // ----- VERDANT BLOOM (a 3-harvest garden: Sap from Blooms, Pollen from Pollen
   //   Spires, Loam from Mulch Beds; the grandest plants & beasts demand a MIX) -----
-  // The Heartwood musters the whole army and raises the early garden + the three
-  // Grafts; advanced defences grow from the Grove, the Erdtree/apex from the
-  // Arboretum — so no single build menu overflows (see ui.js command-card cap).
-  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient','bramblehorn','sporecaller'], grows:['bloom','petalspire','mulchbed','grove','bramble','thornwall','arboretum','graft_necro','graft_moon','graft_wild'], spawns:'sapling', spawnEvery:8 },
+  // Build menu is split across buildings so no card overflows (see ui.js cap):
+  // Heartwood = whole army + core economy; Grove = defences + Heartwood Sapling;
+  // Arboretum = the three Grafts, the Erdtree and the apex Heart Grove.
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient','bramblehorn','sporecaller'], grows:['bloom','petalspire','mulchbed','grove','arboretum'], spawns:'sapling', spawnEvery:8 },
   bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
   petalspire:{ fac:'verdant', kind:'building', name:'Pollen Spire', hp:300, size:16, cost:110, time:12, ironPerSec:0.9 },
   mulchbed:  { fac:'verdant', kind:'building', name:'Mulch Bed', hp:360, size:19, cost:120, time:12, powderPerSec:0.7 },
-  grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6, grows:['sporevent','sporebloss','fertpod','greatroot','heartsap'] },
+  grove:     { fac:'verdant', kind:'building', name:'Grove', hp:430, size:22, cost:170, time:16, spawns:'sapling', spawnEvery:6, grows:['bramble','thornwall','sporevent','sporebloss','fertpod','greatroot','heartsap'] },
   bramble:   { fac:'verdant', kind:'building', name:'Bramble', hp:360, size:13, cost:120, time:9, dmg:11, range:172, cd:0.9, aggro:190, shot:'glob' },
   sporevent: { fac:'verdant', kind:'building', name:'Spore Vent', hp:380, size:15, cost:140, cost3:25, time:13, dmg:14, range:150, cd:1.4, aggro:175, shot:'glob', splash:42 },
   fertpod:   { fac:'verdant', kind:'building', name:'Fertiliser Pod', hp:320, size:15, cost:140, cost3:20, time:11, aura:165, buffAura:true, heal:3 },
@@ -224,7 +224,7 @@ const DEFS = {
   sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee', freeUnit:true },
   thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:70, size:8, speed:74, cost:90, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
   treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:270, cost2:25, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
-  arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true, grows:['erdtree','heartgrove'] },
+  arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true, grows:['graft_necro','graft_moon','graft_wild','erdtree','heartgrove'] },
   ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:360, cost2:45, cost3:25, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
   // -- heavier beasts of the garden: a charging bruiser and a long-range spore-thrower,
   // both gated behind the Arboretum so they arrive as a real mid/late power spike --
