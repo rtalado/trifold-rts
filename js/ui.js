@@ -145,7 +145,7 @@ function currentCommands() {
   const catOrder = { building: 0, unit: 1, upgrade: 2, ability: 3, research: 4, sell: 5 };
   cmds.forEach((c, i) => { c._i = i; });
   cmds.sort((a, b) => ((catOrder[a.cat] ?? 8) - (catOrder[b.cat] ?? 8)) || (a._i - b._i));
-  return cmds.slice(0, 14);
+  return cmds.slice(0, 16);
 }
 
 // compact stat readout for a definition, shown in the build tooltip

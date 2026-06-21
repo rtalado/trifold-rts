@@ -1037,6 +1037,26 @@ function drawEnt(e) {
     ctx.fillRect(x - w / 2, by, w * hpf, 4);
   }
 
+  // Verdant Heartwood Graft indicators — a coloured pip per standing Graft that
+  // empowers this unit (Necrotic purple, Moonsign blue, Wildgrowth gold), matching
+  // the Graft sigil colours. Grafts are faction-wide, so the whole army shows them.
+  if (e.def.kind === 'unit' && e.fac === 'verdant') {
+    const vp = game.players.verdant;
+    if (vp && (vp.gNecro || vp.gMoon || vp.gWild)) {
+      const cols = [];
+      if (vp.gNecro) cols.push('#9b7ad6');
+      if (vp.gMoon) cols.push('#bfe0ff');
+      if (vp.gWild) cols.push('#ffe27a');
+      const gap = 4.5, py = y - s - 4;
+      let px = x - (cols.length - 1) * gap / 2;
+      for (const c of cols) {
+        ctx.fillStyle = c; ctx.strokeStyle = '#0009'; ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.arc(px, py, 1.9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        px += gap;
+      }
+    }
+  }
+
   ctx.restore();
 }
 
