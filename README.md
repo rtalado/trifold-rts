@@ -220,8 +220,13 @@ Bulwark, and the Siege Ordnance doctrine.
 
 ### EMBER NOMADS — the Warband · *Plunder* · core: **War Pyre**
 No mines — you fund the war by waging it: every point of damage you deal pays
-Plunder. Dirt-cheap, blazing-fast raiders; idleness is death. Units: Raiders,
-Slingers, Firebrands, War Beasts, and the splashing **Fire Wagon**.
+Plunder, so idleness is death. The War Pyre and War Camps churn out dirt-cheap,
+blazing-fast **Raiders** and **Slingers**, then **Firebrands**, **War Beasts** and the
+splashing **Fire Wagon**. Raise an **Ember Foundry** to round out the warband: the
+armoured **Cinderguard** (a tanky front wall that soaks fire so your raiders live to
+plunder), long-range **Cinderbows**, the **Cinder Catapult** (slow siege with huge range
+and splash to crack turtles), and the **Flame Shaman**, whose healing aura keeps the
+fragile horde fighting. Tech to the **Great Pyre** for the fast, fire-hosing **Ash Titan**.
 
 ### VERDANT BLOOM — the Grove · *Sap · Pollen · Loam* · core: **Heartwood**
 A slow, unstoppable garden fed by **three harvests**: Sap from Blooms, Pollen from

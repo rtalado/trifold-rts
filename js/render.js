@@ -744,8 +744,9 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
       }
     } else {
-      ctx.fillStyle = e.type === 'warbeast' ? '#7a3410' : col;
-      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.fillStyle = (e.type === 'warbeast' || e.type === 'cinderguard' || e.type === 'catapult') ? '#7a3410'
+        : e.type === 'shaman' ? '#ffd27a' : col;
+      ctx.strokeStyle = col; ctx.lineWidth = (e.type === 'cinderguard' || e.type === 'catapult') ? 2.2 : 1.5;
       ctx.beginPath();
       ctx.moveTo(x, y - s); ctx.lineTo(x + s, y + s); ctx.lineTo(x, y + s * 0.4); ctx.lineTo(x - s, y + s);
       ctx.closePath(); ctx.fill(); ctx.stroke();

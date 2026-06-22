@@ -57,8 +57,8 @@ const HINTS = {
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
   syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
-  warden: 'TWO resources: Stone from your buildings’ total mass (Quarries add a trickle), Iron only from Forges. Your tech tree is DISTRIBUTED — raise advanced structures FROM advanced ones: the War College builds the Bunker/Ballista/Hall, the War Foundry the Redoubt/Arsenal, the Arsenal the Bulwark and the doomsday WORLDBREAKER siege gun (map-spanning Gustav Strike). Slow, armoured, unstoppable. Hold the Keep.',
-  ember: 'No mines, no farms — you fund the war by WAGING it. Every point of damage your warband deals to the enemy is paid back as Plunder. Fast, cheap, fragile raiders: keep attacking or starve. Guard the War Pyre.',
+  warden: 'Slow, armoured, unstoppable. Your standing buildings ARE your economy — the more you raise, the more Stone you mint (Forges add Iron). So wall up, turret up, and grind forward with heavy troops and siege. Hold the Keep.',
+  ember: 'No mines, no farms — you fund the war by WAGING it: every point of damage your warband deals is paid back as Plunder, so keep attacking or starve. Fast, cheap raiders up front; raise an Ember Foundry for a tanky Cinderguard wall, long-range Cinderbows, Cinder Catapult siege and a mending Flame Shaman. Guard the War Pyre.',
   verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. The Heartwood musters the whole army (heavier beasts — Bramblehorn, Spore Caller — need an Arboretum). Groves breed free Saplings and grow your defences; the Arboretum cultivates the three Grafts, the apex Heart Grove and the colossal, INDESTRUCTIBLE Erdtree, which builds impassable Erdtree Walls to funnel the foe. Patient early, unstoppable late. Protect the Heartwood.',
   stormforge: 'An engine that only accelerates. Power RAMPS the longer your Dynamos stand — each one pays more every minute, so time and held ground compound into a fortune. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Survive the early game and bury them. Defend the Reactor.',
   pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Reckless by design. Keep the Altar.',
@@ -183,15 +183,22 @@ const DEFS = {
                          desc:'Nuke any point in huge range; a telegraphed shell levels a wide blast after a short delay.' } },
 
   // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
-  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:9, range:170, cd:0.7, aggro:200, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge','greatpyre'] },
-  warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:520, size:24, cost:120, time:9, produces:['raider','slinger'] },
-  totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:340, size:13, cost:110, time:7, dmg:12, range:165, cd:0.8, aggro:190, shot:'glob' },
-  raider:    { fac:'ember', kind:'unit', name:'Raider', hp:70, size:8, speed:128, cost:45, time:4, dmg:9, range:16, cd:0.6, aggro:185, shot:'melee' },
-  slinger:   { fac:'ember', kind:'unit', name:'Slinger', hp:52, size:8, speed:100, cost:80, time:5, dmg:11, range:135, cd:0.9, aggro:195, shot:'glob' },
-  firebrand: { fac:'ember', kind:'unit', name:'Firebrand', hp:95, size:9, speed:92, cost:150, time:8, dmg:18, range:120, cd:1.3, aggro:200, shot:'shell', splash:34 },
-  warbeast:  { fac:'ember', kind:'unit', name:'War Beast', hp:300, size:15, speed:96, cost:280, time:13, dmg:24, range:20, cd:0.9, aggro:185, shot:'melee', splash:26 },
+  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:10, range:175, cd:0.65, aggro:205, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge','emberforge','greatpyre'] },
+  warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:560, size:24, cost:120, time:9, produces:['raider','slinger'] },
+  totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:380, size:13, cost:110, time:7, dmg:14, range:170, cd:0.75, aggro:195, shot:'glob' },
+  raider:    { fac:'ember', kind:'unit', name:'Raider', hp:90, size:8, speed:130, cost:45, time:4, dmg:11, range:16, cd:0.55, aggro:190, shot:'melee' },
+  slinger:   { fac:'ember', kind:'unit', name:'Slinger', hp:68, size:8, speed:104, cost:80, time:5, dmg:13, range:145, cd:0.85, aggro:200, shot:'glob' },
+  firebrand: { fac:'ember', kind:'unit', name:'Firebrand', hp:125, size:9, speed:94, cost:150, time:8, dmg:22, range:125, cd:1.2, aggro:205, shot:'shell', splash:40 },
+  warbeast:  { fac:'ember', kind:'unit', name:'War Beast', hp:360, size:15, speed:100, cost:280, time:13, dmg:30, range:20, cd:0.85, aggro:190, shot:'melee', splash:30 },
   warlodge:  { fac:'ember', kind:'building', name:'War Lodge', hp:520, size:22, cost:140, time:12, researchLab:true },
-  firewagon: { fac:'ember', kind:'unit', name:'Fire Wagon', hp:160, size:13, speed:110, cost:160, time:9, dmg:16, range:90, cd:0.7, aggro:175, shot:'glob', splash:36 },
+  firewagon: { fac:'ember', kind:'unit', name:'Fire Wagon', hp:205, size:13, speed:112, cost:160, time:9, dmg:20, range:95, cd:0.65, aggro:180, shot:'glob', splash:44 },
+  // the Ember Foundry: a forward war-works that beats out the heavy warband — a
+  // tanky frontline, long-range fire archers, siege catapults and a mending shaman
+  emberforge:{ fac:'ember', kind:'building', name:'Ember Foundry', hp:680, size:24, cost:190, time:13, produces:['cinderguard','cinderbow','catapult','shaman'] },
+  cinderguard:{ fac:'ember', kind:'unit', name:'Cinderguard', hp:480, size:14, speed:88, cost:180, time:11, dmg:22, range:22, cd:1.0, aggro:185, shot:'melee', splash:22 },
+  cinderbow: { fac:'ember', kind:'unit', name:'Cinderbow', hp:80, size:8, speed:94, cost:110, time:7, dmg:20, range:180, cd:1.1, aggro:205, shot:'glob' },
+  catapult:  { fac:'ember', kind:'unit', name:'Cinder Catapult', hp:220, size:14, speed:66, cost:240, time:15, dmg:64, range:255, cd:3.0, aggro:275, shot:'shell', splash:62 },
+  shaman:    { fac:'ember', kind:'unit', name:'Flame Shaman', hp:130, size:9, speed:98, cost:130, time:8, aggro:0, aura:140, heal:7 },
 
   // ----- VERDANT BLOOM (a 3-harvest garden: Sap from Blooms, Pollen from Pollen
   //   Spires, Loam from Mulch Beds; the grandest plants & beasts demand a MIX) -----
@@ -290,9 +297,9 @@ const DEFS = {
 
   // EMBER NOMADS — a fast-moving inferno engine that hoses splashing fire
   greatpyre: { fac:'ember', kind:'building', name:'Great Pyre', hp:950, size:28, cost:560, time:16, apex:true, produces:['titan'] },
-  titan:     { fac:'ember', kind:'unit', name:'Ash Titan', hp:1250, size:21, speed:80, cost:600, time:30, apex:true,
-               dmg:34, range:120, cd:0.9, aggro:205, shot:'glob', splash:60,
-               aux:{ dmg:10, range:130, cd:0.3, shot:'glob', guns:3 } },
+  titan:     { fac:'ember', kind:'unit', name:'Ash Titan', hp:1500, size:21, speed:82, cost:600, time:30, apex:true,
+               dmg:42, range:125, cd:0.85, aggro:210, shot:'glob', splash:64,
+               aux:{ dmg:12, range:135, cd:0.3, shot:'glob', guns:4 } },
 
   // VERDANT BLOOM — a world-tree: titanic HP, splashing blows, heals the garden
   heartgrove:{ fac:'verdant', kind:'building', name:'Heart Grove', hp:1250, size:28, cost:520, cost2:60, cost3:40, time:18, apex:true, spawns:'sapling', spawnEvery:5, produces:['eldertree'] },
@@ -407,6 +414,11 @@ const META = {
   slinger:   { desc: 'Fast ranged skirmisher.' },
   firebrand: { desc: 'Splashing molotov thrower.', req: 'warcamp' },
   warbeast:  { desc: 'Fast heavy charger that bowls through lines.', req: 'warcamp' },
+  emberforge:{ desc: 'War-works for the heavy warband: the Cinderguard, Cinderbow, Cinder Catapult and Flame Shaman.' },
+  cinderguard:{ desc: 'Tough armoured brawler — a tanky front wall that soaks fire so your raiders survive to plunder.', req: 'emberforge' },
+  cinderbow: { desc: 'Long-range fire-archer with serious single-target damage. Out-ranges most foes.', req: 'emberforge' },
+  catapult:  { desc: 'Slow siege engine flinging blazing rocks — huge range and splash to break turtles and turrets.', req: 'emberforge' },
+  shaman:    { desc: 'Support that mends the warband with an embered healing aura. Keeps your fragile raiders fighting.', req: 'emberforge' },
   // VERDANT BLOOM
   heart:     { desc: 'Your core. Spawns free Saplings forever and grows the garden. THREE harvests feed it: Sap, Pollen and Loam.' },
   bloom:     { desc: 'Sap plant. Each mature Bloom pays Sap — your bulk economy.' },
@@ -736,8 +748,9 @@ const ECON = {
   // warden's third resource: Powder. Minted slowly at Powder Mills and, crucially,
   // trickled by every Obelisk the Covenant holds — so the doomsday tech demands map control.
   wardenObeliskPowder: 0.3,
-  // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle
-  emberBase: 1.2, emberLootPerDmg: 0.32,
+  // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle.
+  // Buffed so a fighting warband actually self-funds its push instead of starving.
+  emberBase: 1.8, emberLootPerDmg: 0.45,
   // verdant: Sap income per mature Bloom (Pollen + Loam come from their own plants,
   // minted generically via ironPerSec / powderPerSec). The garden snowballs on Sap;
   // Pollen and Loam are the scarcer harvests that gate the diverse, late-game plants.

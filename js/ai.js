@@ -247,7 +247,9 @@ function aiTick(fac) {
     const pyre = myCore;
     const camps = ents(e => e.fac === fac && e.type === 'warcamp').length;
     const totems = ents(e => e.fac === fac && e.type === 'totem').length;
-    if (camps < aiGrow(2, 1, 6) && p.res >= 120) aiPlace(fac, 'warcamp', p.base);
+    const forges = ents(e => e.fac === fac && e.type === 'emberforge').length;
+    if (camps < aiGrow(2, 1, 5) && p.res >= 120) aiPlace(fac, 'warcamp', p.base);
+    else if (forges < 1 && p.res >= 190 && game.t > 80) aiPlace(fac, 'emberforge', p.base);
     else if (totems < aiGrow(2, 1, 6) && p.res >= 110 && game.t > 60) aiPlace(fac, 'totem', p.base);
     const prod = e => {
       if (!e || e.queue.length || e.growing) return;
@@ -260,8 +262,21 @@ function aiTick(fac) {
       else if (p.res >= 80 && Math.random() < 0.5) enqueue(e, 'slinger');
       else if (p.res >= 45) enqueue(e, 'raider');
     };
+    // the Ember Foundry beats out the heavy warband — a tank wall, reach, siege, a healer
+    const prodForge = e => {
+      if (!e || e.queue.length || e.growing) return;
+      const guards = ents(o => o.fac === fac && o.type === 'cinderguard').length;
+      const catas = ents(o => o.fac === fac && o.type === 'catapult').length;
+      const shamans = ents(o => o.fac === fac && o.type === 'shaman').length;
+      const bows = ents(o => o.fac === fac && o.type === 'cinderbow').length;
+      if (guards < aiGrow(2, 1, 6) && p.res >= 180) enqueue(e, 'cinderguard');
+      else if (catas < aiGrow(1, 1, 4) && p.res >= 240) enqueue(e, 'catapult');
+      else if (shamans < aiGrow(1, 1, 3) && p.res >= 130) enqueue(e, 'shaman');
+      else if (bows < aiGrow(4, 1, 10) && p.res >= 110) enqueue(e, 'cinderbow');
+    };
     prod(pyre);
     for (const c of ents(e => e.fac === fac && e.type === 'warcamp' && !e.growing)) prod(c);
+    for (const fb of ents(e => e.fac === fac && e.type === 'emberforge' && !e.growing)) prodForge(fb);
     // raiders are restless — keep pushing even below full wave size
     if (army.length >= 5 && game.t > 60) for (const u of army)
       if (u.order.type === 'idle') u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
