@@ -404,7 +404,7 @@ const META = {
   arsenal:   { desc: 'Tier-3 workshop: builds Castellan/Trebuchet, raises the Bulwark and Worldbreaker.', reqs:['foundry_w','college'] },
   castellan: { desc: 'Tier-3 siege colossus — long-range splash, a wall of HP. Heavy Iron.' },
   trebuchet: { desc: 'Longest-ranged unit in the game. Fragile up close; huge splash from afar. Heavy Iron.' },
-  citadel:   { desc: 'Doomsday fortress: map-spanning cannon + four machine-guns. From the Arsenal; needs the full war machine and Weapons II.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_wpn2' },
+  citadel:   { desc: 'A doomsday fortress: a huge long-range siege cannon ringed by four machine-guns, on enormous HP. The anchor of an impenetrable base.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_wpn2' },
   worldbreaker: { desc: 'The ultimate structure — longest passive range in the game, plus the active GUSTAV STRIKE: nuke any point across most of the map (~1-min reload). Needs an Arsenal, a Bulwark, and Siege Ordnance.', reqs:['arsenal','citadel'], reqResearch:'warden_ord' },
   // EMBER NOMADS
   pyre:      { desc: 'Your core. Musters the whole warband. Plunder from combat funds it.' },
