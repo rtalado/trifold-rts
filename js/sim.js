@@ -505,6 +505,19 @@ function engage(e, t, dt) {
   }
 }
 
+// ranged units snap off a shot at the nearest foe in range without breaking
+// stride — so a relocating, retreating or kiting squad keeps up its fire while it
+// moves. Melee units (and anything without a gun) need to stop and close, so they
+// skip this. Target scanning is throttled (scanT) just like the idle/amove scans.
+function moveFire(e, dt) {
+  const d = e.def;
+  if (d.shot === 'melee' || !d.dmg || !d.aggro) return;
+  e.scanT -= dt;
+  if (e.scanT <= 0) { e.scanT = 0.3; const t = findTarget(e); e.tgt = t ? t.id : 0; }
+  const t = e.tgt ? byId(e.tgt) : null;
+  if (t && e.cd <= 0 && dist(e, t) <= rangeOf(e) + e.size + t.size) fireAt(e, t);
+}
+
 function moveToward(e, x, y, dt) {
   const dx = x - e.x, dy = y - e.y, dl = Math.hypot(dx, dy);
   if (dl < 3) return true;
@@ -547,7 +560,9 @@ function updateUnit(e, dt) {
       break;
     }
     case 'move': {
-      if (navMove(e, o.x, o.y, dt)) e.order = { type: 'idle' };
+      const arrived = navMove(e, o.x, o.y, dt);
+      moveFire(e, dt);   // ranged units shoot on the run while relocating/retreating
+      if (arrived) e.order = { type: 'idle' };
       break;
     }
     case 'amove': {

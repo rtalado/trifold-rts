@@ -278,6 +278,7 @@ function buildSelMainHTML() {
       + '<div>Drag or click to select.</div>'
       + '<div>Right-click — move / attack / harvest</div>'
       + '<div>Shift+right-click — attack-move</div>'
+      + '<div>Ctrl+right-click — attack that way</div>'
       + '<div><b>F</b> select army &nbsp;·&nbsp; <b>Space</b> jump to core</div></div>';
   }
   if (game.sel.length === 1) {

@@ -29,7 +29,9 @@ canvas.addEventListener('mousedown', ev => {
   } else if (ev.button === 2) {
     if (game.targeting) { game.targeting = null; return; }
     if (game.placing) { game.placing = null; return; }
-    issueOrder(mouse.wx, mouse.wy, ev.shiftKey); // Shift = attack-move
+    // Ctrl = attack toward a direction (auto-finds the foe), Shift = attack-move
+    const mode = ev.ctrlKey ? 'adir' : ev.shiftKey ? 'amove' : 'move';
+    issueOrder(mouse.wx, mouse.wy, mode);
   }
 });
 
@@ -83,22 +85,52 @@ canvas.addEventListener('wheel', ev => {
   const w = screenToWorld(mouse.x, mouse.y); mouse.wx = w.x; mouse.wy = w.y;
 }, { passive: false });
 
-function issueOrder(wx, wy, amove) { // local right-click (amove = attack-move)
+// local right-click. mode: 'move' (plain), 'amove' (attack-move to point),
+// 'adir' (attack toward the clicked direction — auto-finds the nearest foe).
+function issueOrder(wx, wy, mode) {
   if (!game.sel.length) return;
   if (game.mode === 'guest') {
-    netSend({ t: 'cmd', fac: game.localFac, kind: 'order', ids: game.sel.map(e => e.id), x: wx, y: wy, amove });
-    addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: amove ? '#ff6a6a' : '#7dffa8' });
+    netSend({ t: 'cmd', fac: game.localFac, kind: 'order', ids: game.sel.map(e => e.id), x: wx, y: wy, mode });
+    addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: mode !== 'move' ? '#ff6a6a' : '#7dffa8' });
     return;
   }
-  applyOrder(game.localFac, game.sel, wx, wy, amove);
+  applyOrder(game.localFac, game.sel, wx, wy, mode);
+}
+
+// pick the nearest enemy lying in the general direction of (wx,wy) from the
+// selection's centre — the engine behind Ctrl+RMB "attack that way", so you needn't
+// pixel-hunt a tiny unit. Returns null if nothing falls within the aim cone.
+function directionalTarget(fac, selEnts, wx, wy) {
+  let cx = 0, cy = 0, n = 0;
+  for (const e of selEnts) { cx += e.x; cy += e.y; n++; }
+  if (!n) return null;
+  cx /= n; cy /= n;
+  const aim = Math.atan2(wy - cy, wx - cx);
+  let best = null, bd = 1e9;
+  for (const o of game.entities) {
+    if (o.dead || o.fac === fac || o.fac === 'neutral' || o.def.noTarget) continue;
+    const ang = Math.atan2(o.y - cy, o.x - cx);
+    if (Math.abs(((ang - aim + Math.PI) % (Math.PI * 2)) - Math.PI) > 0.7) continue;  // ~40° cone
+    const dd = Math.hypot(o.x - cx, o.y - cy);
+    if (dd < bd) { bd = dd; best = o; }
+  }
+  return best;
 }
 
 // runs on the simulating side (SP or host) for either faction.
-// amove=true issues an attack-move (engage on the way); otherwise a plain move
-// that ignores enemies — so you can actually pull units OUT of a fight to retreat.
-function applyOrder(fac, selEnts, wx, wy, amove) {
+// mode 'amove' issues an attack-move (engage on the way); 'adir' aims an attack-move
+// at the nearest foe in the clicked direction; anything else is a plain move that
+// ignores enemies — so you can actually pull units OUT of a fight to retreat.
+function applyOrder(fac, selEnts, wx, wy, mode) {
+  if (mode === true) mode = 'amove';        // tolerate the old boolean form
   const target = ents(o => o.fac !== fac && !o.def.noTarget && dist(o, { x: wx, y: wy }) <= o.size + 5)[0];
   const node = game.nodes.find(n => n.amount > 0 && Math.hypot(n.x - wx, n.y - wy) <= n.r + 6);
+  // Ctrl+RMB: if there's no foe right under the cursor, march on the nearest one in
+  // that direction; either way it resolves to an attack-move.
+  if (mode === 'adir') {
+    if (!target) { const ft = directionalTarget(fac, selEnts, wx, wy); if (ft) { wx = ft.x; wy = ft.y; } }
+    mode = 'amove';
+  }
   let acted = false;
 
   for (const e of selEnts) {
@@ -121,7 +153,7 @@ function applyOrder(fac, selEnts, wx, wy, amove) {
     }
     else if (node && d.harvester) { e.order = { type: 'harvest', nodeId: node.id, phase: 'go', timer: 0, carry: 0 }; acted = true; }
     else if (d.harvester || !d.dmg) { e.order = { type: 'move', x: wx, y: wy }; acted = true; }
-    else { e.order = { type: amove ? 'amove' : 'move', x: wx, y: wy }; acted = true; }
+    else { e.order = { type: mode === 'amove' ? 'amove' : 'move', x: wx, y: wy }; acted = true; }
   }
   if (acted) addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: target ? '#ff6a6a' : '#7dffa8' });
 }

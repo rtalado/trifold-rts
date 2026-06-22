@@ -288,7 +288,7 @@ function handleCmd(m) {
   if (!fac || !game.players[fac] || game.eliminated.has(fac)) return;
   if (m.kind === 'order') {
     const sel = (m.ids || []).map(byId).filter(e => e && e.fac === fac);
-    if (sel.length) applyOrder(fac, sel, m.x, m.y, m.amove);
+    if (sel.length) applyOrder(fac, sel, m.x, m.y, m.mode || (m.amove ? 'amove' : 'move'));
   } else if (m.kind === 'place') {
     if (DEFS[m.type] && DEFS[m.type].fac === fac) placeBuilding(fac, m.type, m.x, m.y);
   } else if (m.kind === 'enq') {

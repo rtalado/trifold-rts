@@ -254,7 +254,9 @@ deaths. Units: Thralls, Zealots, Behemoths, and the ranged **Cultist**.
 | Input | Action |
 |---|---|
 | Left-drag / left-click | Select units / a building |
-| Right-click | Move (attack-move for combat units), attack target, harvest/siphon node, set rally |
+| Right-click | Move, attack target, harvest/siphon node, set rally |
+| Shift+right-click | Attack-move to a point (engage foes on the way) |
+| Ctrl+right-click | Attack that way — auto-targets the nearest foe in the clicked direction |
 | Mouse wheel | Zoom in / out (toward the cursor) |
 | 1–0 | Command-card hotkeys (build / produce / sell / deploy) |
 | T | Open / close the tech tree |
