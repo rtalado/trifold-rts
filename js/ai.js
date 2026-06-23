@@ -64,6 +64,18 @@ function aiTick(fac) {
     }
   }
 
+  // ---- shared: expansion. Try to harness the nearest un-held Wellspring by raising
+  // our econ structure beside it. placeValid still requires it to connect to us (except
+  // the Syndicate's forward-dropped Watchpost), so the bot only claims fonts its base
+  // has actually grown toward — the same pressure to expand a human player feels.
+  const harnessType = WELL.harness[fac];
+  if (harnessType && Math.random() < 0.5) {
+    const w = ents(e => e.def.wellspring && e.owner !== fac)
+      .sort((a, b) => dist(myCore, a) - dist(myCore, b))[0];
+    if (w && dist(myCore, w) < 1300 && affordable(p, DEFS[harnessType]) && techMet(fac, harnessType))
+      aiPlace(fac, harnessType, w); // aiPlace rings 70–240 around the font — outside its keepout, mostly in harness range
+  }
+
   if (fac === 'vanguard') {
     const workers = ents(e => e.fac === fac && e.type === 'worker');
     const hq = ents(e => e.fac === fac && e.type === 'hq' && !e.constructing)[0];
@@ -103,12 +115,19 @@ function aiTick(fac) {
     const mounds = ents(e => e.fac === fac && e.type === 'spittermound');
     const dens = ents(e => e.fac === fac && e.type === 'hunterden');
     const spines = ents(e => e.fac === fac && e.type === 'spine');
-    // spread creep toward the enemy
+    // spread creep — toward the enemy, but every so often crawl it out to the nearest
+    // un-covered Wellspring instead, so the swarm harnesses fonts (its creep IS its claim)
     if (tumors.length < aiGrow(9, 3, 30) && p.res >= 50 && Math.random() < 0.65) {
       const sources = [hive, ...tumors].filter(Boolean);
       const src = sources[Math.floor(Math.random() * sources.length)];
       if (src) {
-        const ang = Math.atan2(enemyCore.y - src.y, enemyCore.x - src.x) + (Math.random() - 0.5) * 1.6;
+        let goal = enemyCore;
+        if (Math.random() < 0.45) {
+          const w = ents(e => e.def.wellspring && e.owner !== fac && dist(src, e) < 1100)
+            .sort((a, b) => dist(src, a) - dist(src, b))[0];
+          if (w) goal = w;
+        }
+        const ang = Math.atan2(goal.y - src.y, goal.x - src.x) + (Math.random() - 0.5) * 1.6;
         const r = (src.creepCur || 5) * TILE * 0.8;
         aiPlaceAt(fac, 'tumor', src.x + Math.cos(ang) * r, src.y + Math.sin(ang) * r);
       }

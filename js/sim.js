@@ -119,6 +119,12 @@ function genLayout(rng, bases) {
   for (let i = 0; i < obs;     i++) { const s = findSpot(120, 420, 260); if (s) spawnEnt('obelisk', 'neutral', s.x, s.y); }
   for (let i = 0; i < bunkers; i++) { const s = findSpot(140, 520, 300); if (s) spawnEnt('munitions', 'neutral', s.x, s.y); }
 
+  // Wellsprings: the faction-specific expansion economy. Scattered out in contested
+  // ground (kept well away from any base) so reaching one means marching out and
+  // chaining your economy toward it. More of them on bigger maps.
+  const wells = 4 + 2 * P;             // 2p:8  3p:10  4p:12
+  for (let i = 0; i < wells; i++) { const s = findSpot(140, 520, 320); if (s) spawnEnt('wellspring', 'neutral', s.x, s.y); }
+
   // 4) central contested prize, behind the cliff-ring chokepoints: a guarded Hoard,
   // an Obelisk, a Munitions Bunker and rich crystal nodes — worth marching for.
   spawnEnt('obelisk', 'neutral', cx, cy);
@@ -885,6 +891,36 @@ function recomputeCreep() {
   for (const fac in game.players) game.players[fac].creepTiles = counts[facIdx(fac)] || 0;
 }
 
+// Wellspring harness: every 0.5s (right after creep), decide who holds each font.
+// A faction harnesses a Wellspring if its designated econ structure is the closest one
+// within WELL.harnessR (the Myriad instead needs the font under its creep). The owner
+// is stored on the entity (so it colours in and syncs to guests like an Obelisk) and
+// tallied per player for tickEconomy. Exodus (nomad) and Warden (turtle) never harness.
+function recomputeWellsprings() {
+  for (const fac in game.players) game.players[fac].wellHarness = 0;
+  for (const w of game.entities) {
+    if (w.dead || !w.def.wellspring) continue;
+    let best = null, bestD = WELL.harnessR;
+    for (const fac in game.players) {
+      if (fac === 'warden' || fac === 'exodus') continue;
+      let d = Infinity;
+      if (fac === 'myriad') {
+        if (onCreep('myriad', w.x, w.y)) d = 0;        // covered in creep
+      } else {
+        const ht = WELL.harness[fac]; if (!ht) continue;
+        for (const e of game.entities) {
+          if (e.dead || e.fac !== fac || e.type !== ht || e.constructing || e.growing) continue;
+          const dd = Math.hypot(e.x - w.x, e.y - w.y);
+          if (dd < d) d = dd;
+        }
+      }
+      if (d < bestD) { bestD = d; best = fac; }
+    }
+    w.owner = best;
+    if (best) game.players[best].wellHarness++;
+  }
+}
+
 function tickEconomy(dt) {
   for (const fac in game.players) {
     const p = game.players[fac];
@@ -942,6 +978,9 @@ function tickEconomy(dt) {
     }
     // every Obelisk this faction holds adds a steady trickle
     gain += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.obeliskIncome;
+    // every Wellspring this faction harnesses pours out its primary resource — the
+    // expansion economy that drags everyone (bar Exodus & Warden) out onto the map
+    gain += (p.wellHarness || 0) * (WELL.income[fac] || WELL.defaultIncome);
     gain *= p.incomeMul * (p.econMul || 1); // AI handicap × researched economy upgrades
     p.res += gain * dt;
     p.gainAccum += gain * dt;
@@ -1047,6 +1086,21 @@ function tickRegen(dt) {
       if (o.dead || o.def.kind !== 'unit' || o.fac === g.fac || o.fac === 'neutral') continue;
       const dx = o.x - g.x, dy = o.y - g.y;
       if (dx * dx + dy * dy < r2) o.slowUntil = game.t + VERD.slowWindow;
+    }
+  }
+  // Verdant ecosystem: a Wellspring the Bloom has harnessed becomes a thriving garden
+  // — it fortifies (buffs damage & fire-rate) and heals nearby Verdant plants & beasts,
+  // just like a Fertiliser Pod planted on the font. Rewards spreading the garden out.
+  const vWell = game.players.verdant && ents(e => e.def.wellspring && e.owner === 'verdant');
+  if (vWell && vWell.length) {
+    const r2 = WELL.verdBuffR * WELL.verdBuffR;
+    for (const w of vWell) for (const o of game.entities) {
+      if (o.dead || o.fac !== 'verdant' || o.constructing || o.growing) continue;
+      const dx = o.x - w.x, dy = o.y - w.y;
+      if (dx * dx + dy * dy < r2) {
+        o.fertUntil = game.t + VERD.fertWindow;
+        if (o.hp < o.hpMax) o.hp = Math.min(o.hpMax, o.hp + 3 * dt);
+      }
     }
   }
 }

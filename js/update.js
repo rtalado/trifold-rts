@@ -6,7 +6,7 @@ function update(dt) {
   refreshGrafts();   // Verdant: which Heartwood Grafts are standing this tick
 
   game.creepTimer -= dt;
-  if (game.creepTimer <= 0) { game.creepTimer = 0.5; recomputeCreep(); }
+  if (game.creepTimer <= 0) { game.creepTimer = 0.5; recomputeCreep(); recomputeWellsprings(); }
 
   tickEconomy(dt);
   tickRegen(dt);

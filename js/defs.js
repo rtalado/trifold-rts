@@ -52,16 +52,16 @@ const facColor = f => (FACTIONS[f] || NEUTRAL).color;
 const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 
 const HINTS = {
-  vanguard: 'A full Earth war machine. Workers harvest crystal automatically — and raise SUPPLY DEPOTS, which mint a steady trickle of crystal and double as drop-offs, so your economy keeps growing even as the nodes run dry. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
-  myriad: 'Your creep IS your economy — every covered tile feeds you biomass. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. With the Hive selected, right-click to set the swarm rally. The swarm heals on creep.',
+  vanguard: 'A full Earth war machine. Workers harvest crystal automatically — and raise SUPPLY DEPOTS, which mint a steady trickle of crystal and double as drop-offs, so your economy keeps growing even as the nodes run dry — and a Depot raised beside a WELLSPRING harnesses it for a surge of extra crystal. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
+  myriad: 'Your creep IS your economy — every covered tile feeds you biomass. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. With the Hive selected, right-click to set the swarm rally. The swarm heals on creep. Crawl your creep OUT to cover WELLSPRINGS — each one you blanket pours out extra biomass.',
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
-  choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
-  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Watchposts can be air-dropped across the map — but not into enemy territory. Hoard or hire — and guard the Haven.',
-  warden: 'Slow, armoured, unstoppable. Your standing buildings ARE your economy — the more you raise, the more Stone you mint (Forges add Iron). So wall up, turret up, and grind forward with heavy troops and siege. Hold the Keep.',
-  ember: 'No mines, no farms — you fund the war by WAGING it: every point of damage your warband deals is paid back as Plunder, so keep attacking or starve. Fast, cheap raiders up front; raise an Ember Foundry for a tanky Cinderguard wall, long-range Cinderbows, Cinder Catapult siege and a mending Flame Shaman. Guard the War Pyre.',
-  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. The Heartwood musters the whole army (heavier beasts — Bramblehorn, Spore Caller — need an Arboretum). Groves breed free Saplings and grow your defences; the Arboretum cultivates the three Grafts, the apex Heart Grove and the colossal, INDESTRUCTIBLE Erdtree, which builds impassable Erdtree Walls to funnel the foe. Patient early, unstoppable late. Protect the Heartwood.',
-  stormforge: 'An engine that only accelerates. Power RAMPS the longer your Dynamos stand — each one pays more every minute, so time and held ground compound into a fortune. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Survive the early game and bury them. Defend the Reactor.',
-  pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Reckless by design. Keep the Altar.',
+  choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Crawl the lattice OUT to plant a Conduit beside a WELLSPRING — each one you reach surges Essence. Guard the Ossuary.',
+  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Air-drop Watchposts across the map (not into enemy territory) — park one beside a WELLSPRING to milk it for extra Gold. Hoard or hire — and guard the Haven.',
+  warden: 'Slow, armoured, unstoppable, and SELF-SUFFICIENT: alone among the powers you needn’t march out for the map — your standing buildings ARE your economy, the more you raise the more Stone you mint (Forges add Iron). A walled, secretive brotherhood: wall up, turret up, and grind forward with heavy troops and siege. (You cannot tap Wellsprings — you don’t need to.) Hold the Keep.',
+  ember: 'No mines, no farms — you fund the war by WAGING it: every point of damage your warband deals is paid back as Plunder, so keep attacking or starve. Fast, cheap raiders up front; raise an Ember Foundry for a tanky Cinderguard wall, long-range Cinderbows, Cinder Catapult siege and a mending Flame Shaman. Throw forward War Camps beside WELLSPRINGS to bleed extra Plunder from the map. Guard the War Pyre.',
+  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. The Heartwood musters the whole army (heavier beasts — Bramblehorn, Spore Caller — need an Arboretum). Plant a Bloom beside a WELLSPRING to root a thriving ecosystem there: extra Sap AND a fertilising buff that makes every nearby plant & beast hit harder. Groves breed free Saplings and grow your defences; the Arboretum cultivates the three Grafts, the apex Heart Grove and the colossal, INDESTRUCTIBLE Erdtree. Patient early, unstoppable late. Protect the Heartwood.',
+  stormforge: 'An engine that only accelerates. Power RAMPS the longer your Dynamos stand — but the real fortune is on the map: raise a Dynamo beside a WELLSPRING (a Storm Font) to harness it for a flood of Power. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Hold the map, not just the clock. Defend the Reactor.',
+  pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Raise Bone Shrines beside WELLSPRINGS to bleed extra Blood from the map. Reckless by design. Keep the Altar.',
 };
 
 // verb shown on a faction's build buttons ('Build X' by default)
@@ -337,6 +337,12 @@ const DEFS = {
   // big bounty to anyone — but it holds a hoard of Powder the Warden alone can use,
   // so it's a prize the Covenant must march out to seize for its grand projects.
   munitions:     { fac:'neutral', kind:'building', name:'Munitions Bunker', hp:2000, size:24, dmg:15, range:205, cd:0.85, aggro:235, shot:'bullet', splash:18, bounty:450, powder:90 },
+  // Wellspring: an indestructible font of raw potential scattered across the map. It
+  // can't be captured by standing on it — each faction must raise its own economy
+  // structure beside it (or, for the Myriad, blanket it in creep) to HARNESS it for a
+  // surge of its primary resource. The whole point is to pull every faction out of its
+  // corner and onto the map (the turtling Warden, fittingly, can't harness them at all).
+  wellspring:    { fac:'neutral', kind:'building', name:'Wellspring', hp:1, size:20, noTarget:true, wellspring:true },
 };
 
 // Per-thing flavour + tech tree. `desc` shows on hover; `req` is a building that
@@ -516,6 +522,7 @@ const META = {
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
   cache:     { desc: 'Lightly-guarded neutral supply cache. Crack it open for a small bounty.' },
   munitions: { desc: 'A heavily-guarded neutral strongpoint holding a hoard of munitions. Crack it for a big bounty — and a cache of Powder if you are the Warden.' },
+  wellspring:{ desc: 'A font of raw potential. You cannot capture it by standing on it — HARNESS it by raising your own economy structure beside it (Vanguard Supply Depot · Choir Soul Conduit · Syndicate Watchpost · Ember War Camp · Verdant Bloom · Stormforge Dynamo · Pact Bone Shrine), or, as the Myriad, by covering it in creep. Each harnessed Wellspring pours out your primary resource — and a Verdant font grows a thriving ecosystem that buffs nearby plants & beasts. March out and hold them; the Warden alone cannot tap them.' },
 };
 const meta = t => META[t] || {};
 // has this faction met the tech requirement (a finished prerequisite building) for `type`?
@@ -780,13 +787,38 @@ const ECON = {
   // stormforge: the engine that accelerates. Each standing Dynamo's output RAMPS with
   // elapsed game time, so early Dynamos compound into a fortune — the longer you hold
   // them (and the map), the more devastating the late game. Held Obelisks add on top.
-  stormBase: 1.8, stormPerDynamo: 1.0, stormRamp: 0.0022,
+  // (ramp trimmed a touch now that Storm Fonts — harnessed Wellsprings — are the real
+  // way to accelerate: hold the map, not just the clock)
+  stormBase: 1.8, stormPerDynamo: 1.0, stormRamp: 0.0016,
   // pact: Blood gained when your OWN units die (flat + a share of their max HP)
   pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
   // neutral capture points pay their holder a steady income. Obelisks now matter a
   // lot more — they're the main reason to march out and fight over the map rather
   // than clump at home and scale forever off a single base.
   obeliskIncome: 2.6,
+};
+
+// ---- Wellsprings: the map-expansion economy ----
+// Almost every faction needs to march out and harness Wellsprings to keep its economy
+// scaling — holing up in a corner no longer keeps pace. Each faction harnesses a font
+// by raising its designated econ structure within HARNESS_R of it (the Myriad instead
+// blankets it in creep). The two exceptions are deliberate: the nomadic Solari Exodus
+// already chases finite crystal nodes around the map, and the turtling Warden Covenant
+// — a secretive, walled brotherhood — cannot tap them at all.
+const WELL = {
+  harnessR: 215,        // how close your harness structure must be to claim a font
+  verdBuffR: 230,       // radius of the Verdant ecosystem buff around a harnessed font
+  // the structure each faction raises to harness a Wellspring (myriad = creep coverage)
+  harness: {
+    vanguard: 'depot', choir: 'conduit', syndicate: 'watchpost',
+    ember: 'warcamp', verdant: 'bloom', stormforge: 'dynamo', pact: 'shrine',
+  },
+  // bonus primary-resource income per harnessed font (tuned to each economy's scale)
+  income: {
+    vanguard: 4.0, myriad: 3.6, choir: 3.6, syndicate: 4.2,
+    ember: 3.2, verdant: 3.0, stormforge: 4.6, pact: 3.6,
+  },
+  defaultIncome: 3.6,
 };
 
 // AI difficulty. `incomeMul` is the dominant lever (the bot's whole economy is

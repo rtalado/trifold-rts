@@ -615,6 +615,27 @@ function drawEnt(e) {
         ctx.strokeStyle = '#9aa6b8'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
       }
+    } else if (e.type === 'wellspring') { // a font of potential — a pulsing star, tinted to its harnesser
+      const oc = e.owner ? facColor(e.owner) : '#8fe6ff';
+      const pulse = 0.7 + 0.3 * Math.sin(game.t * 2.2 + e.id);
+      // a soft glow halo
+      ctx.globalAlpha *= 0.16;
+      ctx.fillStyle = oc; ctx.beginPath(); ctx.arc(x, y, s * 1.7 * pulse, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha /= 0.16;
+      // harness-radius ring (so players can see how close they must build)
+      ctx.strokeStyle = e.owner ? 'rgba(255,255,255,0.10)' : 'rgba(143,230,255,0.12)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, WELL.harnessR, 0, Math.PI * 2); ctx.stroke();
+      // a four-point star core
+      ctx.fillStyle = e.owner ? facDark(e.owner) : '#10303a'; ctx.strokeStyle = oc; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4 - Math.PI / 2, rr = (i % 2 === 0 ? s : s * 0.42);
+        const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+        i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = oc;
+      ctx.beginPath(); ctx.arc(x, y, s * 0.26 * (0.8 + 0.4 * pulse), 0, Math.PI * 2); ctx.fill();
     } else { // hoard: a fortified treasure tower
       ctx.fillStyle = '#2a2014'; ctx.strokeStyle = '#d4a73e'; ctx.lineWidth = 2.5;
       poly(x, y, s, 5, -Math.PI / 2); ctx.fill(); ctx.stroke();

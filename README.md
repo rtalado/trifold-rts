@@ -78,6 +78,18 @@ so scouting matters. Objectives worth fighting over:
   pays its owner **+2.6 resources/s** in whatever your faction's currency is (and a
   trickle of **Powder** to the Warden — see below). They can be recaptured, and there
   are more of them than before.
+- **Wellsprings** — the faction-specific **expansion economy**. Scattered out in
+  contested ground, far from every base. You can't capture one by standing on it —
+  you **harness** it by raising your own economy structure beside it (within ~215px),
+  whereupon it pours out **+3–4.6/s** of your primary resource. Each faction taps them
+  its own way: **Vanguard** Supply Depot · **Choir** Soul Conduit · **Syndicate**
+  air-dropped Watchpost · **Ember** War Camp · **Verdant** Bloom (which also grows a
+  *thriving ecosystem* — a fertilising buff that makes nearby plants & beasts hit
+  harder) · **Stormforge** Dynamo · **Pact** Bone Shrine · **Myriad** by simply
+  blanketing the font in **creep**. The nomadic **Solari Exodus** already roams for
+  finite crystal and doesn't need them; the turtling **Warden Covenant** — a walled,
+  secretive brotherhood — *cannot* tap them at all, by design. Holing up in a corner
+  no longer keeps pace: march out and hold the founts.
 - **Supply Caches** — small, lightly-guarded jungle camps dotted everywhere.
   Crack one open for a quick **+160 bounty**.
 - **Munitions Bunkers** — heavily-guarded strongpoints, several of them, often sat
@@ -211,7 +223,10 @@ advanced structures are raised from *other* advanced structures, not all from th
 - **War Foundry** → **Redoubts** and the **Grand Arsenal**.
 - **Grand Arsenal** → **The Bulwark** and **The Worldbreaker**.
 
-Wall in and bristle with layered defences for a truly impenetrable base. Slow,
+Wall in and bristle with layered defences for a truly impenetrable base. Alone among
+the ten, the Warden is **self-sufficient** — a secretive, walled brotherhood that needn't
+scrabble for the map's **Wellsprings** (and in fact *cannot* harness them); its standing
+buildings already are its economy. Slow,
 armoured units (Sentinels, Warden Guards, Pikemen, Ironclads, Bombards) grind
 forward and never break; the **Hall of Oaths** musters anti-armour **Halberdiers**
 and banner-bearing **Marshals** whose aura heals troops *and repairs buildings*; the
@@ -249,8 +264,9 @@ or **Wildgrowth** (uncaps your Saplings and erupts them as fierce mutants). Unit
 Saplings, Thornlings, Treants, and the colossal **Ancient**.
 
 ### STORMFORGE DYNASTY — the Engine · *Power* · core: **Storm Reactor**
-An engine that only accelerates — each standing **Dynamo** pays more every minute, so
-time and held ground compound into a fortune. Few but devastating, **shielded** machines,
+An engine that only accelerates — each standing **Dynamo** pays more every minute. But
+the real fortune is on the map: raise a Dynamo beside a **Wellspring** (a *Storm Font*)
+to harness it for a flood of Power — hold the map, not just the clock. Few but devastating, **shielded** machines,
 kept in the fight by **Charge Pylons** that re-energise their shields mid-battle:
 Arclights, the shock-trooper **Galvan**, Voltaics, the mid-weight **Gladius**, and the
 towering Colossus.
