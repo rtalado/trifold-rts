@@ -34,7 +34,7 @@ const HUD_BOTTOM = 158; // height of #bottombar that overlaps the canvas bottom
 const ZMIN = 0.28, ZMAX = 1.8;  // camera zoom range (out / in)
 
 const FACTIONS = {
-  vanguard:  { name: 'IRON VANGUARD',   color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 54 },
+  vanguard:  { name: 'THE VANGUARD',    color: '#4da6ff', dark: '#173153', res: 'Crystal', cap: 54 },
   myriad:    { name: 'MYRIAD SWARM',    color: '#c75cff', dark: '#3a1d52', res: 'Biomass', cap: 90 },
   exodus:    { name: 'SOLARI EXODUS',   color: '#ffc94d', dark: '#4a3a14', res: 'Energy',  cap: 28 },
   choir:     { name: 'ASHEN CHOIR',     color: '#3fe0c8', dark: '#0e3f3a', res: 'Essence', cap: 45 },
@@ -52,7 +52,7 @@ const facColor = f => (FACTIONS[f] || NEUTRAL).color;
 const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 
 const HINTS = {
-  vanguard: 'Workers harvest crystal automatically. Select a Worker to BUILD (Barracks → Marines/Snipers/Medics, Factory → Tanks, Airfield → Gunships, Turrets to defend). Destroy the enemy core; protect your Headquarters.',
+  vanguard: 'A full Earth war machine. Workers harvest crystal automatically — and raise SUPPLY DEPOTS, which mint a steady trickle of crystal and double as drop-offs, so your economy keeps growing even as the nodes run dry. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
   myriad: 'Your creep IS your economy — every covered tile feeds you biomass. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. With the Hive selected, right-click to set the swarm rally. The swarm heals on creep.',
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Guard the Ossuary.',
@@ -74,21 +74,30 @@ const BUILD_VERB = {
 // kind: 'unit' | 'building'
 // shot: 'melee' | 'bullet' | 'beam' | 'glob' | 'shell'
 const DEFS = {
-  // ----- IRON VANGUARD -----
+  // ----- THE VANGUARD -----
+  // Earth's main standing army: a textbook combined-arms force. Cheap, finite crystal
+  // is its weakness, so its Supply Depots mint a steady trickle (and double as drop-offs)
+  // to keep the war machine fed once the nodes run dry — its answer to limited scaling.
   hq:       { fac:'vanguard', kind:'building', name:'Headquarters', hp:1600, size:42, core:true, produces:['worker'], dropoff:true },
   worker:   { fac:'vanguard', kind:'unit', name:'Worker', hp:45, size:8, speed:75, cost:50, time:6, dmg:3, range:12, cd:1, aggro:0, shot:'melee', harvester:true, builder:true },
-  barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','sniper','medic'] },
-  factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['tank','flametank','goliath'] },
-  airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship'] },
+  depot:    { fac:'vanguard', kind:'building', name:'Supply Depot', hp:560, size:22, cost:175, time:14, dropoff:true, crystalPerSec:1.5, capBonus:6 },
+  barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','rocket','sniper','medic'] },
+  factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['outrider','tank','flametank','goliath','artillery'] },
+  airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship','bomber'] },
   turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:420, size:14, cost:100, time:12, dmg:9, range:195, cd:0.65, aggro:215, shot:'bullet' },
+  pillbox:  { fac:'vanguard', kind:'building', name:'Pillbox', hp:820, size:18, cost:200, time:16, dmg:20, range:215, cd:1.2, aggro:230, shot:'shell', splash:30 },
   techlab:  { fac:'vanguard', kind:'building', name:'Tech Lab', hp:600, size:24, cost:150, time:14, researchLab:true },
   marine:   { fac:'vanguard', kind:'unit', name:'Marine', hp:75, size:8, speed:82, cost:60, time:5, dmg:8, range:95, cd:0.8, aggro:170, shot:'bullet' },
+  rocket:   { fac:'vanguard', kind:'unit', name:'Rocketeer', hp:65, size:8, speed:74, cost:85, time:7, dmg:24, range:140, cd:1.7, aggro:205, shot:'shell' },
   sniper:   { fac:'vanguard', kind:'unit', name:'Sniper', hp:50, size:8, speed:65, cost:110, time:8, dmg:30, range:215, cd:2.2, aggro:235, shot:'beam' },
   medic:    { fac:'vanguard', kind:'unit', name:'Medic', hp:60, size:8, speed:80, cost:75, time:6, aggro:0, aura:110, heal:6 },
+  outrider: { fac:'vanguard', kind:'unit', name:'Outrider', hp:135, size:11, speed:138, cost:90, time:7, dmg:8, range:115, cd:0.38, aggro:185, shot:'bullet' },
   tank:     { fac:'vanguard', kind:'unit', name:'Siege Tank', hp:280, size:14, speed:52, cost:200, time:12, dmg:34, range:165, cd:2.4, aggro:195, shot:'shell', splash:42 },
   gunship:  { fac:'vanguard', kind:'unit', name:'Gunship', hp:140, size:10, speed:120, cost:180, time:11, dmg:7, range:120, cd:0.35, aggro:200, shot:'bullet' },
+  bomber:   { fac:'vanguard', kind:'unit', name:'Vulture Bomber', hp:170, size:12, speed:116, cost:240, time:14, dmg:36, range:120, cd:1.9, aggro:160, shot:'glob', splash:54 },
   flametank:{ fac:'vanguard', kind:'unit', name:'Hellhound', hp:210, size:13, speed:74, cost:170, time:11, dmg:14, range:82, cd:0.5, aggro:150, shot:'glob', splash:34 },
   goliath:  { fac:'vanguard', kind:'unit', name:'Goliath', hp:380, size:15, speed:48, cost:270, time:15, dmg:26, range:185, cd:1.4, aggro:200, shot:'bullet' },
+  artillery:{ fac:'vanguard', kind:'unit', name:'Artillery', hp:165, size:13, speed:42, cost:250, time:16, dmg:42, range:252, cd:3.3, aggro:120, shot:'shell', splash:66 },
 
   // ----- MYRIAD SWARM -----
   hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother','ravager'], grows:['tumor','spawnpit','spittermound','hunterden','spine','evochamber','broodnexus'], spawns:'drone', spawnEvery:7 },
@@ -268,7 +277,7 @@ const DEFS = {
   // them a glowing marker; several carry an `aux` machine-gun ring like the Bulwark.
   // (The Warden already has its own apex pair: the Castellan + the Bulwark.)
 
-  // IRON VANGUARD — a walking dreadnought: siege cannon + four autocannon turrets
+  // THE VANGUARD — a walking dreadnought: siege cannon + four autocannon turrets
   dominion:  { fac:'vanguard', kind:'building', name:'Dominion Yard', hp:1100, size:32, cost:600, time:30, apex:true, produces:['leviathan'] },
   leviathan: { fac:'vanguard', kind:'unit', name:'Leviathan', hp:1500, size:22, speed:40, cost:700, time:36, apex:true,
                dmg:60, range:235, cd:3.0, aggro:245, shot:'shell', splash:80,
@@ -333,18 +342,24 @@ const DEFS = {
 // Per-thing flavour + tech tree. `desc` shows on hover; `req` is a building that
 // must be finished before this can be built/produced (the faction's tech gate).
 const META = {
-  // IRON VANGUARD
+  // THE VANGUARD
   hq:        { desc: 'Your core. Workers drop off crystal here, and it trains more Workers. Lose it and you lose.' },
   worker:    { desc: 'Cheap harvester and builder. Auto-mines crystal; select one to construct buildings.' },
-  barracks:  { desc: 'Infantry school — trains Marines, Snipers and Medics.' },
-  factory:   { desc: 'Heavy vehicle bay. Builds Siege Tanks.', req: 'barracks' },
-  airfield:  { desc: 'Aircraft hangar. Builds Gunships.', req: 'factory' },
+  depot:     { desc: 'Logistics hub: MINTS a steady trickle of Crystal every second and serves as a Worker drop-off — build them out toward distant nodes so your economy keeps scaling even after the crystal runs dry. Also raises your unit cap.' },
+  barracks:  { desc: 'Infantry school — trains Marines, Rocketeers, Snipers and Medics.' },
+  factory:   { desc: 'Heavy vehicle bay. Builds Outriders, Siege Tanks, Hellhounds, Goliaths and Artillery.', req: 'barracks' },
+  airfield:  { desc: 'Aircraft hangar. Builds Gunships and Vulture Bombers.', req: 'factory' },
   turret:    { desc: 'Static defensive gun. Cheap base protection.' },
+  pillbox:   { desc: 'Armoured strongpoint: a tough, longer-range emplacement with a splashing shell. The backbone of a dug-in defensive line.' },
   marine:    { desc: 'Cheap, reliable rifle infantry. The backbone of any push.' },
+  rocket:    { desc: 'Rocket infantry: out-ranges Marines and hits far harder per shot. Your answer to armour, buildings and aircraft.' },
   sniper:    { desc: 'Fragile long-range specialist with heavy single-target damage.' },
   medic:     { desc: 'Non-combat support; continuously heals nearby friendly units.' },
+  outrider:  { desc: 'Fast, cheap recon buggy. Scouts the map, runs down stragglers and raids enemy workers. Flimsy in a stand-up fight.' },
   tank:      { desc: 'Slow siege vehicle with a splashing cannon. Anti-armour and anti-clump.' },
   gunship:   { desc: 'Fast flyer with rapid fire. Excellent for raids and mop-up.' },
+  bomber:    { desc: 'Fast bombing aircraft that drops a heavy splashing payload — devastating against clumped troops and buildings. Slow to reload.' },
+  artillery: { desc: 'Long-range mobile gun with a huge splash. Out-ranges almost everything, but fragile and helpless up close — screen it with armour.', req: 'techlab' },
   // MYRIAD SWARM
   hive:      { desc: 'Your core. Spreads creep, spawns free Drones, and grows every structure.' },
   tumor:     { desc: 'Cheap creep spreader; extends your economy and where you can build.' },
@@ -460,12 +475,12 @@ const META = {
   zealot:    { desc: 'Tougher melee fanatic.', req: 'shrine' },
   behemoth:  { desc: 'Massive splashing horror raised from spilled Blood.', req: 'shrine' },
   // NEW UNITS & BUILDINGS
-  techlab:   { desc: 'Research building. Develops Iron Vanguard weapon & armour upgrades.' },
+  techlab:   { desc: 'Research building. Develops the Vanguard’s weapon & armour upgrades.' },
   flametank: { desc: 'Fast short-range tank that hoses a cone of fire — devastating against clumped infantry.' },
   goliath:   { desc: 'Heavy walker with a long-range autocannon. Durable all-rounder; anchors a push.' },
   evochamber:{ desc: 'Research building grown on creep. Evolves the swarm’s upgrades.' },
   ravager:   { desc: 'Bred ranged elite that lobs corrosive splash. Needs a Hunter Den.', req: 'hunterden' },
-  aegis:     { desc: 'Heavily shielded vanguard bruiser. Soaks fire and crushes what it reaches.' },
+  aegis:     { desc: 'Heavily shielded Solari bruiser. Soaks fire and crushes what it reaches.' },
   oracle:    { desc: 'Lattice research shrine. Unlocks the Choir’s upgrades.' },
   lich:      { desc: 'Ranged caster spirit with a piercing death-beam. Fragile but hits hard.' },
   blackmarket:{ desc: 'Air-dropped research den. Brokers the Syndicate’s upgrades.' },
@@ -690,7 +705,14 @@ function cdOf(e) {
   return e.def.cd * m;
 }
 function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1); }
-function capOf(fac) { const p = game.players[fac]; return FACTIONS[fac].cap + ((p && p.capBonus) || 0); }
+function capOf(fac) {
+  const p = game.players[fac];
+  let bonus = (p && p.capBonus) || 0;
+  // standing buildings with a capBonus (the Vanguard's Supply Depots) raise the cap
+  for (const e of game.entities)
+    if (!e.dead && e.fac === fac && e.def.capBonus && !e.constructing) bonus += e.def.capBonus;
+  return FACTIONS[fac].cap + bonus;
+}
 function researchQueued(fac, rid) {
   return game.entities.some(e => !e.dead && e.fac === fac && e.rqueue && e.rqueue.some(q => q.rid === rid));
 }

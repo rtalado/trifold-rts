@@ -120,7 +120,7 @@ Nodes are timed, cost resources, gate behind their prerequisites, and apply
 
 | Faction | Research building |
 |---|---|
-| Iron Vanguard | Tech Lab |
+| The Vanguard | Tech Lab |
 | Myriad Swarm | Evolution Chamber |
 | Solari Exodus | the Ark itself |
 | Ashen Choir | Bone Oracle |
@@ -159,10 +159,16 @@ link can fail — have one switch networks (a phone hotspot usually works).
 Each has a unique economy, a single **core** that ends the game if it dies, and its
 own roster (units below are highlights, not the full list).
 
-### IRON VANGUARD — the Architects · *Crystal* · core: **Headquarters**
-Classic macro. Workers mine crystal back to the HQ. Build Barracks (Marines, Snipers,
-Medics), a Factory (Siege Tanks, the fast flame **Hellhound**, the heavy **Goliath**
-walker), an Airfield (Gunships), and Turrets. Economy → production → army → push.
+### THE VANGUARD — Earth's Army · *Crystal* · core: **Headquarters**
+Earth's main standing army and the widest, most flexible roster in the war — textbook
+combined arms with an answer to everything. Workers mine crystal back to the HQ. Build
+Barracks (Marines, the hard-hitting **Rocketeers**, Snipers, Medics), a Factory (fast
+**Outriders**, Siege Tanks, flame **Hellhounds**, heavy **Goliath** walkers and
+long-range **Artillery**), an Airfield (Gunships, splashing **Vulture Bombers**),
+Turrets and armoured **Pillboxes**. Their one weakness is *limited resource scaling* —
+crystal nodes are finite — so **Supply Depots** mint a steady trickle of crystal, double
+as drop-offs and raise the unit cap, keeping the war machine fed once the nodes run dry.
+Economy → production → army → push.
 
 ### MYRIAD SWARM — the Flood · *Biomass* · core: **Hive**
 No workers, no mining — every tile of **creep** pays biomass, so your map presence

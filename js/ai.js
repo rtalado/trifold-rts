@@ -71,20 +71,29 @@ function aiTick(fac) {
     const rax = ents(e => e.fac === fac && e.type === 'barracks');
     const fact = ents(e => e.fac === fac && e.type === 'factory');
     const air = ents(e => e.fac === fac && e.type === 'airfield');
+    const depots = ents(e => e.fac === fac && e.type === 'depot');
+    const lab = ents(e => e.fac === fac && e.type === 'techlab');
     const turrets = ents(e => e.fac === fac && e.type === 'turret');
+    const pillboxes = ents(e => e.fac === fac && e.type === 'pillbox');
     if (rax.length < aiGrow(2, 1, 6) && p.res >= 150) aiPlace(fac, 'barracks', p.base);
+    else if (rax.length >= 1 && depots.length < aiGrow(2, 1, 6) && p.res >= 175) aiPlace(fac, 'depot', p.base);
     else if (rax.length >= 1 && fact.length < aiGrow(1, 1, 4) && p.res >= 250) aiPlace(fac, 'factory', p.base);
+    else if (fact.length >= 1 && lab.length < 1 && p.res >= 150 && game.t > 150) aiPlace(fac, 'techlab', p.base);
     else if (fact.length >= 1 && air.length < aiGrow(1, 1, 3) && p.res >= 300 && game.t > 200) aiPlace(fac, 'airfield', p.base);
     else if (turrets.length < aiGrow(3, 1, 10) && p.res >= 220 && game.t > 150) aiPlace(fac, 'turret', p.base);
+    else if (pillboxes.length < aiGrow(2, 1, 6) && p.res >= 200 && game.t > 240) aiPlace(fac, 'pillbox', p.base);
     for (const b of rax) if (!b.constructing && !b.queue.length && p.res >= 60) {
       const r = Math.random();
-      enqueue(b, (r < 0.25 && p.res >= 110) ? 'sniper' : (r < 0.4 && p.res >= 75) ? 'medic' : 'marine');
+      enqueue(b, (r < 0.18 && p.res >= 110) ? 'sniper' : (r < 0.38 && p.res >= 85) ? 'rocket' : (r < 0.5 && p.res >= 75) ? 'medic' : 'marine');
     }
-    for (const b of fact) if (!b.constructing && !b.queue.length && p.res >= 170) {
+    for (const b of fact) if (!b.constructing && !b.queue.length && p.res >= 90) {
       const r = Math.random();
-      enqueue(b, (r < 0.3 && p.res >= 270) ? 'goliath' : (r < 0.6) ? 'flametank' : 'tank');
+      enqueue(b, (r < 0.18 && p.res >= 250 && techMet(fac, 'artillery')) ? 'artillery'
+        : (r < 0.4 && p.res >= 270) ? 'goliath' : (r < 0.62 && p.res >= 170) ? 'flametank'
+        : (r < 0.82 && p.res >= 200) ? 'tank' : 'outrider');
     }
-    for (const b of air) if (!b.constructing && !b.queue.length && p.res >= 180) enqueue(b, 'gunship');
+    for (const b of air) if (!b.constructing && !b.queue.length && p.res >= 180)
+      enqueue(b, (Math.random() < 0.4 && p.res >= 240) ? 'bomber' : 'gunship');
   }
 
   else if (fac === 'myriad') {

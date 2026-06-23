@@ -55,7 +55,7 @@ function currentCommands() {
     });
   };
 
-  if (types.has('worker')) ['barracks', 'factory', 'airfield', 'turret', 'techlab', 'dominion'].forEach(buildBtn);
+  if (types.has('worker')) ['barracks', 'factory', 'depot', 'airfield', 'turret', 'pillbox', 'techlab', 'dominion'].forEach(buildBtn);
 
   if (game.sel.length === 1) {
     const d = sel0.def;

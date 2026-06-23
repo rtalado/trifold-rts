@@ -889,7 +889,15 @@ function tickEconomy(dt) {
   for (const fac in game.players) {
     const p = game.players[fac];
     let gain = 0;
-    if (fac === 'myriad') {
+    if (fac === 'vanguard') {
+      // the war machine's real income is Workers hauling crystal (see harvestStep),
+      // but the nodes are finite — so each standing Supply Depot mints a steady
+      // trickle on top, letting the Vanguard keep scaling once the crystal runs dry.
+      let depots = 0;
+      for (const e of game.entities)
+        if (!e.dead && e.fac === fac && e.def.crystalPerSec && !e.constructing) depots += e.def.crystalPerSec;
+      gain = depots;
+    } else if (fac === 'myriad') {
       // creepTiles is refreshed in recomputeCreep (every 0.5s) — no per-frame rescan
       gain = ECON.myriadBase + (p.creepTiles || 0) * ECON.myriadPerTile;
     } else if (fac === 'exodus') {

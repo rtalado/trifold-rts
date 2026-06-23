@@ -369,27 +369,49 @@ function drawEnt(e) {
         ctx.strokeStyle = col;
         ctx.beginPath(); ctx.moveTo(x, y - s * 0.8); ctx.lineTo(x, y - s * 1.35); ctx.stroke();
         ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y - s * 1.35, 3.5, 0, Math.PI * 2); ctx.fill();
-      } else if (e.type === 'turret') {
+      } else if (e.type === 'turret' || e.type === 'pillbox') {
+        if (e.type === 'pillbox') { // armoured inner block under the barrel
+          ctx.fillStyle = col; ctx.globalAlpha *= 0.5;
+          ctx.fillRect(x - s * 0.5, y - s * 0.4, s, s * 0.8); ctx.globalAlpha /= 0.5;
+        }
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.5;
-        ctx.strokeStyle = col; ctx.lineWidth = 3.5;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
+        ctx.strokeStyle = col; ctx.lineWidth = e.type === 'pillbox' ? 5 : 3.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + (e.type === 'pillbox' ? 7 : 9)), y + Math.sin(a) * (s + (e.type === 'pillbox' ? 7 : 9))); ctx.stroke();
+      } else if (e.type === 'depot') { // stacked supply crates + chevron
+        ctx.fillStyle = col;
+        for (const [cx, cy] of [[-0.42, -0.28], [0.18, -0.28], [-0.12, 0.18]]) {
+          ctx.fillRect(x + cx * s, y + cy * s, s * 0.5, s * 0.5);
+          ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.strokeRect(x + cx * s, y + cy * s, s * 0.5, s * 0.5);
+        }
       } else {
         ctx.fillStyle = col; ctx.fillRect(x - s * 0.45, y - s * 0.3, s * 0.9, s * 0.6);
       }
-    } else if (e.type === 'tank' || e.type === 'flametank' || e.type === 'goliath') {
+    } else if (e.type === 'tank' || e.type === 'flametank' || e.type === 'goliath' || e.type === 'artillery') {
       ctx.fillStyle = e.type === 'goliath' ? '#0f2740' : dark; ctx.strokeStyle = col; ctx.lineWidth = 2;
       roundRect(x - s, y - s * 0.7, s * 2, s * 1.4, 4); ctx.fill(); ctx.stroke();
       const t = e.tgt ? byId(e.tgt) : null;
       const a = t ? Math.atan2(t.y - y, t.x - x) : 0;
       ctx.strokeStyle = e.type === 'flametank' ? '#ff9d4d' : col;
-      ctx.lineWidth = e.type === 'goliath' ? 4 : 3;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      ctx.lineWidth = e.type === 'goliath' ? 4 : e.type === 'artillery' ? 3.5 : 3;
+      const reach = e.type === 'artillery' ? s + 16 : s + 8; // artillery's long howitzer barrel
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * reach, y + Math.sin(a) * reach); ctx.stroke();
       if (e.type === 'goliath') { // twin barrels
         const px = Math.cos(a + Math.PI / 2) * 3, py = Math.sin(a + Math.PI / 2) * 3;
         ctx.beginPath(); ctx.moveTo(x + px, y + py); ctx.lineTo(x + px + Math.cos(a) * (s + 6), y + py + Math.sin(a) * (s + 6));
         ctx.moveTo(x - px, y - py); ctx.lineTo(x - px + Math.cos(a) * (s + 6), y - py + Math.sin(a) * (s + 6)); ctx.stroke();
+      } else if (e.type === 'artillery') { // muzzle brake at the barrel tip
+        ctx.lineWidth = 3; ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a) * reach + Math.cos(a + Math.PI / 2) * 3, y + Math.sin(a) * reach + Math.sin(a + Math.PI / 2) * 3);
+        ctx.lineTo(x + Math.cos(a) * reach - Math.cos(a + Math.PI / 2) * 3, y + Math.sin(a) * reach - Math.sin(a + Math.PI / 2) * 3); ctx.stroke();
       }
+    } else if (e.type === 'outrider') { // fast light recon buggy: small angular hull + thin gun
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      const t = e.tgt ? byId(e.tgt) : null, a = t ? Math.atan2(t.y - y, t.x - x) : (e.facing || 0);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.beginPath(); ctx.moveTo(s, 0); ctx.lineTo(-s * 0.7, s * 0.7); ctx.lineTo(-s * 0.7, -s * 0.7); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(s + 5, 0); ctx.stroke();
+      ctx.restore();
     } else if (e.type === 'worker') {
       ctx.fillStyle = e.order.type === 'harvest' && e.order.carry > 0 ? '#6ee7ff' : dark;
       ctx.strokeStyle = col; ctx.lineWidth = 1.5;
@@ -400,6 +422,15 @@ function drawEnt(e) {
       ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(157,208,255,0.45)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(x, y - s * 0.2, s * 0.95, 0, Math.PI * 2); ctx.stroke();
+    } else if (e.type === 'bomber') { // swept-wing strike aircraft with a payload dot
+      const t = e.tgt ? byId(e.tgt) : null, a = t ? Math.atan2(t.y - y, t.x - x) : (e.facing || -Math.PI / 2);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI / 2);
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -s); ctx.lineTo(s * 1.1, s * 0.7); ctx.lineTo(0, s * 0.35); ctx.lineTo(-s * 1.1, s * 0.7); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, s * 0.1, s * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     } else if (e.type === 'medic') {
       ctx.fillStyle = '#dfe8f4'; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
       ctx.fillRect(x - s, y - s, s * 2, s * 2); ctx.strokeRect(x - s, y - s, s * 2, s * 2);
@@ -407,11 +438,16 @@ function drawEnt(e) {
       ctx.fillRect(x - s * 0.55, y - s * 0.18, s * 1.1, s * 0.36);
       ctx.fillRect(x - s * 0.18, y - s * 0.55, s * 0.36, s * 1.1);
     } else {
-      // marine / sniper: triangle
-      ctx.fillStyle = e.type === 'sniper' ? '#1d3f63' : col;
+      // marine / sniper / rocketeer: triangle (rocketeer carries a launcher tube)
+      ctx.fillStyle = e.type === 'sniper' ? '#1d3f63' : e.type === 'rocket' ? '#2c5a8c' : col;
       ctx.strokeStyle = col; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x, y - s - 2); ctx.lineTo(x + s, y + s); ctx.lineTo(x - s, y + s); ctx.closePath();
       ctx.fill(); ctx.stroke();
+      if (e.type === 'rocket') { // shoulder launcher tube
+        const t = e.tgt ? byId(e.tgt) : null, a = t ? Math.atan2(t.y - y, t.x - x) : 0;
+        ctx.strokeStyle = col; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.2); ctx.lineTo(x + Math.cos(a) * (s + 5), y - s * 0.2 + Math.sin(a) * (s + 5)); ctx.stroke();
+      }
     }
   }
 
