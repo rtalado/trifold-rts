@@ -112,7 +112,7 @@ function genLayout(rng, bases) {
   // cache for the Warden). More Obelisks now — map control is the main way to scale.
   const caches  = 12 + 9 * P;          // 2p:30  3p:39  4p:48
   const hoards  = 3 + P;               // 2p:5   3p:6   4p:7
-  const obs     = 3 + P;               // 2p:5   3p:6   4p:7  (more control points)
+  const obs     = 4 + 2 * P;           // 2p:8   3p:10  4p:12 (home econ is capped — territory IS the economy)
   const bunkers = 1 + P;               // 2p:3   3p:4   4p:5
   for (let i = 0; i < caches;  i++) { const s = findSpot(90, 300, 160);  if (s) spawnEnt('cache',   'neutral', s.x, s.y); }
   for (let i = 0; i < hoards;  i++) { const s = findSpot(120, 420, 240); if (s) spawnEnt('hoard',   'neutral', s.x, s.y); }
@@ -122,8 +122,8 @@ function genLayout(rng, bases) {
   // Wellsprings: the faction-specific expansion economy. Scattered out in contested
   // ground (kept well away from any base) so reaching one means marching out and
   // chaining your economy toward it. More of them on bigger maps.
-  const wells = 4 + 2 * P;             // 2p:8  3p:10  4p:12
-  for (let i = 0; i < wells; i++) { const s = findSpot(140, 520, 320); if (s) spawnEnt('wellspring', 'neutral', s.x, s.y); }
+  const wells = 5 + 3 * P;             // 2p:11  3p:14  4p:17 — lots of ground to fight over
+  for (let i = 0; i < wells; i++) { const s = findSpot(140, 480, 300); if (s) spawnEnt('wellspring', 'neutral', s.x, s.y); }
 
   // 4) central contested prize, behind the cliff-ring chokepoints: a guarded Hoard,
   // an Obelisk, a Munitions Bunker and rich crystal nodes — worth marching for.
@@ -925,17 +925,19 @@ function tickEconomy(dt) {
   for (const fac in game.players) {
     const p = game.players[fac];
     let gain = 0;
+    // territory held this tick: harnessed Wellsprings + captured Obelisks. This is the
+    // uncapped scaler — with home economies plateaued, holding ground IS the economy.
+    const wells = p.wellHarness || 0;
+    const obs = ents(e => e.type === 'obelisk' && e.owner === fac).length;
     if (fac === 'vanguard') {
-      // the war machine's real income is Workers hauling crystal (see harvestStep),
-      // but the nodes are finite — so each standing Supply Depot mints a steady
-      // trickle on top, letting the Vanguard keep scaling once the crystal runs dry.
-      let depots = 0;
-      for (const e of game.entities)
-        if (!e.dead && e.fac === fac && e.def.crystalPerSec && !e.constructing) depots += e.def.crystalPerSec;
-      gain = depots;
+      // home economy is Workers hauling FINITE crystal (see harvestStep) — once the
+      // starter nodes run dry you MUST send Workers out to claim distant nodes. No
+      // passive minting: Supply Depots are forward drop-offs, not a corner crystal tap.
+      gain = 0;
     } else if (fac === 'myriad') {
-      // creepTiles is refreshed in recomputeCreep (every 0.5s) — no per-frame rescan
-      gain = ECON.myriadBase + (p.creepTiles || 0) * ECON.myriadPerTile;
+      // biomass per creep tile, but the tile income PLATEAUS — a home creep-blob maxes
+      // out, so growth means creeping OUT across the map (and over Wellsprings).
+      gain = ECON.myriadBase + Math.min(p.creepTiles || 0, ECON.myriadCapTiles) * ECON.myriadPerTile;
     } else if (fac === 'exodus') {
       gain = ECON.exodusBase;
       const ark = ents(e => e.fac === fac && e.def.core)[0];
@@ -948,15 +950,20 @@ function tickEconomy(dt) {
         } else ark.siphonNode = 0;
       }
     } else if (fac === 'choir') {
+      // lattice trickle PLATEAUS at choirConduitCap — the Choir scales by feeding on
+      // death across the map (see applyDamage), not by stacking conduits at home.
       const conduits = ents(e => e.fac === fac && e.type === 'conduit' && !e.growing).length;
-      gain = ECON.choirBase + conduits * ECON.choirConduit;
+      gain = ECON.choirBase + Math.min(conduits, ECON.choirConduitCap) * ECON.choirConduit;
     } else if (fac === 'syndicate') {
+      // interest on the treasury — but the CAP is driven by TERRITORY, so a bank in a
+      // corner stalls at synCapBase. Each held Obelisk/Wellspring lifts it a lot.
       const houses = ents(e => e.fac === fac && e.type === 'countinghouse' && !e.growing).length;
-      const cap = ECON.synCapBase + houses * ECON.synCapPer;
+      const cap = ECON.synCapBase + houses * ECON.synCapPer + (obs + wells) * ECON.synCapTerritory;
       gain = ECON.synBase + houses * ECON.synHouseFlat + ECON.synInterest * Math.min(p.res, cap);
     } else if (fac === 'warden') {
-      // the fortress pays out by its mass: total HP of all finished buildings,
-      // plus a flat trickle from each standing Stone Quarry
+      // THE exception — self-sufficient. Income scales with the total HP of standing
+      // buildings, plus a flat trickle from each Stone Quarry. The walled brotherhood
+      // needn't march out (and cannot harness Wellsprings at all).
       let hp = 0, quarries = 0;
       for (const e of game.entities)
         if (!e.dead && e.fac === fac && e.def.kind === 'building' && !e.constructing && !e.growing) {
@@ -966,38 +973,47 @@ function tickEconomy(dt) {
     } else if (fac === 'ember') {
       gain = ECON.emberBase; // the rest is plundered through combat (see applyDamage)
     } else if (fac === 'verdant') {
+      // Sap per Bloom PLATEAUS at verdantBloomCap — a home garden caps out. The scarce
+      // Pollen/Loam (and bonus Sap) come from harnessed Wellsprings (see below).
       const blooms = ents(e => e.fac === fac && e.type === 'bloom' && !e.growing && !e.withered).length;
-      gain = ECON.verdantBase + blooms * ECON.verdantPerBloom;
+      gain = ECON.verdantBase + Math.min(blooms, ECON.verdantBloomCap) * ECON.verdantPerBloom;
     } else if (fac === 'stormforge') {
-      // each standing Dynamo's payout ramps with elapsed time, so early Dynamos
-      // (and holding them) compound into a fortune — the engine that accelerates.
+      // home Dynamo output is FLAT and plateaus at stormDynamoCap — no more scaling by
+      // idling. The acceleration now lives on the map (each Storm Font ramps — see below).
       const dynamos = ents(e => e.fac === fac && e.type === 'dynamo' && !e.growing).length;
-      gain = ECON.stormBase + dynamos * ECON.stormPerDynamo * (1 + game.t * ECON.stormRamp);
+      gain = ECON.stormBase + Math.min(dynamos, ECON.stormDynamoCap) * ECON.stormPerDynamo;
     } else if (fac === 'pact') {
       gain = ECON.pactBase; // the rest is reaped from your own dying (see applyDamage)
     }
-    // every Obelisk this faction holds adds a steady trickle
-    gain += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.obeliskIncome;
-    // every Wellspring this faction harnesses pours out its primary resource — the
-    // expansion economy that drags everyone (bar Exodus & Warden) out onto the map
-    gain += (p.wellHarness || 0) * (WELL.income[fac] || WELL.defaultIncome);
+    // ---- TERRITORY: the dominant, uncapped income (bar the self-sufficient Warden) ----
+    gain += obs * ECON.obeliskIncome;
+    // harnessed Wellsprings pour out your primary resource. The Stormforge's Storm Fonts
+    // ramp the longer they're held — its 'engine that accelerates', re-homed onto the map.
+    let wellPay = wells * (WELL.income[fac] || WELL.defaultIncome);
+    if (fac === 'stormforge') wellPay *= (1 + game.t * ECON.stormFontRamp);
+    gain += wellPay;
     gain *= p.incomeMul * (p.econMul || 1); // AI handicap × researched economy upgrades
     p.res += gain * dt;
     p.gainAccum += gain * dt;
 
-    // secondary resource: the Warden mints Iron from every finished Iron Forge
+    // secondary resource: Warden Iron from Forges; Verdant Pollen from Pollen Spires —
+    // PLUS, for the Verdant, a flow of Pollen from every harnessed Wellspring, so the
+    // scarce harvest its diverse late-game garden needs comes from holding fertile ground.
     let iron = 0;
     for (const e of game.entities)
       if (!e.dead && e.fac === fac && e.def.ironPerSec && !e.constructing && !e.growing && !e.withered) iron += e.def.ironPerSec;
+    if (fac === 'verdant') iron += wells * ECON.verdantFontPollen;
     if (iron) { iron *= p.incomeMul * (p.econMul || 1); p.iron += iron * dt; p.ironAccum += iron * dt; }
 
-    // tertiary resource: the Warden's Powder — a trickle from Powder Mills, plus a
-    // flow from every Obelisk it holds, so the grand projects demand map control.
+    // tertiary resource: Warden Powder (Mills + held Obelisks); Verdant Loam from Mulch
+    // Beds — plus, for the Verdant, Loam from every harnessed Wellspring (the third
+    // harvest the great trees demand, again paid out only for holding the map).
     let powder = 0;
     for (const e of game.entities)
       if (!e.dead && e.fac === fac && e.def.powderPerSec && !e.constructing && !e.growing && !e.withered) powder += e.def.powderPerSec;
-    if (FACTIONS[fac].res3)
+    if (FACTIONS[fac].res3 && fac !== 'verdant')
       powder += ents(e => e.type === 'obelisk' && e.owner === fac).length * ECON.wardenObeliskPowder;
+    if (fac === 'verdant') powder += wells * ECON.verdantFontLoam;
     if (powder) { powder *= p.incomeMul * (p.econMul || 1); p.powder += powder * dt; p.powderAccum += powder * dt; }
   }
 }

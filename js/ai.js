@@ -59,8 +59,14 @@ function aiTick(fac) {
       for (const u of army) if (u.order.type === 'idle' || u.order.type === 'amove')
         u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
     } else {
-      // between pushes: hold the muster point near home (ready to defend or regroup)
-      for (const u of army) if (u.order.type === 'idle') u.order = { type: 'amove', x: muster.x, y: muster.y };
+      // between pushes: GRAB TERRITORY. Home economy is capped, so the bot marches its
+      // army out to seize the nearest objective it doesn't already hold — an un-owned
+      // Obelisk (captured by standing on it) or a Wellspring it hasn't harnessed (to clear
+      // the ground and guard the econ structure it builds there). Falls back to mustering.
+      const objective = ents(e => (e.type === 'obelisk' && e.owner !== fac) || (e.def.wellspring && e.owner !== fac))
+        .map(e => ({ e, d: dist(myCore, e) })).filter(o => o.d < 1500).sort((a, b) => a.d - b.d)[0];
+      const hold = objective ? objective.e : muster;
+      for (const u of army) if (u.order.type === 'idle') u.order = { type: 'amove', x: hold.x, y: hold.y };
     }
   }
 

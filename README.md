@@ -73,23 +73,24 @@ so scouting matters. Objectives worth fighting over:
 
 - **Crystal nodes** — the mineable resource (Vanguard Workers, Exodus Collectors
   and the deployed Ark feed on them). Dozens are scattered across the map.
-- **Obelisks** — capture points, and now the main reason to fight over the map. Hold
-  the ground around one (with no enemies in range) for ~6 s to claim it; each obelisk
-  pays its owner **+2.6 resources/s** in whatever your faction's currency is (and a
-  trickle of **Powder** to the Warden — see below). They can be recaptured, and there
-  are more of them than before.
-- **Wellsprings** — the faction-specific **expansion economy**. Scattered out in
-  contested ground, far from every base. You can't capture one by standing on it —
-  you **harness** it by raising your own economy structure beside it (within ~215px),
-  whereupon it pours out **+3–4.6/s** of your primary resource. Each faction taps them
-  its own way: **Vanguard** Supply Depot · **Choir** Soul Conduit · **Syndicate**
-  air-dropped Watchpost · **Ember** War Camp · **Verdant** Bloom (which also grows a
-  *thriving ecosystem* — a fertilising buff that makes nearby plants & beasts hit
-  harder) · **Stormforge** Dynamo · **Pact** Bone Shrine · **Myriad** by simply
-  blanketing the font in **creep**. The nomadic **Solari Exodus** already roams for
-  finite crystal and doesn't need them; the turtling **Warden Covenant** — a walled,
-  secretive brotherhood — *cannot* tap them at all, by design. Holing up in a corner
-  no longer keeps pace: march out and hold the founts.
+- **Obelisks** — capture points, and a pillar of the economy. Hold the ground around
+  one (with no enemies in range) for ~6 s to claim it; each obelisk pays its owner
+  **+3.4 resources/s** in whatever your faction's currency is (and a trickle of
+  **Powder** to the Warden — see below). They can be recaptured, and there are lots of
+  them.
+- **Wellsprings** — **the dominant economy itself**, not a side bonus. Because every
+  faction's *home* income is now hard-**capped** (see below), harnessed Wellsprings are
+  how you actually scale. Scattered out in contested ground far from every base, you
+  can't capture one by standing on it — you **harness** it by raising your own economy
+  structure beside it (within ~215px), whereupon it floods you with **+4.2–5.5/s** of
+  your primary resource. Each faction taps them its own way: **Vanguard** Supply Depot ·
+  **Choir** Soul Conduit · **Syndicate** air-dropped Watchpost · **Ember** War Camp ·
+  **Verdant** Bloom (which pours out bonus **Sap + Pollen + Loam** *and* grows a
+  *thriving ecosystem* — a fertilising buff over nearby plants & beasts) · **Stormforge**
+  Dynamo (a *Storm Font* whose payout **ramps the longer you hold it**) · **Pact** Bone
+  Shrine · **Myriad** by simply blanketing the font in **creep**. The nomadic **Solari
+  Exodus** already roams for finite crystal; the turtling **Warden Covenant** — a walled,
+  secretive brotherhood — *cannot* tap them at all, by design.
 - **Supply Caches** — small, lightly-guarded jungle camps dotted everywhere.
   Crack one open for a quick **+160 bounty**.
 - **Munitions Bunkers** — heavily-guarded strongpoints, several of them, often sat
@@ -171,6 +172,18 @@ link can fail — have one switch networks (a phone hotspot usually works).
 Each has a unique economy, a single **core** that ends the game if it dies, and its
 own roster (units below are highlights, not the full list).
 
+> **You cannot win from a corner.** Every faction's *home* economy is deliberately
+> **capped** — it plateaus at a level that keeps you alive and defending, but never
+> enough to overwhelm. Real scaling comes from **holding contested map territory**:
+> finite crystal nodes, captured Obelisks, and harnessed Wellsprings. Each faction is
+> *driven out* in its own way — the Vanguard's starter crystal runs dry; a Myriad
+> creep-blob, a Choir conduit-cluster, a Verdant home-garden and a Stormforge dynamo
+> yard all hit a ceiling; the Syndicate's interest cap only grows with the ground it
+> holds; the Ember and the Pact only earn by fighting. The lone exception is the
+> **Warden Covenant** — a self-sufficient, walled brotherhood whose buildings *are* its
+> economy, and which can't tap Wellsprings at all. So the game is a fight **over the
+> map**, not a race to turtle then all-in.
+
 ### THE VANGUARD — Earth's Army · *Crystal* · core: **Headquarters**
 Earth's main standing army and the widest, most flexible roster in the war — textbook
 combined arms with an answer to everything. Workers mine crystal back to the HQ. Build
@@ -183,10 +196,12 @@ as drop-offs and raise the unit cap, keeping the war machine fed once the nodes 
 Economy → production → army → push.
 
 ### MYRIAD SWARM — the Flood · *Biomass* · core: **Hive**
-No workers, no mining — every tile of **creep** pays biomass, so your map presence
-*is* your income. Growths must sit on your own creep; Spawn Pits / Spitter Mounds /
-Hunter Dens **breed units for free, forever**. Steer the swarm with a rally point.
-The swarm heals on creep and is just meat off it. Elites: Broodmother, **Ravager**.
+No workers, no mining — every tile of **creep** pays biomass. But a home creep-blob's
+income soon **maxes out**, so you must spread OUTWARD and blanket **Wellsprings** in
+creep (each font you cover floods you with biomass). Growths must sit on your own creep;
+Spawn Pits / Spitter Mounds / Hunter Dens **breed units for free, forever**. Steer the
+swarm with a rally point. The swarm heals on creep and is just meat off it. Elites:
+Broodmother, **Ravager**.
 
 ### SOLARI EXODUS — the Pilgrims · *Energy* · core: **The Ark**
 No base, ever. The Ark is fortress, factory and treasury in one — it walks and
@@ -196,16 +211,20 @@ elites — Seekers, Lancers, Guardians, Phoenixes, Templars, and the heavy **Aeg
 whose shields regenerate out of combat. Lose nothing, or lose everything.
 
 ### ASHEN CHOIR — the Revenants · *Essence* · core: **Ossuary**
-All death anywhere pays you Essence — carnage enriches you, stalemates starve you.
-Near the lattice your spirits are sustained; in the field they fade but heal by
-dealing damage. Build only within the lattice (Soul Conduits extend it). Units:
-Wraiths, Banshees, Revenants, and the ranged caster **Lich**.
+All death anywhere pays you Essence — carnage enriches you, stalemates starve you. Your
+home Soul Conduits only **trickle** (and that trickle soon caps), so you scale by
+fighting across the map and by crawling the lattice OUT to plant a Conduit on a
+**Wellspring**. Near the lattice your spirits are sustained; in the field they fade but
+heal by dealing damage. Build only within the lattice. Units: Wraiths, Banshees,
+Revenants, and the ranged caster **Lich**.
 
 ### GILDED SYNDICATE — the Magnates · *Gold* · core: **The Haven**
-Gold breeds gold: your treasury earns **compound interest**. Mercenaries arrive
-**instantly**; every kill pays a bounty. Air-drop Watchposts across the map (never
-into enemy territory) and Countinghouses to raise your interest cap. Units:
-Enforcers, Arbalests, Juggernauts, **Marauders**.
+Gold breeds gold: your treasury earns **compound interest** — but only up to a cap set
+by the **territory you hold**. A bank in a corner stalls; every **Obelisk** you capture
+and **Wellspring** you harness (park a Watchpost beside one) lifts the cap and lets the
+fortune snowball. Mercenaries arrive **instantly**; every kill pays a bounty; Watchposts
+air-drop across the map (never into enemy territory). Units: Enforcers, Arbalests,
+Juggernauts, **Marauders**.
 
 ### WARDEN COVENANT — the Bulwark · *Stone* + *Iron* + *Powder* · core: **Bastion Keep**
 The most intricate faction in the game, on **three resources**: Stone scales with the
@@ -251,8 +270,12 @@ fragile horde fighting. Tech to the **Great Pyre** for the fast, fire-hosing **A
 
 ### VERDANT BLOOM — the Grove · *Sap · Pollen · Loam* · core: **Heartwood**
 A slow, unstoppable garden fed by **three harvests**: Sap from Blooms, Pollen from
-Pollen Spires, Loam from Mulch Beds. A *diverse* garden snowballs — the grandest plants
-and beasts demand a mix of all three. Free **Saplings** keep their own separate cap, so
+Pollen Spires, Loam from Mulch Beds — the grandest plants and beasts demand a mix of all
+three. But a **home garden caps out**, and Pollen & Loam stay choked. The way to bloom is
+to *spread*: plant a Bloom on a **Wellspring** to root a thriving **new ecosystem** that
+pours out bonus Sap, Pollen *and* Loam, and grows a fertilising buff over nearby plants &
+beasts — so you claim fertile ground all across the map (your *diverse* answer to the
+Vanguard's crystal-chasing). Free **Saplings** keep their own separate cap, so
 they never crowd out your real army. Cultivate a sprawling estate: **Fertiliser Pods**
 buff and heal everything nearby, **Spore Blossoms** drag the enemy to a crawl across a
 huge radius, **Spore Vents** gas a kill-zone, and **Thornwalls** + the titanic **Great
@@ -264,9 +287,10 @@ or **Wildgrowth** (uncaps your Saplings and erupts them as fierce mutants). Unit
 Saplings, Thornlings, Treants, and the colossal **Ancient**.
 
 ### STORMFORGE DYNASTY — the Engine · *Power* · core: **Storm Reactor**
-An engine that only accelerates — each standing **Dynamo** pays more every minute. But
-the real fortune is on the map: raise a Dynamo beside a **Wellspring** (a *Storm Font*)
-to harness it for a flood of Power — hold the map, not just the clock. Few but devastating, **shielded** machines,
+An engine that accelerates — but no longer just by waiting. Home **Dynamos** pay a flat
+rate and soon **max out**; the acceleration now lives on the map. Raise a Dynamo on a
+**Wellspring** (a *Storm Font*) to harness it, and the longer you **hold** that font the
+more Power it ramps out — so seize ground early and never let go. Few but devastating, **shielded** machines,
 kept in the fight by **Charge Pylons** that re-energise their shields mid-battle:
 Arclights, the shock-trooper **Galvan**, Voltaics, the mid-weight **Gladius**, and the
 towering Colossus.

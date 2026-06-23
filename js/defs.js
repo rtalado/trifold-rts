@@ -52,15 +52,15 @@ const facColor = f => (FACTIONS[f] || NEUTRAL).color;
 const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 
 const HINTS = {
-  vanguard: 'A full Earth war machine. Workers harvest crystal automatically — and raise SUPPLY DEPOTS, which mint a steady trickle of crystal and double as drop-offs, so your economy keeps growing even as the nodes run dry — and a Depot raised beside a WELLSPRING harnesses it for a surge of extra crystal. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
-  myriad: 'Your creep IS your economy — every covered tile feeds you biomass. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. With the Hive selected, right-click to set the swarm rally. The swarm heals on creep. Crawl your creep OUT to cover WELLSPRINGS — each one you blanket pours out extra biomass.',
+  vanguard: 'A full Earth war machine. Workers harvest crystal automatically — but the nodes are FINITE, so once your starter patch runs dry you MUST push Workers out to claim fresh nodes across the map. SUPPLY DEPOTS are forward drop-offs (and raise your cap) so far nodes are worth mining; a Depot beside a WELLSPRING harnesses it for a flood of extra crystal. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
+  myriad: 'Your creep IS your economy — every covered tile feeds you biomass, but a home creep-blob MAXES OUT fast. To grow you must creep OUTWARD and blanket WELLSPRINGS — each font you cover pours out far more biomass than any tile. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. Right-click with the Hive selected to set the swarm rally. The swarm heals on creep.',
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
-  choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence. Near your lattice, spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice (near your structures); Soul Conduits extend it and trickle Essence. Crawl the lattice OUT to plant a Conduit beside a WELLSPRING — each one you reach surges Essence. Guard the Ossuary.',
-  syndicate: 'Gold breeds gold: your treasury earns compound interest (up to a cap — Countinghouses raise it and pay rent). Mercenaries arrive INSTANTLY for a price, and every kill pays a bounty. Air-drop Watchposts across the map (not into enemy territory) — park one beside a WELLSPRING to milk it for extra Gold. Hoard or hire — and guard the Haven.',
+  choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence, so SCALING means fighting across the map. Your home Soul Conduits only trickle (and soon max out); crawl the lattice OUT to plant a Conduit beside a WELLSPRING for a real surge of Essence. Near your lattice spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice. Guard the Ossuary.',
+  syndicate: 'Gold breeds gold: your treasury earns compound interest — but the interest CAP is set by the TERRITORY you hold. A bank in a corner stalls; every Obelisk you capture and Wellspring you harness (park a Watchpost beside one) lifts the cap and lets the fortune compound. Mercenaries arrive INSTANTLY for a price, every kill pays a bounty, and Watchposts air-drop across the map (not into enemy territory). Hoard or hire — and guard the Haven.',
   warden: 'Slow, armoured, unstoppable, and SELF-SUFFICIENT: alone among the powers you needn’t march out for the map — your standing buildings ARE your economy, the more you raise the more Stone you mint (Forges add Iron). A walled, secretive brotherhood: wall up, turret up, and grind forward with heavy troops and siege. (You cannot tap Wellsprings — you don’t need to.) Hold the Keep.',
   ember: 'No mines, no farms — you fund the war by WAGING it: every point of damage your warband deals is paid back as Plunder, so keep attacking or starve. Fast, cheap raiders up front; raise an Ember Foundry for a tanky Cinderguard wall, long-range Cinderbows, Cinder Catapult siege and a mending Flame Shaman. Throw forward War Camps beside WELLSPRINGS to bleed extra Plunder from the map. Guard the War Pyre.',
-  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. The Heartwood musters the whole army (heavier beasts — Bramblehorn, Spore Caller — need an Arboretum). Plant a Bloom beside a WELLSPRING to root a thriving ecosystem there: extra Sap AND a fertilising buff that makes every nearby plant & beast hit harder. Groves breed free Saplings and grow your defences; the Arboretum cultivates the three Grafts, the apex Heart Grove and the colossal, INDESTRUCTIBLE Erdtree. Patient early, unstoppable late. Protect the Heartwood.',
-  stormforge: 'An engine that only accelerates. Power RAMPS the longer your Dynamos stand — but the real fortune is on the map: raise a Dynamo beside a WELLSPRING (a Storm Font) to harness it for a flood of Power. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Hold the map, not just the clock. Defend the Reactor.',
+  verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. But a home garden CAPS OUT, and the scarce Pollen & Loam are choked. The answer is to spread: plant a Bloom on a WELLSPRING to root a thriving new ecosystem — it pours out bonus Sap, Pollen AND Loam, and grows a fertilising buff that makes every nearby plant & beast hit harder. So claim fertile ground all across the map. The Heartwood musters the whole army (Bramblehorn, Spore Caller need an Arboretum); Groves breed free Saplings; the Arboretum cultivates the Grafts, the Heart Grove and the INDESTRUCTIBLE Erdtree. Protect the Heartwood.',
+  stormforge: 'An engine that accelerates — but no longer just by waiting. Your home Dynamos pay a FLAT rate and soon max out; the acceleration now lives on the MAP. Raise a Dynamo beside a WELLSPRING (a Storm Font) to harness it — and the longer you HOLD that font, the more Power it ramps out. So seize ground early and never let it go. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Defend the Reactor.',
   pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Raise Bone Shrines beside WELLSPRINGS to bleed extra Blood from the map. Reckless by design. Keep the Altar.',
 };
 
@@ -80,7 +80,7 @@ const DEFS = {
   // to keep the war machine fed once the nodes run dry — its answer to limited scaling.
   hq:       { fac:'vanguard', kind:'building', name:'Headquarters', hp:1600, size:42, core:true, produces:['worker'], dropoff:true },
   worker:   { fac:'vanguard', kind:'unit', name:'Worker', hp:45, size:8, speed:75, cost:50, time:6, dmg:3, range:12, cd:1, aggro:0, shot:'melee', harvester:true, builder:true },
-  depot:    { fac:'vanguard', kind:'building', name:'Supply Depot', hp:560, size:22, cost:175, time:14, dropoff:true, crystalPerSec:1.5, capBonus:6 },
+  depot:    { fac:'vanguard', kind:'building', name:'Supply Depot', hp:560, size:22, cost:175, time:14, dropoff:true, capBonus:6 },
   barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','rocket','sniper','medic'] },
   factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['outrider','tank','flametank','goliath','artillery'] },
   airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship','bomber'] },
@@ -351,7 +351,7 @@ const META = {
   // THE VANGUARD
   hq:        { desc: 'Your core. Workers drop off crystal here, and it trains more Workers. Lose it and you lose.' },
   worker:    { desc: 'Cheap harvester and builder. Auto-mines crystal; select one to construct buildings.' },
-  depot:     { desc: 'Logistics hub: MINTS a steady trickle of Crystal every second and serves as a Worker drop-off — build them out toward distant nodes so your economy keeps scaling even after the crystal runs dry. Also raises your unit cap.' },
+  depot:     { desc: 'Forward logistics hub: a Worker drop-off that raises your unit cap. Build them out toward distant crystal nodes (and beside Wellsprings) so your Workers haul from far afield without the long trek home — your reach across the map, not a way to mint crystal in place.' },
   barracks:  { desc: 'Infantry school — trains Marines, Rocketeers, Snipers and Medics.' },
   factory:   { desc: 'Heavy vehicle bay. Builds Outriders, Siege Tanks, Hellhounds, Goliaths and Artillery.', req: 'barracks' },
   airfield:  { desc: 'Aircraft hangar. Builds Gunships and Vulture Bombers.', req: 'factory' },
@@ -756,55 +756,64 @@ function enqueueResearch(e, rid) {
 }
 
 // economy tuning
+// DESIGN: no faction (bar the turtling Warden) may scale forever from a corner. Every
+// home economy is hard-CAPPED — it plateaus at a low ceiling that's enough to defend and
+// keep a modest army going, but never enough to win. Real scaling comes from holding
+// CONTESTED MAP TERRITORY (crystal nodes, captured Obelisks, harnessed Wellsprings), so
+// the game is a fight over ground, not a race to turtle then all-in. Each faction reaches
+// for territory in its own way (see tickEconomy + WELL).
 const ECON = {
   workerCarry: 10, workerMine: 2.0,
-  myriadBase: 2.0, myriadPerTile: 0.012,
+  // myriad: biomass per creep tile, but the tile income PLATEAUS at myriadCapTiles — a
+  // home creep-blob maxes out fast, so to grow you must creep OUT over Wellsprings/ground.
+  myriadBase: 2.0, myriadPerTile: 0.012, myriadCapTiles: 480,
   exodusBase: 1.5, exodusSiphon: 4.5,
-  // choir: trickle + a cut of every death on the map; units decay in the field
-  // but are sustained near the lattice and lifesteal in combat
-  choirBase: 1.8, choirConduit: 0.8, choirDeathFlat: 5, choirDeathPct: 0.06,
+  // choir: a small lattice trickle that PLATEAUS at choirConduitCap conduits, plus a cut
+  // of every death on the map — so the Choir scales by fighting, not by stacking conduits.
+  choirBase: 1.8, choirConduit: 0.8, choirConduitCap: 5, choirDeathFlat: 5, choirDeathPct: 0.06,
   choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.7, choirLattice: 270,
-  // syndicate: compound interest on the banked treasury, bounties on kills
-  synBase: 2.5, synInterest: 0.011, synCapBase: 1200, synCapPer: 500,
-  synHouseFlat: 0.8, synBountyFlat: 10, synBountyPct: 0.06,
+  // syndicate: compound interest on the treasury — but the interest CAP is now driven by
+  // TERRITORY (each held Obelisk/Wellspring raises it a lot; Countinghouses only a little),
+  // so a bank in a corner stalls at synCapBase. Kills still pay bounties.
+  synBase: 2.5, synInterest: 0.011, synCapBase: 700, synCapPer: 150, synCapTerritory: 650,
+  synHouseFlat: 0.4, synBountyFlat: 10, synBountyPct: 0.06,
   // no building (turret, wall, anything) may be placed within this radius of an enemy structure
   enemyKeepout: 300,
-  // warden: income scales with the total HP of standing (finished) buildings,
-  // plus a flat trickle from each Stone Quarry. The per-HP scaling is deliberately
-  // small so a clump of walls no longer self-funds the war — map control (Obelisks,
-  // Bunkers) is where the real Stone and Powder come from.
-  wardenBase: 1.0, wardenPerHp: 0.0009, wardenQuarry: 1.6,
+  // warden: THE exception — self-sufficient by design. Income scales with the total HP of
+  // standing buildings plus a trickle per Stone Quarry, so the walled brotherhood needn't
+  // march out. (Powder still wants map control for the doomsday tech.)
+  wardenBase: 1.0, wardenPerHp: 0.0011, wardenQuarry: 1.8,
   // warden's third resource: Powder. Minted slowly at Powder Mills and, crucially,
   // trickled by every Obelisk the Covenant holds — so the doomsday tech demands map control.
   wardenObeliskPowder: 0.3,
-  // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle.
-  // Buffed so a fighting warband actually self-funds its push instead of starving.
-  emberBase: 1.8, emberLootPerDmg: 0.45,
-  // verdant: Sap income per mature Bloom (Pollen + Loam come from their own plants,
-  // minted generically via ironPerSec / powderPerSec). The garden snowballs on Sap;
-  // Pollen and Loam are the scarcer harvests that gate the diverse, late-game plants.
-  verdantBase: 1.2, verdantPerBloom: 1.6,
-  // stormforge: the engine that accelerates. Each standing Dynamo's output RAMPS with
-  // elapsed game time, so early Dynamos compound into a fortune — the longer you hold
-  // them (and the map), the more devastating the late game. Held Obelisks add on top.
-  // (ramp trimmed a touch now that Storm Fonts — harnessed Wellsprings — are the real
-  // way to accelerate: hold the map, not just the clock)
-  stormBase: 1.8, stormPerDynamo: 1.0, stormRamp: 0.0016,
-  // pact: Blood gained when your OWN units die (flat + a share of their max HP)
+  // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle —
+  // a warband that isn't out fighting over the map simply starves.
+  emberBase: 1.6, emberLootPerDmg: 0.45,
+  // verdant: Sap per mature Bloom, PLATEAUING at verdantBloomCap — a home garden caps out.
+  // The scarce Pollen & Loam (and bonus Sap, plus an ecosystem buff) come from harnessed
+  // Wellsprings, so the diverse late-game garden DEMANDS holding fertile ground.
+  verdantBase: 1.2, verdantPerBloom: 1.6, verdantBloomCap: 6,
+  verdantFontPollen: 0.8, verdantFontLoam: 0.6,
+  // stormforge: the engine that accelerates — but no longer just by waiting. Home Dynamo
+  // output is flat and PLATEAUS at stormDynamoCap; the acceleration now lives on the map:
+  // each harnessed Storm Font (Wellspring) ramps its payout the longer you hold it.
+  stormBase: 1.8, stormPerDynamo: 1.0, stormDynamoCap: 6, stormFontRamp: 0.0022,
+  // pact: Blood gained when your OWN units die (flat + a share of their max HP) — there is
+  // no passive home income to speak of, so the Pact must throw itself into the fight.
   pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
-  // neutral capture points pay their holder a steady income. Obelisks now matter a
-  // lot more — they're the main reason to march out and fight over the map rather
-  // than clump at home and scale forever off a single base.
-  obeliskIncome: 2.6,
+  // neutral capture points pay their holder a steady income. With home economies now
+  // capped, captured Obelisks (and harnessed Wellsprings) ARE the economy — the dominant,
+  // uncapped way to scale, so the whole match is a fight over the map's ground.
+  obeliskIncome: 3.4,
 };
 
-// ---- Wellsprings: the map-expansion economy ----
-// Almost every faction needs to march out and harness Wellsprings to keep its economy
-// scaling — holing up in a corner no longer keeps pace. Each faction harnesses a font
-// by raising its designated econ structure within HARNESS_R of it (the Myriad instead
-// blankets it in creep). The two exceptions are deliberate: the nomadic Solari Exodus
-// already chases finite crystal nodes around the map, and the turtling Warden Covenant
-// — a secretive, walled brotherhood — cannot tap them at all.
+// ---- Wellsprings: the dominant, uncapped map economy ----
+// With home economies hard-capped (see ECON), harnessed Wellsprings are HOW you scale —
+// not a little bonus, the main event. Each faction harnesses a font by raising its
+// designated econ structure within HARNESS_R of it (the Myriad instead blankets it in
+// creep), and is paid a hefty flow of its primary resource. Two deliberate exceptions:
+// the nomadic Solari Exodus already chases finite crystal nodes around the map, and the
+// turtling Warden Covenant — a secretive, walled brotherhood — cannot tap them at all.
 const WELL = {
   harnessR: 215,        // how close your harness structure must be to claim a font
   verdBuffR: 230,       // radius of the Verdant ecosystem buff around a harnessed font
@@ -813,12 +822,14 @@ const WELL = {
     vanguard: 'depot', choir: 'conduit', syndicate: 'watchpost',
     ember: 'warcamp', verdant: 'bloom', stormforge: 'dynamo', pact: 'shrine',
   },
-  // bonus primary-resource income per harnessed font (tuned to each economy's scale)
+  // primary-resource income per harnessed font — large, because this IS your scaling now
+  // (the Stormforge's fonts additionally ramp with how long they're held; the Verdant's
+  // also pour Pollen + Loam and grow an ecosystem buff — see tickEconomy)
   income: {
-    vanguard: 4.0, myriad: 3.6, choir: 3.6, syndicate: 4.2,
-    ember: 3.2, verdant: 3.0, stormforge: 4.6, pact: 3.6,
+    vanguard: 5.5, myriad: 5.2, choir: 5.0, syndicate: 5.5,
+    ember: 4.6, verdant: 4.2, stormforge: 5.0, pact: 5.0,
   },
-  defaultIncome: 3.6,
+  defaultIncome: 5.0,
 };
 
 // AI difficulty. `incomeMul` is the dominant lever (the bot's whole economy is
