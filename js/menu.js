@@ -102,6 +102,8 @@ function syncSettingsUI() {
   $('setShowFps').checked = !!SETTINGS.showFps;
   $('setPanSpeed').value = SETTINGS.panSpeed;
   $('setPanSpeedVal').textContent = (+SETTINGS.panSpeed).toFixed(1) + '×';
+  $('setMusicVol').value = SETTINGS.musicVol;
+  $('setMusicVolVal').textContent = Math.round(SETTINGS.musicVol * 100) + '%';
 }
 function openSettings() { settingsOpen = true; syncSettingsUI(); $('settings').style.display = 'flex'; }
 function closeSettings() { settingsOpen = false; $('settings').style.display = 'none'; }
@@ -118,7 +120,14 @@ $('setPanSpeed').addEventListener('input', e => {
   $('setPanSpeedVal').textContent = SETTINGS.panSpeed.toFixed(1) + '×';
   saveSettings();
 });
+$('setMusicVol').addEventListener('input', e => {
+  SETTINGS.musicVol = +e.target.value;
+  $('setMusicVolVal').textContent = Math.round(SETTINGS.musicVol * 100) + '%';
+  applyMusicVol();
+  saveSettings();
+});
 
 // boot: cards live in the single-player holder; start on the home screen
 mountCards('cardsHolderSP');
 showScreen('home');
+applyMusicVol(); // arm the soundtrack at the saved volume (starts on first gesture)

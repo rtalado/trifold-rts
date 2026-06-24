@@ -8,13 +8,34 @@ let lastFrame = 0;
 // camera (input.js) and the FPS readout (loop.js); surfaced in the Settings
 // panel reachable from the main menu and the in-game pause menu.
 const SETTINGS = (() => {
-  const def = { edgePan: true, panSpeed: 1.0, showFps: false };
+  const def = { edgePan: true, panSpeed: 1.0, showFps: false, musicVol: 0.5 };
   try { return Object.assign(def, JSON.parse(localStorage.getItem('trifold.settings') || '{}')); }
   catch (e) { return def; }
 })();
 function saveSettings() {
   try { localStorage.setItem('trifold.settings', JSON.stringify(SETTINGS)); } catch (e) {}
 }
+
+// ---------------- soundtrack ----------------
+// One looping <audio> element. Browsers block autoplay until the first user
+// gesture, so we apply the saved volume up front and kick off playback on the
+// first interaction (see startMusic). Volume 0 just leaves it silent/paused.
+const bgm = document.getElementById('bgm');
+function applyMusicVol() {
+  if (!bgm) return;
+  bgm.volume = clamp(+SETTINGS.musicVol || 0, 0, 1);
+  if (bgm.volume === 0) bgm.pause();
+  else startMusic();
+}
+function startMusic() {
+  if (!bgm || bgm.volume === 0) return;
+  const p = bgm.play();
+  if (p && p.catch) p.catch(() => {}); // ignore autoplay rejection; retried on next gesture
+}
+// Unlock audio on the first user gesture, then keep nudging playback on later
+// gestures in case the very first attempt was blocked.
+addEventListener('pointerdown', startMusic);
+addEventListener('keydown', startMusic);
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');

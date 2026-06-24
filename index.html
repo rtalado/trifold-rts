@@ -181,6 +181,8 @@
     Capture neutral <b>Obelisks</b> for income · harness a <b>Wellspring</b> (build your economy beside it) for a surge of your resource · crack a guarded <b>Hoard</b> for a bounty · research upgrades at your faction's research building</div>
 </div>
 
+<audio id="bgm" src="TrifoldOst.mp3" loop preload="auto"></audio>
+
 <canvas id="game"></canvas>
 
 <div id="hud">
@@ -226,6 +228,10 @@
     <div class="setbar"><span class="settitle">SETTINGS</span>
       <button id="setClose" class="setclose">✕ CLOSE</button></div>
     <div class="setbody">
+      <div class="setrow">
+        <div class="setlabel">Music volume<span class="setsub">Soundtrack volume — slide to zero to mute</span></div>
+        <div class="setctl"><input type="range" id="setMusicVol" min="0" max="1" step="0.05"><span id="setMusicVolVal" class="setval">50%</span></div>
+      </div>
       <div class="setrow">
         <div class="setlabel">Edge-scroll panning<span class="setsub">Pan the camera when the cursor touches a screen edge</span></div>
         <label class="switch"><input type="checkbox" id="setEdgePan"><span class="slider"></span></label>
