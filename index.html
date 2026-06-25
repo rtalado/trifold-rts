@@ -233,6 +233,10 @@
         <div class="setctl"><input type="range" id="setMusicVol" min="0" max="1" step="0.05"><span id="setMusicVolVal" class="setval">50%</span></div>
       </div>
       <div class="setrow">
+        <div class="setlabel">Sound effects<span class="setsub">Volume of game sounds — gunfire, orders, building — slide to zero to mute</span></div>
+        <div class="setctl"><input type="range" id="setSfxVol" min="0" max="1" step="0.05"><span id="setSfxVolVal" class="setval">50%</span></div>
+      </div>
+      <div class="setrow">
         <div class="setlabel">Edge-scroll panning<span class="setsub">Pan the camera when the cursor touches a screen edge</span></div>
         <label class="switch"><input type="checkbox" id="setEdgePan"><span class="slider"></span></label>
       </div>
@@ -269,6 +273,7 @@
      so load order matters — data first, then state, logic, UI, render, net, bootstrap -->
 <script src="js/defs.js"></script>
 <script src="js/core.js"></script>
+<script src="js/sfx.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/ai.js"></script>

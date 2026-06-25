@@ -8,7 +8,7 @@ let lastFrame = 0;
 // camera (input.js) and the FPS readout (loop.js); surfaced in the Settings
 // panel reachable from the main menu and the in-game pause menu.
 const SETTINGS = (() => {
-  const def = { edgePan: true, panSpeed: 1.0, showFps: false, musicVol: 0.5 };
+  const def = { edgePan: true, panSpeed: 1.0, showFps: false, musicVol: 0.5, sfxVol: 0.5 };
   try { return Object.assign(def, JSON.parse(localStorage.getItem('trifold.settings') || '{}')); }
   catch (e) { return def; }
 })();

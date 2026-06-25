@@ -23,6 +23,7 @@ function currentCommands() {
       onClick: () => {
         if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'enq', id: host.id, type });
         else enqueue(host, type);
+        playSfx('train');
         refreshCard();
       },
     });

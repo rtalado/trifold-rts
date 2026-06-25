@@ -104,6 +104,8 @@ function syncSettingsUI() {
   $('setPanSpeedVal').textContent = (+SETTINGS.panSpeed).toFixed(1) + '×';
   $('setMusicVol').value = SETTINGS.musicVol;
   $('setMusicVolVal').textContent = Math.round(SETTINGS.musicVol * 100) + '%';
+  $('setSfxVol').value = SETTINGS.sfxVol;
+  $('setSfxVolVal').textContent = Math.round(SETTINGS.sfxVol * 100) + '%';
 }
 function openSettings() { settingsOpen = true; syncSettingsUI(); $('settings').style.display = 'flex'; }
 function closeSettings() { settingsOpen = false; $('settings').style.display = 'none'; }
@@ -124,6 +126,13 @@ $('setMusicVol').addEventListener('input', e => {
   SETTINGS.musicVol = +e.target.value;
   $('setMusicVolVal').textContent = Math.round(SETTINGS.musicVol * 100) + '%';
   applyMusicVol();
+  saveSettings();
+});
+$('setSfxVol').addEventListener('input', e => {
+  SETTINGS.sfxVol = +e.target.value;
+  $('setSfxVolVal').textContent = Math.round(SETTINGS.sfxVol * 100) + '%';
+  applySfxVol();
+  playSfx('select'); // audible preview as you drag
   saveSettings();
 });
 

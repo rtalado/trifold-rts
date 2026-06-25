@@ -398,6 +398,7 @@ function findTarget(e) {
 
 function fireAt(e, t) {
   const d = e.def, dmg = dmgOf(e);
+  if (e.fac === game.localFac && onScreen(e.x, e.y)) playSfxThrottled('shoot', 55);
   e.cd = cdOf(e);
   e.tgt = t.id;
   if (d.shot === 'melee') {

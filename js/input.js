@@ -20,9 +20,9 @@ canvas.addEventListener('mousedown', ev => {
         const d = DEFS[game.placing], fac = game.localFac;
         if (placeValid(game.placing, fac, mouse.wx, mouse.wy) && game.players[fac].res >= d.cost) {
           netSend({ t: 'cmd', fac: game.localFac, kind: 'place', type: game.placing, x: mouse.wx, y: mouse.wy });
-          game.placing = null;
+          game.placing = null; playSfx('build');
         } else floatMsg(placeErr(fac));
-      } else if (placeBuilding(game.localFac, game.placing, mouse.wx, mouse.wy)) game.placing = null;
+      } else if (placeBuilding(game.localFac, game.placing, mouse.wx, mouse.wy)) { game.placing = null; playSfx('build'); }
       return;
     }
     mouse.dragging = true; mouse.dx0 = mouse.x; mouse.dy0 = mouse.y;
@@ -65,6 +65,7 @@ addEventListener('mouseup', ev => {
       picked = ents(o => o.fac === game.localFac && o.x >= x0 && o.x <= x1 && o.y >= y0 && o.y <= y1);
   }
   game.sel = picked;
+  if (picked.length) playSfx('select');
   refreshCard();
 });
 
@@ -89,6 +90,7 @@ canvas.addEventListener('wheel', ev => {
 // 'adir' (attack toward the clicked direction — auto-finds the nearest foe).
 function issueOrder(wx, wy, mode) {
   if (!game.sel.length) return;
+  if (game.sel.some(e => e.fac === game.localFac)) playSfx('order');
   if (game.mode === 'guest') {
     netSend({ t: 'cmd', fac: game.localFac, kind: 'order', ids: game.sel.map(e => e.id), x: wx, y: wy, mode });
     addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: mode !== 'move' ? '#ff6a6a' : '#7dffa8' });
