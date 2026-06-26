@@ -138,12 +138,28 @@ function aiTick(fac) {
         aiPlaceAt(fac, 'tumor', src.x + Math.cos(ang) * r, src.y + Math.sin(ang) * r);
       }
     }
+    const have = t => ents(e => e.fac === fac && e.type === t).length;
     if (pits.length < aiGrow(3, 1, 8) && p.res >= 150) aiPlace(fac, 'spawnpit', p.base);
+    else if (have('infestpit') < aiGrow(2, 1, 6) && pits.length >= 1 && p.res >= 200) aiPlace(fac, 'infestpit', p.base);
     else if (mounds.length < aiGrow(2, 1, 6) && pits.length >= 1 && p.res >= 200) aiPlace(fac, 'spittermound', p.base);
     else if (dens.length < aiGrow(2, 1, 6) && pits.length >= 2 && p.res >= 250) aiPlace(fac, 'hunterden', p.base);
+    else if (have('corruptden') < aiGrow(1, 1, 3) && p.res >= 260 && game.t > 120 && techMet(fac, 'corruptden')) aiPlace(fac, 'corruptden', p.base);
     else if (spines.length < aiGrow(3, 1, 9) && p.res >= 120 && game.t > 150) aiPlace(fac, 'spine', p.base);
+    else if (have('miasma') < aiGrow(2, 1, 6) && p.res >= 160 && game.t > 170) aiPlace(fac, 'miasma', p.base);
     else if (hive && !hive.queue.length && p.res >= 200 && game.t > 160 && techMet(fac, 'ravager'))
       enqueue(hive, (p.res >= 300 && Math.random() < 0.5) ? 'broodmother' : 'ravager');
+    // breed the corruption elites from the Corruption Den
+    const den = ents(e => e.fac === fac && e.type === 'corruptden' && !e.growing)[0];
+    if (den && !den.queue.length && p.res >= 300) {
+      const r = Math.random();
+      enqueue(den, r < 0.4 ? 'defiler' : r < 0.75 ? 'corruptor' : 'mawflyer');
+    }
+    // unleash Corruption Bloom: on the attackers when defending, else on the enemy core
+    if (hive && hive.def.ability && (hive.abilityCd || 0) <= 0) {
+      const tgt = (defendPt && dist(hive, defendPt) <= hive.def.ability.range) ? defendPt
+        : (enemyCore && dist(hive, enemyCore) <= hive.def.ability.range) ? enemyCore : null;
+      if (tgt) fireAbility(fac, hive, tgt.x, tgt.y);
+    }
     // swarm rally drifts toward the enemy as the game goes on
     p.swarmRally = underAttack && defendPt ? { x: defendPt.x, y: defendPt.y }
       : { x: p.base.x + (enemyCore.x - p.base.x) * 0.3, y: p.base.y + (enemyCore.y - p.base.y) * 0.3 };

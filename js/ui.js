@@ -389,10 +389,13 @@ function updateHUD() {
   incEl.style.display = fac === 'myriad' ? '' : 'none';
   incEl.innerHTML = fac === 'myriad' ? 'Creep: <b>' + (p.creepTiles || 0) + '</b> tiles' : '';
   let armyHtml = 'Units: <b>' + countUnits(fac) + '</b>/' + capOf(fac);
-  // the Verdant Bloom's free Saplings keep their own separate cap
+  // the Verdant Bloom's free Saplings and the Myriad's free Larva keep their own cap
   if (fac === 'verdant') {
     const sc = freeCapOf(fac);
     armyHtml += ' · Saplings: <b>' + countFree(fac) + '</b>/' + (sc === Infinity ? '∞' : sc);
+  } else if (fac === 'myriad') {
+    const lc = freeCapOf(fac);
+    armyHtml += ' · Larva: <b>' + countFree(fac) + '</b>/' + (lc === Infinity ? '∞' : lc);
   }
   document.getElementById('hudArmy').innerHTML = armyHtml;
 

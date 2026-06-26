@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.20';
+const APP_VERSION = '1.0.21';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -55,7 +55,7 @@ const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 
 const HINTS = {
   vanguard: 'A full Earth war machine. Workers harvest crystal automatically — but the nodes are FINITE, so once your starter patch runs dry you MUST push Workers out to claim fresh nodes across the map. SUPPLY DEPOTS are forward drop-offs (and raise your cap) so far nodes are worth mining; a Depot beside a WELLSPRING harnesses it for a flood of extra crystal. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
-  myriad: 'Your creep IS your economy — every covered tile feeds you biomass, but a home creep-blob MAXES OUT fast. To grow you must creep OUTWARD and blanket WELLSPRINGS — each font you cover pours out far more biomass than any tile. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. Right-click with the Hive selected to set the swarm rally. The swarm heals on creep.',
+  myriad: 'Your creep IS your economy — every covered tile feeds you biomass, but a home creep-blob MAXES OUT fast. To grow you must creep OUTWARD and blanket WELLSPRINGS — each font you cover pours out far more biomass than any tile. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. The swarm also CORRUPTS: every attack rots and weakens the foe (deals less damage, slows, decays), and a corrupted enemy that dies bursts free LARVA from its corpse. Breed Larva at an Infestation Pit, hire corrosive elites (Corruptor / Defiler / Mawflyer) from a Corruption Den, anchor Miasma Vents — and cast the Hive’s CORRUPTION BLOOM to infect a whole army at once. Right-click with the Hive selected to set the swarm rally. The swarm heals on creep.',
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. ASCEND the Ark through eight tiers (each pricier than the last) — and pour a fortune into the final tiers to forge it into a roaming SUPERWEAPON that surpasses the Worldbreaker, armed with the map-scorching SOLAR LANCE that grows stronger with every tier. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence, so SCALING means fighting across the map. Your home Soul Conduits only trickle (and soon max out); crawl the lattice OUT to plant a Conduit beside a WELLSPRING for a real surge of Essence. Near your lattice spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice. Guard the Ossuary.',
   syndicate: 'Gold breeds gold: your treasury earns compound interest — but the interest CAP is set by the TERRITORY you hold. A bank in a corner stalls; every Obelisk you capture and Wellspring you harness (park a Watchpost beside one) lifts the cap and lets the fortune compound (Countinghouses & Bullion Vaults raise it a little). Mercenaries arrive INSTANTLY for a price — the Haven hires the core four; a MERCENARY GUILD hires specialists (fast Gun Hands, aerial Dragoons, mending Sawbones, armoured Ironhides, siege Demolishers). Every kill pays a bounty, a fallen merc refunds part of its hire price (SEVERANCE), Watchposts air-drop across the map, and the Haven can DROP a free squad of Enforcers anywhere. Hoard or hire — and guard the Haven.',
@@ -102,7 +102,15 @@ const DEFS = {
   artillery:{ fac:'vanguard', kind:'unit', name:'Artillery', hp:165, size:13, speed:42, cost:250, time:16, dmg:42, range:252, cd:3.3, aggro:120, shot:'shell', splash:66 },
 
   // ----- MYRIAD SWARM -----
-  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11, produces:['broodmother','ravager'], grows:['tumor','spawnpit','spittermound','hunterden','spine','evochamber','broodnexus'], spawns:'drone', spawnEvery:7 },
+  hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11,
+                 produces:['broodmother','ravager'],
+                 grows:['tumor','spawnpit','spittermound','hunterden','spine','infestpit','corruptden','miasma','evochamber','broodnexus'],
+                 spawns:'drone', spawnEvery:7,
+                 // the swarm's active: erupt a corrupting spore-bloom that heavily corrupts
+                 // (and rots) every enemy in a wide radius — corrupted foes that die burst
+                 // into free Larva, so a well-placed Bloom snowballs a whole fight.
+                 ability:{ key:'corrupt', name:'Corruption Bloom', range:2600, cd:40, radius:210, dmg:60, corruptDur:9,
+                           desc:'Erupt a corrupting spore-bloom at a point in great range: every enemy caught is heavily CORRUPTED (deals less damage and slowly rots) and takes a burst of corrosion. Corrupted foes that die burst into free Larva.' } },
   tumor:       { fac:'myriad', kind:'building', name:'Creep Tumor', hp:130, size:10, cost:50,  time:8,  creepR:6.5 },
   spawnpit:    { fac:'myriad', kind:'building', name:'Spawn Pit', hp:350, size:21, cost:150, time:14, spawns:'drone',   spawnEvery:5 },
   spittermound:{ fac:'myriad', kind:'building', name:'Spitter Mound', hp:380, size:21, cost:200, time:16, spawns:'spitter', spawnEvery:8.5 },
@@ -114,6 +122,16 @@ const DEFS = {
   broodmother: { fac:'myriad', kind:'unit', name:'Broodmother', hp:420, size:16, speed:55, cost:300, time:20, dmg:22, range:26, cd:1.4, aggro:185, shot:'melee', splash:38 },
   evochamber:  { fac:'myriad', kind:'building', name:'Evolution Chamber', hp:480, size:22, cost:150, time:14, researchLab:true },
   ravager:     { fac:'myriad', kind:'unit', name:'Ravager', hp:170, size:11, speed:84, cost:200, time:13, dmg:20, range:150, cd:1.2, aggro:195, shot:'glob', splash:24 },
+  // -- corruption wing: breeds free Larva, the corrupting elites, and a corruption tower --
+  // `corrupt: N` makes a unit/tower's hits inflict N seconds of corruption (enemies deal
+  // less damage and rot); every Myriad attack inflicts a base dose even without it.
+  infestpit:   { fac:'myriad', kind:'building', name:'Infestation Pit', hp:360, size:21, cost:160, time:14, spawns:'larva', spawnEvery:4 },
+  corruptden:  { fac:'myriad', kind:'building', name:'Corruption Den', hp:430, size:22, cost:220, time:16, produces:['corruptor','defiler','mawflyer'] },
+  miasma:      { fac:'myriad', kind:'building', name:'Miasma Vent', hp:360, size:14, cost:140, time:11, dmg:9, range:175, cd:1.0, aggro:190, shot:'glob', corrupt:6 },
+  larva:       { fac:'myriad', kind:'unit', name:'Larva', hp:35, size:6, speed:108, dmg:5, range:13, cd:0.6, aggro:170, shot:'melee', freeUnit:true },
+  corruptor:   { fac:'myriad', kind:'unit', name:'Corruptor', hp:90, size:9, speed:80, cost:170, time:14, dmg:10, range:160, cd:1.3, aggro:205, shot:'glob', corrupt:8 },
+  defiler:     { fac:'myriad', kind:'unit', name:'Defiler', hp:280, size:14, speed:60, cost:260, time:18, dmg:26, range:175, cd:2.2, aggro:205, shot:'glob', splash:46, corrupt:8 },
+  mawflyer:    { fac:'myriad', kind:'unit', name:'Mawflyer', hp:120, size:10, speed:118, cost:160, time:11, dmg:12, range:120, cd:0.8, aggro:200, shot:'glob', corrupt:4 },
 
   // ----- SOLARI EXODUS -----
   ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true,
@@ -396,7 +414,7 @@ const META = {
   bomber:    { desc: 'Fast bombing aircraft that drops a heavy splashing payload — devastating against clumped troops and buildings. Slow to reload.' },
   artillery: { desc: 'Long-range mobile gun with a huge splash. Out-ranges almost everything, but fragile and helpless up close — screen it with armour.', req: 'techlab' },
   // MYRIAD SWARM
-  hive:      { desc: 'Your core. Spreads creep, spawns free Drones, and grows every structure.' },
+  hive:      { desc: 'Your core. Spreads creep, spawns free Drones, grows every structure — and casts CORRUPTION BLOOM: a wide spore-burst that heavily corrupts enemies (and bursts the corrupted dead into free Larva). Every Myriad attack already inflicts a base dose of corruption.' },
   tumor:     { desc: 'Cheap creep spreader; extends your economy and where you can build.' },
   spawnpit:  { desc: 'Breeds Drones endlessly, for free.' },
   spittermound:{ desc: 'Breeds ranged Spitters endlessly, for free.', req: 'spawnpit' },
@@ -406,6 +424,14 @@ const META = {
   spitter:   { desc: 'Free ranged unit that spits acid.' },
   hunter:    { desc: 'Free fast melee striker that runs units down.' },
   broodmother:{ desc: 'Elite splashing bruiser bred from the Hive.', req: 'hunterden' },
+  // -- corruption wing --
+  infestpit: { desc: 'Breeds free Larva endlessly — fast, expendable corrupting chaff (kept on a separate cap from the main swarm).' },
+  corruptden:{ desc: 'Breeds the corruption elites: ranged Corruptors, siege Defilers and flying Mawflyers. Gate to the swarm’s corrosive arm.', req: 'evochamber' },
+  miasma:    { desc: 'Static corruption tower — its acid bolts heavily CORRUPT what they hit, weakening attackers at your creep edge.' },
+  larva:     { desc: 'Free, tiny, very fast melee chaff. Bred by the Infestation Pit and burst from corrupted enemy corpses. Corrupts on hit; heals on creep.' },
+  corruptor: { desc: 'Ranged spore-caster whose globs inflict heavy, lasting CORRUPTION — wither the enemy army before it ever reaches your swarm.', req: 'corruptden' },
+  defiler:   { desc: 'Heavy bile-beast: long-range corrosive splash that both sieges and deeply CORRUPTS clumped foes. Your turtle-breaker.', req: 'corruptden' },
+  mawflyer:  { desc: 'Fast flying acid-spitter — the swarm’s air. Raids, chases flyers and corrupts what it bites.', req: 'corruptden' },
   // SOLARI EXODUS
   ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. Deploy on a crystal node to siphon. ASCEND it up eight tiers: each costs more but adds huge HP, shields, firepower and reach, and at the top tiers it becomes a roaming superweapon (surpassing the Worldbreaker) with a devastating Solar Lance. Lose it and all is lost.' },
   collector: { desc: 'Harvester that mines crystal and hauls it back to the Ark. Build more to scale your economy.' },
@@ -634,6 +660,15 @@ const VERD = {
   mutHp: 1.8, mutDmg: 2.0, mutSize: 1.35, mutSpeed: 1.15,
 };
 
+// Myriad CORRUPTION. Every Myriad attack inflicts a timed corruption debuff on the
+// enemy it hits (`baseDur`); units/towers with a `corrupt` stat inflict their own,
+// longer dose. A corrupted enemy deals less damage (`dmgMul`), is slowed (`slowMul`)
+// and slowly rots (`dps`). When a corrupted enemy UNIT dies, the swarm bursts free
+// Larva from the corpse (`larvaBurst`, bounded by the free-Larva cap) — infestation.
+const CORRUPT = {
+  baseDur: 3.0, dmgMul: 0.8, slowMul: 0.85, dps: 5, larvaBurst: 2,
+};
+
 // ---------------- research / upgrades ----------------
 // Every faction shares the same four-branch tech tree (Offense / Defense / Mobility
 // / Economy), laid out as a grid: `branch` is the row, `tier` the column. Each node
@@ -741,6 +776,7 @@ function dmgOf(e) {
   if (e.fertUntil > game.t) m *= VERD.fertDmg;                                  // Fertiliser Pod
   if (e.necroStacks) m *= 1 + Math.min(e.necroStacks, VERD.necroMaxStacks) * VERD.necroStackDmg; // Necrotic Graft
   if (e.mutated) m *= VERD.mutDmg;                                              // Wildgrowth mutation
+  if (e.corruptUntil > game.t) m *= CORRUPT.dmgMul;                            // Myriad corruption: weakened
   return e.def.dmg * m;
 }
 function spd(e) {
@@ -748,6 +784,7 @@ function spd(e) {
   let m = (p && p.speedMul) || 1;
   if (p && p.gMoon) m *= VERD.moonSpeed;          // Moonsign Graft: haste
   if (e.mutated) m *= VERD.mutSpeed;
+  if (e.corruptUntil > game.t) m *= CORRUPT.slowMul; // Myriad corruption: sluggish
   if (e.slowUntil > game.t) m *= VERD.slowFactor; // Spore Blossom: enemy slow
   return e.def.speed * m;
 }

@@ -307,6 +307,12 @@ function applyDamage(t, dmg, attacker) {
     const g = dmg0 * ECON.emberLootPerDmg * game.players.ember.incomeMul;
     game.players.ember.res += g; game.players.ember.gainAccum += g;
   }
+  // myriad corruption: every Myriad attack infects the foe it strikes (units &
+  // buildings, never neutrals); corruption units/towers (`corrupt`) inflict a longer
+  // dose. A corrupted foe deals less damage, is slowed, rots, and bursts Larva on death.
+  if (attacker && attacker.fac === 'myriad' && t.fac !== 'myriad' && t.fac !== 'neutral') {
+    t.corruptUntil = Math.max(t.corruptUntil || 0, game.t + (attacker.def.corrupt || CORRUPT.baseDur));
+  }
   // retaliate if idle
   if (attacker && !attacker.dead && t.def.dmg > 0 && !t.def.harvester && t.def.kind === 'unit'
       && !t.def.stationary && t.order.type === 'idle') {
@@ -331,6 +337,17 @@ function applyDamage(t, dmg, attacker) {
       for (const f in game.players)
         if (f !== t.fac && game.players[f].gNecro) growNecrotic(f, t.x, t.y);
     if (attacker && game.players[attacker.fac]) game.players[attacker.fac].kills++;
+    // myriad infestation: a CORRUPTED enemy unit bursts free Larva from its corpse —
+    // bounded by the free-Larva cap so a big fight can't spawn an unbounded tide.
+    if (t.corruptUntil > game.t && t.def.kind === 'unit' && t.fac !== 'myriad' && t.fac !== 'neutral' && game.players.myriad) {
+      const room = freeCapOf('myriad') - countFree('myriad');
+      const burst = Math.max(0, Math.min(CORRUPT.larvaBurst, room));
+      for (let i = 0; i < burst; i++) {
+        const a = Math.random() * Math.PI * 2;
+        spawnEnt('larva', 'myriad', t.x + Math.cos(a) * 10, t.y + Math.sin(a) * 10);
+      }
+      if (burst > 0) addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.5, ttl: 0.4, max: 0.4, color: '#9a4dd0' });
+    }
     // every death anywhere pays the Choir essence — friend or foe
     const choirP = game.players.choir;
     if (choirP) {
@@ -483,6 +500,21 @@ function fireAbility(fac, e, wx, wy) {
     localMsg(fac, ab.name + ' — mercs inbound!');
     return true;
   }
+  // corruption-type ability (the Myriad's Corruption Bloom): heavily corrupt and burst-
+  // damage every enemy in a radius (corrupted dead then burst Larva via applyDamage).
+  if (ab.corrupt) {
+    e.abilityCd = ab.cd;
+    for (const o of game.entities) {
+      if (o.dead || o.fac === fac || o.fac === 'neutral' || o.def.noTarget) continue;
+      if (Math.hypot(o.x - wx, o.y - wy) > ab.radius + o.size) continue;
+      o.corruptUntil = Math.max(o.corruptUntil || 0, game.t + ab.corruptDur);
+      applyDamage(o, ab.dmg, e);
+    }
+    addFx({ kind: 'shock', x: wx, y: wy, r: ab.radius, ttl: 0.7, max: 0.7, color: '#9a4dd0' });
+    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#c75cff' });
+    localMsg(fac, ab.name + ' — corruption blooms!');
+    return true;
+  }
   e.abilityCd = ab.cd;
   // ground-strike abilities scale with the Ark's ascension tier (arkStatMul is 1 for
   // every non-Ark caster, so the Worldbreaker's Gustav Strike is unaffected): damage
@@ -497,6 +529,20 @@ function fireAbility(fac, e, wx, wy) {
   addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#ffd9a0' });
   localMsg(fac, ab.name + ' away!');
   return true;
+}
+
+// Myriad corruption: corrupted enemies slowly rot (a light corrosion DoT). The debuff's
+// other effects — reduced damage and speed — are read live in dmgOf/spd; this only ticks
+// the rot. Runs on the simulating side (SP/host). `n` is captured so Larva burst from a
+// rot-kill this frame aren't themselves processed.
+function tickCorruption(dt) {
+  if (!game.players.myriad) return;
+  const es = game.entities, n = es.length;
+  for (let i = 0; i < n; i++) {
+    const e = es[i];
+    if (e.dead || e.fac === 'myriad' || e.fac === 'neutral') continue;
+    if (e.corruptUntil > game.t) applyDamage(e, CORRUPT.dps * dt, null);
+  }
 }
 
 // pending ground strikes detonate when their flight timer expires

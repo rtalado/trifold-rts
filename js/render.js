@@ -361,6 +361,15 @@ function drawEnt(e) {
   }
   if (e.constructing || e.growing) ctx.globalAlpha = 0.6;
 
+  // Myriad corruption: a sickly, pulsing violet aura marks an infected enemy
+  if (e.corruptUntil > game.t) {
+    ctx.save();
+    ctx.globalAlpha = 0.35 + 0.3 * Math.sin(game.t * 5 + e.id);
+    ctx.strokeStyle = '#c75cff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, s + 3, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
   if (e.fac === 'vanguard') {
     if (e.def.kind === 'building') {
       ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 2;
@@ -491,6 +500,25 @@ function drawEnt(e) {
     } else if (e.type === 'spitter') {
       ctx.fillStyle = '#9fe06a';
       ctx.beginPath(); ctx.arc(x, y - s * 0.3, 2.4, 0, Math.PI * 2); ctx.fill();
+    } else if (e.type === 'miasma') { // corruption tower: toxic barrel + acid core
+      const t = e.tgt ? byId(e.tgt) : null;
+      const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.6;
+      ctx.strokeStyle = '#9fe06a'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
+      ctx.fillStyle = '#9fe06a'; ctx.beginPath(); ctx.arc(x, y, s * 0.22, 0, Math.PI * 2); ctx.fill();
+    } else if (e.type === 'corruptden' || e.type === 'infestpit') {
+      ctx.fillStyle = '#9fe06a';
+      ctx.beginPath(); ctx.arc(x, y, s * 0.24, 0, Math.PI * 2); ctx.fill();
+    } else if (e.type === 'mawflyer') { // flyer: a winged chevron
+      ctx.strokeStyle = '#9fe06a'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x - s * 0.9, y + s * 0.3); ctx.lineTo(x, y - s * 0.4); ctx.lineTo(x + s * 0.9, y + s * 0.3); ctx.stroke();
+    } else if (e.type === 'corruptor' || e.type === 'defiler') { // orbiting acid globs
+      ctx.fillStyle = '#9fe06a';
+      const dots = e.type === 'defiler' ? 3 : 1;
+      for (let i = 0; i < dots; i++) {
+        const a = game.t * 1.5 + i * Math.PI * 2 / dots;
+        ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.42, y + Math.sin(a) * s * 0.42, 2.4, 0, Math.PI * 2); ctx.fill();
+      }
     }
   }
 

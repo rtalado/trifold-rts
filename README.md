@@ -202,9 +202,12 @@ Economy → production → army → push.
 No workers, no mining — every tile of **creep** pays biomass. But a home creep-blob's
 income soon **maxes out**, so you must spread OUTWARD and blanket **Wellsprings** in
 creep (each font you cover floods you with biomass). Growths must sit on your own creep;
-Spawn Pits / Spitter Mounds / Hunter Dens **breed units for free, forever**. Steer the
-swarm with a rally point. The swarm heals on creep and is just meat off it. Elites:
-Broodmother, **Ravager**.
+Spawn Pits / Spitter Mounds / Hunter Dens **breed units for free, forever**. The swarm also
+**CORRUPTS**: every attack rots and weakens the foe (less damage, slower, decaying), and a
+corrupted enemy that dies **bursts free Larva** from its corpse. Breed Larva at an Infestation
+Pit, hire corrosive elites (**Corruptor / Defiler / Mawflyer**) from a Corruption Den, anchor
+Miasma Vents, and cast the Hive's **Corruption Bloom** to infect a whole army at once. Steer the
+swarm with a rally point; it heals on creep and is just meat off it. Elites: Broodmother, **Ravager**.
 
 ### SOLARI EXODUS — the Pilgrims · *Energy* · core: **The Ark**
 No base, ever. The Ark is fortress, factory and treasury in one — it walks and
