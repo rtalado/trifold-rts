@@ -213,19 +213,31 @@ function aiTick(fac) {
 
   else if (fac === 'syndicate') { // bank gold for interest, spend the overflow on mercs
     const haven = myCore;
-    const houses = ents(e => e.fac === fac && e.type === 'countinghouse');
-    const posts = ents(e => e.fac === fac && e.type === 'watchpost');
-    if (houses.length < aiGrow(2, 1, 7) && p.res >= 420) aiPlace(fac, 'countinghouse', p.base);
-    else if (posts.length < aiGrow(3, 1, 9) && p.res >= 360 && game.t > 120) aiPlace(fac, 'watchpost', p.base);
+    const have = t => ents(e => e.fac === fac && e.type === t).length;
+    if (have('countinghouse') < aiGrow(2, 1, 7) && p.res >= 420) aiPlace(fac, 'countinghouse', p.base);
+    else if (have('guild') < 1 && p.res >= 400 && game.t > 80) aiPlace(fac, 'guild', p.base);
+    else if (have('vault') < aiGrow(1, 1, 4) && p.res >= 650 && game.t > 150) aiPlace(fac, 'vault', p.base);
+    else if (have('gunbastion') < aiGrow(2, 1, 7) && p.res >= 420 && game.t > 140) aiPlace(fac, 'gunbastion', p.base);
+    else if (have('watchpost') < aiGrow(3, 1, 9) && p.res >= 360 && game.t > 120) aiPlace(fac, 'watchpost', p.base);
+    // air-drop a free defending squad when the base is under attack
+    if (haven && defendPt && haven.def.ability && (haven.abilityCd || 0) <= 0)
+      fireAbility(fac, haven, defendPt.x, defendPt.y);
     if (haven && !haven.queue.length && (p.res >= 400 || (underAttack && p.res >= 100))) {
-      const enf = ents(e => e.fac === fac && e.type === 'enforcer').length;
-      const arb = ents(e => e.fac === fac && e.type === 'arbalest').length;
-      const jug = ents(e => e.fac === fac && e.type === 'juggernaut').length;
-      const mar = ents(e => e.fac === fac && e.type === 'marauder').length;
-      if (jug < Math.floor(enf / 5) && p.res >= 650 && techMet(fac, 'juggernaut')) enqueue(haven, 'juggernaut');
-      else if (arb < enf / 2 && p.res >= 520 && techMet(fac, 'arbalest')) enqueue(haven, 'arbalest');
-      else if (mar < enf / 3 && p.res >= 500) enqueue(haven, 'marauder');
+      const enf = have('enforcer');
+      if (have('juggernaut') < Math.floor(enf / 5) && p.res >= 650 && techMet(fac, 'juggernaut')) enqueue(haven, 'juggernaut');
+      else if (have('arbalest') < enf / 2 && p.res >= 520 && techMet(fac, 'arbalest')) enqueue(haven, 'arbalest');
+      else if (have('marauder') < enf / 3 && p.res >= 500) enqueue(haven, 'marauder');
       else enqueue(haven, 'enforcer');
+    }
+    // specialist mercs from the Mercenary Guild
+    const guild = ents(e => e.fac === fac && e.type === 'guild' && !e.growing)[0];
+    if (guild && !guild.queue.length && p.res >= 500) {
+      const enf = have('enforcer');
+      if (have('ironhide') < Math.floor(enf / 6) && p.res >= 700) enqueue(guild, 'ironhide');
+      else if (have('demolisher') < aiGrow(1, 1, 4) && p.res >= 760) enqueue(guild, 'demolisher');
+      else if (have('sawbones') < aiGrow(1, 1, 3) && p.res >= 560) enqueue(guild, 'sawbones');
+      else if (have('dragoon') < aiGrow(2, 1, 6) && p.res >= 600) enqueue(guild, 'dragoon');
+      else if (p.res >= 540) enqueue(guild, 'gunhand');
     }
   }
 

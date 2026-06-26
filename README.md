@@ -172,6 +172,9 @@ link can fail — have one switch networks (a phone hotspot usually works).
 Each has a unique economy, a single **core** that ends the game if it dies, and its
 own roster (units below are highlights, not the full list).
 
+> 📖 **In-depth strategy guides** for every faction — economy, build orders, full unit
+> rosters, tech priorities and win conditions — live in [`guides/`](guides/README.md).
+
 > **You cannot win from a corner.** Every faction's *home* economy is deliberately
 > **capped** — it plateaus at a level that keeps you alive and defending, but never
 > enough to overwhelm. Real scaling comes from **holding contested map territory**:
@@ -222,9 +225,14 @@ Revenants, and the ranged caster **Lich**.
 Gold breeds gold: your treasury earns **compound interest** — but only up to a cap set
 by the **territory you hold**. A bank in a corner stalls; every **Obelisk** you capture
 and **Wellspring** you harness (park a Watchpost beside one) lifts the cap and lets the
-fortune snowball. Mercenaries arrive **instantly**; every kill pays a bounty; Watchposts
-air-drop across the map (never into enemy territory). Units: Enforcers, Arbalests,
-Juggernauts, **Marauders**.
+fortune snowball (**Countinghouses** and the heavier **Bullion Vault** raise it too).
+Mercenaries arrive **instantly**; every kill pays a bounty; a fallen merc refunds part of
+its hire price (**severance insurance**); Watchposts air-drop across the map; and the Haven
+can **air-drop a free squad of Enforcers** anywhere (Reinforcement Drop). The Haven hires
+the core four — Enforcers, Arbalests, Juggernauts, **Marauders** — while a **Mercenary
+Guild** hires specialists: fast **Gun Hands**, aerial **Dragoons**, mending **Sawbones**,
+armoured **Ironhides** and long-range siege **Demolishers**. A heavy **Gun Bastion** anchors
+a hold. See the [full Syndicate guide](guides/syndicate.md).
 
 ### WARDEN COVENANT — the Bulwark · *Stone* + *Iron* + *Powder* · core: **Bastion Keep**
 The most intricate faction in the game, on **three resources**: Stone scales with the

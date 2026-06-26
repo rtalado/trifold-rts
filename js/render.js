@@ -546,6 +546,16 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.arc(x, y, s * 0.28, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#3a140d';
         ctx.beginPath(); ctx.arc(x, y, s * 0.13, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'vault') { // a stack of bullion coins
+        ctx.fillStyle = '#ffd97d'; ctx.strokeStyle = '#3a140d'; ctx.lineWidth = 1;
+        for (const [cx, cy] of [[-0.26, 0.12], [0.26, 0.12], [0, -0.18]]) {
+          ctx.beginPath(); ctx.arc(x + cx * s, y + cy * s, s * 0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
+      } else if (e.type === 'guild') { // crossed-blades mercenary mark
+        ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.4, y - s * 0.4); ctx.lineTo(x + s * 0.4, y + s * 0.4);
+        ctx.moveTo(x + s * 0.4, y - s * 0.4); ctx.lineTo(x - s * 0.4, y + s * 0.4); ctx.stroke();
       }
       if (e.def.dmg) { // haven & watchpost barrels
         const t = e.tgt ? byId(e.tgt) : null;
@@ -553,16 +563,29 @@ function drawEnt(e) {
         ctx.strokeStyle = col; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
       }
-    } else { // mercs: pentagons
-      ctx.fillStyle = e.type === 'juggernaut' ? '#54201a' : '#6b2418';
-      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+    } else if (e.type === 'dragoon') { // aerial gunner: a chevron with a rotor ring
+      ctx.fillStyle = '#6b2418'; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x - s, y + s * 0.6); ctx.lineTo(x, y - s); ctx.lineTo(x + s, y + s * 0.6); ctx.lineTo(x, y + s * 0.15); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,217,125,0.45)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y - s * 0.2, s * 0.95, 0, Math.PI * 2); ctx.stroke();
+    } else if (e.type === 'sawbones') { // field surgeon: gold cross
+      ctx.fillStyle = '#3a140d'; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
       poly(x, y, s + 1, 5, -Math.PI / 2); ctx.fill(); ctx.stroke();
-      if (e.type === 'arbalest') {
+      ctx.fillStyle = '#ffd97d';
+      ctx.fillRect(x - s * 0.5, y - s * 0.16, s, s * 0.32);
+      ctx.fillRect(x - s * 0.16, y - s * 0.5, s * 0.32, s);
+    } else { // mercs: pentagons (heavier ones get a darker, chunkier body)
+      const heavy = e.type === 'juggernaut' || e.type === 'ironhide' || e.type === 'demolisher';
+      ctx.fillStyle = heavy ? '#54201a' : '#6b2418';
+      ctx.strokeStyle = col; ctx.lineWidth = heavy ? 2 : 1.5;
+      poly(x, y, s + 1, 5, -Math.PI / 2); ctx.fill(); ctx.stroke();
+      if (e.type === 'arbalest' || e.type === 'demolisher') { // marksman / siege barrel
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
-        ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 7), y + Math.sin(a) * (s + 7)); ctx.stroke();
-      } else if (e.type === 'juggernaut') {
+        ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = e.type === 'demolisher' ? 3.5 : 2;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + (e.type === 'demolisher' ? 10 : 7)), y + Math.sin(a) * (s + (e.type === 'demolisher' ? 10 : 7))); ctx.stroke();
+      } else if (e.type === 'juggernaut' || e.type === 'ironhide') {
         ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 1.5;
         poly(x, y, s * 0.5, 5, -Math.PI / 2); ctx.stroke();
       }

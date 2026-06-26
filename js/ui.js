@@ -299,7 +299,8 @@ function buildSelMainHTML() {
     }
     if (e.type === 'hive') notes.push('Right-click to set the swarm rally');
     if (e.type === 'ark' && e.deployed) notes.push('DEPLOYED — siphoning' + (e.siphonNode ? ' crystal' : '… (no node in reach)'));
-    if (e.type === 'haven') notes.push('Treasury earns interest — Countinghouses raise the cap');
+    if (e.type === 'haven') notes.push('Treasury earns interest — Countinghouses & Vaults raise the cap');
+    if (e.type === 'vault') notes.push('Bullion stored — raises your interest cap & pays rent');
     if (e.def.ability) notes.push(e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — target via the command card'));
     if (e.fac === 'choir' && e.def.kind === 'unit') notes.push('Fades away from the lattice — heals by dealing damage');
     if (notes.length) h += '<div class="sel-status">' + notes.map(n => '<div>' + n + '</div>').join('') + '</div>';

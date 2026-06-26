@@ -342,6 +342,11 @@ function applyDamage(t, dmg, attacker) {
       const g = (ECON.synBountyFlat + t.hpMax * ECON.synBountyPct) * game.players.syndicate.incomeMul;
       game.players.syndicate.res += g; game.players.syndicate.gainAccum += g;
     }
+    // syndicate severance insurance: a fallen merc refunds part of its hire price
+    if (t.fac === 'syndicate' && t.def.kind === 'unit' && (t.def.cost || 0) > 0 && game.players.syndicate) {
+      const g = t.def.cost * ECON.synSeverance * game.players.syndicate.incomeMul;
+      game.players.syndicate.res += g; game.players.syndicate.gainAccum += g;
+    }
     // obsidian pact: each of your own fallen units spills Blood for the next summoning
     if (t.fac === 'pact' && t.def.kind === 'unit' && game.players.pact) {
       const g = (ECON.pactMartyrFlat + t.hpMax * ECON.pactMartyrPct) * game.players.pact.incomeMul;
@@ -462,6 +467,22 @@ function fireAbility(fac, e, wx, wy) {
   const ab = e.def.ability;
   if ((e.abilityCd || 0) > 0) { localMsg(fac, ab.name + ' reloading (' + Math.ceil(e.abilityCd) + 's)'); return false; }
   if (dist(e, { x: wx, y: wy }) > ab.range) { localMsg(fac, 'Target out of range'); return false; }
+  // spawn-type ability (the Syndicate's Reinforcement Drop): air-drop a free squad at
+  // the target — but never into enemy territory (no dropping mercs on top of their base)
+  if (ab.spawn) {
+    const enemyNear = game.entities.some(o => !o.dead && o.fac !== fac && o.fac !== 'neutral'
+      && o.def.kind === 'building' && Math.hypot(o.x - wx, o.y - wy) < ECON.enemyKeepout);
+    if (enemyNear) { localMsg(fac, 'Cannot drop into enemy territory'); return false; }
+    e.abilityCd = ab.cd;
+    const n = ab.count || 3;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2;
+      spawnEnt(ab.spawn, fac, wx + Math.cos(ang) * 18, wy + Math.sin(ang) * 18);
+    }
+    addFx({ kind: 'shock', x: wx, y: wy, r: 60, ttl: 0.6, max: 0.6, color: '#ffd97d' });
+    localMsg(fac, ab.name + ' — mercs inbound!');
+    return true;
+  }
   e.abilityCd = ab.cd;
   game.strikes.push({ x: wx, y: wy, t: ab.delay, dmg: ab.dmg, splash: ab.splash, fac, attackerId: e.id });
   // a long-lived warning marker (forwarded to guests as cosmetic fx) telegraphs the
@@ -959,8 +980,9 @@ function tickEconomy(dt) {
       // interest on the treasury — but the CAP is driven by TERRITORY, so a bank in a
       // corner stalls at synCapBase. Each held Obelisk/Wellspring lifts it a lot.
       const houses = ents(e => e.fac === fac && e.type === 'countinghouse' && !e.growing).length;
-      const cap = ECON.synCapBase + houses * ECON.synCapPer + (obs + wells) * ECON.synCapTerritory;
-      gain = ECON.synBase + houses * ECON.synHouseFlat + ECON.synInterest * Math.min(p.res, cap);
+      const vaults = ents(e => e.fac === fac && e.type === 'vault' && !e.growing).length;
+      const cap = ECON.synCapBase + houses * ECON.synCapPer + vaults * ECON.synVaultCap + (obs + wells) * ECON.synCapTerritory;
+      gain = ECON.synBase + houses * ECON.synHouseFlat + vaults * ECON.synVaultFlat + ECON.synInterest * Math.min(p.res, cap);
     } else if (fac === 'warden') {
       // THE exception — self-sufficient. Income scales with the total HP of standing
       // buildings, plus a flat trickle from each Stone Quarry. The walled brotherhood

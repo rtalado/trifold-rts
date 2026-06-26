@@ -56,7 +56,7 @@ const HINTS = {
   myriad: 'Your creep IS your economy — every covered tile feeds you biomass, but a home creep-blob MAXES OUT fast. To grow you must creep OUTWARD and blanket WELLSPRINGS — each font you cover pours out far more biomass than any tile. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. Right-click with the Hive selected to set the swarm rally. The swarm heals on creep.',
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence, so SCALING means fighting across the map. Your home Soul Conduits only trickle (and soon max out); crawl the lattice OUT to plant a Conduit beside a WELLSPRING for a real surge of Essence. Near your lattice spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice. Guard the Ossuary.',
-  syndicate: 'Gold breeds gold: your treasury earns compound interest — but the interest CAP is set by the TERRITORY you hold. A bank in a corner stalls; every Obelisk you capture and Wellspring you harness (park a Watchpost beside one) lifts the cap and lets the fortune compound. Mercenaries arrive INSTANTLY for a price, every kill pays a bounty, and Watchposts air-drop across the map (not into enemy territory). Hoard or hire — and guard the Haven.',
+  syndicate: 'Gold breeds gold: your treasury earns compound interest — but the interest CAP is set by the TERRITORY you hold. A bank in a corner stalls; every Obelisk you capture and Wellspring you harness (park a Watchpost beside one) lifts the cap and lets the fortune compound (Countinghouses & Bullion Vaults raise it a little). Mercenaries arrive INSTANTLY for a price — the Haven hires the core four; a MERCENARY GUILD hires specialists (fast Gun Hands, aerial Dragoons, mending Sawbones, armoured Ironhides, siege Demolishers). Every kill pays a bounty, a fallen merc refunds part of its hire price (SEVERANCE), Watchposts air-drop across the map, and the Haven can DROP a free squad of Enforcers anywhere. Hoard or hire — and guard the Haven.',
   warden: 'Slow, armoured, unstoppable, and SELF-SUFFICIENT: alone among the powers you needn’t march out for the map — your standing buildings ARE your economy, the more you raise the more Stone you mint (Forges add Iron). A walled, secretive brotherhood: wall up, turret up, and grind forward with heavy troops and siege. (You cannot tap Wellsprings — you don’t need to.) Hold the Keep.',
   ember: 'No mines, no farms — you fund the war by WAGING it: every point of damage your warband deals is paid back as Plunder, so keep attacking or starve. Fast, cheap raiders up front; raise an Ember Foundry for a tanky Cinderguard wall, long-range Cinderbows, Cinder Catapult siege and a mending Flame Shaman. Throw forward War Camps beside WELLSPRINGS to bleed extra Plunder from the map. Guard the War Pyre.',
   verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. But a home garden CAPS OUT, and the scarce Pollen & Loam are choked. The answer is to spread: plant a Bloom on a WELLSPRING to root a thriving new ecosystem — it pours out bonus Sap, Pollen AND Loam, and grows a fertilising buff that makes every nearby plant & beast hit harder. So claim fertile ground all across the map. The Heartwood musters the whole army (Bramblehorn, Spore Caller need an Arboretum); Groves breed free Saplings; the Arboretum cultivates the Grafts, the Heart Grove and the INDESTRUCTIBLE Erdtree. Protect the Heartwood.',
@@ -135,14 +135,35 @@ const DEFS = {
   lich:      { fac:'choir', kind:'unit', name:'Lich', hp:120, size:10, speed:64, cost:180, time:12, dmg:24, range:175, cd:1.6, aggro:210, shot:'beam' },
 
   // ----- GILDED SYNDICATE -----
-  haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet', produces:['enforcer','arbalest','juggernaut','marauder'], grows:['watchpost','countinghouse','blackmarket','exchange'] },
+  // A mercantile cartel that wages war with money: instant-hire mercenaries, kill
+  // bounties, severance insurance (a fallen merc refunds part of its hire price), and
+  // gold that compounds. Production is now DISTRIBUTED — the Haven hires the core
+  // mercs and air-drops reinforcements; the Mercenary Guild hires specialists; the
+  // Bullion Vault fattens the treasury; the Gun Bastion anchors a hold.
+  haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet',
+                   produces:['enforcer','arbalest','juggernaut','marauder'],
+                   grows:['watchpost','gunbastion','countinghouse','vault','guild','blackmarket','exchange'],
+                   ability:{ key:'reinforce', name:'Reinforcement Drop', range:4200, cd:42, delay:0, spawn:'enforcer', count:3,
+                             desc:'Air-drop a squad of three Enforcers anywhere on the map (not into enemy territory). ~40s reload.' } },
   watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet', forward:true },
+  // heavy splashing emplacement — the tanky backbone of a hold (the Watchpost is the cheap forward picket)
+  gunbastion:    { fac:'syndicate', kind:'building', name:'Gun Bastion', hp:900, size:18, cost:220, time:10, dmg:24, range:225, cd:1.3, aggro:240, shot:'shell', splash:34 },
   countinghouse: { fac:'syndicate', kind:'building', name:'Countinghouse', hp:500, size:24, cost:200, time:8 },
+  // Bullion Vault: a heavier treasury — a big interest-cap boost + steady rent
+  vault:         { fac:'syndicate', kind:'building', name:'Bullion Vault', hp:620, size:24, cost:300, time:8 },
+  // Mercenary Guild: hires the Syndicate's specialist mercs (distributed production)
+  guild:         { fac:'syndicate', kind:'building', name:'Mercenary Guild', hp:560, size:24, cost:200, time:7, produces:['gunhand','dragoon','sawbones','ironhide','demolisher'] },
   enforcer:      { fac:'syndicate', kind:'unit', name:'Enforcer', hp:90, size:8, speed:80, cost:90, time:0.5, dmg:9, range:105, cd:0.75, aggro:180, shot:'bullet' },
   arbalest:      { fac:'syndicate', kind:'unit', name:'Arbalest', hp:60, size:8, speed:62, cost:160, time:0.5, dmg:26, range:225, cd:2.0, aggro:240, shot:'beam' },
   juggernaut:    { fac:'syndicate', kind:'unit', name:'Juggernaut', hp:320, size:14, speed:55, cost:320, time:0.5, dmg:30, range:150, cd:2.2, aggro:190, shot:'shell', splash:40 },
   blackmarket:   { fac:'syndicate', kind:'building', name:'Black Market', hp:520, size:24, cost:150, time:6, researchLab:true },
   marauder:      { fac:'syndicate', kind:'unit', name:'Marauder', hp:180, size:11, speed:74, cost:150, time:0.5, dmg:14, range:120, cd:0.9, aggro:185, shot:'glob', splash:20 },
+  // -- specialist mercs (hired instantly from the Mercenary Guild) --
+  gunhand:       { fac:'syndicate', kind:'unit', name:'Gun Hand', hp:110, size:9, speed:140, cost:80, time:0.5, dmg:9, range:95, cd:0.5, aggro:185, shot:'bullet' },
+  dragoon:       { fac:'syndicate', kind:'unit', name:'Dragoon', hp:130, size:10, speed:122, cost:175, time:0.5, dmg:8, range:125, cd:0.4, aggro:200, shot:'bullet' },
+  sawbones:      { fac:'syndicate', kind:'unit', name:'Sawbones', hp:80, size:9, speed:84, cost:120, time:0.5, aggro:0, aura:130, heal:7 },
+  ironhide:      { fac:'syndicate', kind:'unit', name:'Ironhide', hp:560, size:15, speed:58, cost:240, time:0.5, dmg:24, range:30, cd:1.1, aggro:185, shot:'melee', splash:26 },
+  demolisher:    { fac:'syndicate', kind:'unit', name:'Demolisher', hp:200, size:13, speed:48, cost:260, time:0.5, dmg:48, range:245, cd:3.0, aggro:120, shot:'shell', splash:64 },
 
   // ----- WARDEN COVENANT (fortress: Stone from building mass + Iron from Forges) -----
   // The deepest tech tree in the game. Tier 1 runs on Stone alone; the higher tiers
@@ -394,12 +415,20 @@ const META = {
   banshee:   { desc: 'Ranged spirit with a piercing beam.' },
   revenant:  { desc: 'Elite splashing melee horror raised in the Reliquary.' },
   // GILDED SYNDICATE
-  haven:     { desc: 'Your core and treasury. Earns compound interest and hires mercenaries instantly.' },
-  watchpost: { desc: 'Air-dropped static gun. Project control across the map — but not into enemy territory.' },
+  haven:     { desc: 'Your core and treasury. Earns compound interest, hires mercenaries instantly, and can air-drop a free squad of Enforcers anywhere on the map (Reinforcement Drop). Fallen mercs refund part of their hire price (severance).' },
+  watchpost: { desc: 'Air-dropped static gun. Project control across the map — but not into enemy territory. Harnesses a Wellspring if dropped beside one.' },
+  gunbastion:{ desc: 'Heavy splashing gun emplacement — the tanky backbone of a Syndicate hold (the Watchpost is the cheap forward picket). Must connect to your base.' },
   countinghouse:{ desc: 'Raises your interest cap and pays rent. Bank more gold, earn faster.' },
+  vault:     { desc: 'A heavier treasury — a big lift to your interest cap plus steady rent. Stack Vaults and Countinghouses so a deep treasury compounds fast (the biggest caps still come from holding Obelisks & Wellsprings).' },
+  guild:     { desc: 'Mercenary Guild — hires the Syndicate’s specialist mercs instantly: fast Gun Hands, aerial Dragoons, mending Sawbones, armoured Ironhides and long-range Demolishers.' },
   enforcer:  { desc: 'Cheap instant mercenary with a sidearm.' },
   arbalest:  { desc: 'Long-range marksman merc with heavy damage.', req: 'countinghouse' },
   juggernaut:{ desc: 'Heavy splashing mercenary bruiser.', req: 'countinghouse' },
+  gunhand:   { desc: 'Fast, cheap instant-hire raider. Scouts the map, runs down stragglers and harasses enemy economy. Flimsy in a stand-up fight.', req: 'guild' },
+  dragoon:   { desc: 'Fast aerial gunner-for-hire with rapid fire. Excellent for raids, chasing flyers and mop-up.', req: 'guild' },
+  sawbones:  { desc: 'Field-surgeon merc; continuously heals nearby mercenaries so your hires keep fighting. Non-combat.', req: 'guild' },
+  ironhide:  { desc: 'Heavily armoured brawler — a wall of HP that soaks fire so your costlier mercs survive to do the work.', req: 'guild' },
+  demolisher:{ desc: 'Slow long-range siege merc with a huge splashing shell. Out-ranges turrets and shreds clumps — your turtle-breaker. Fragile up close; screen it.', req: 'guild' },
   // WARDEN COVENANT — a deep, DISTRIBUTED tech tree (build advanced structures from
   // other advanced structures). Tier 2+ also costs Iron from Forges.
   keep:      { desc: 'Your core. Trains Tier-1 foot, raises Tier-1/tech buildings. Stone income scales with your buildings’ total HP.' },
@@ -777,6 +806,11 @@ const ECON = {
   // so a bank in a corner stalls at synCapBase. Kills still pay bounties.
   synBase: 2.5, synInterest: 0.011, synCapBase: 700, synCapPer: 150, synCapTerritory: 650,
   synHouseFlat: 0.4, synBountyFlat: 10, synBountyPct: 0.06,
+  // Bullion Vault: a heavier home-treasury piece — a big interest-cap boost + flat rent
+  synVaultCap: 500, synVaultFlat: 1.0,
+  // severance insurance: when a Syndicate merc dies, this fraction of its gold cost is
+  // refunded to the treasury — smoothing the instant-hire churn and rewarding trading
+  synSeverance: 0.25,
   // no building (turret, wall, anything) may be placed within this radius of an enemy structure
   enemyKeepout: 300,
   // warden: THE exception — self-sufficient by design. Income scales with the total HP of
