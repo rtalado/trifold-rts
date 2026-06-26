@@ -48,15 +48,16 @@ function update(dt) {
     }
   }
 
-  // host: stream a state snapshot to all guests ~10×/s. If a guest's channel is
-  // backed up, skip this snapshot (only the latest matters) and retry sooner —
-  // this is what keeps a slow joiner from drowning in a snapshot backlog and
-  // freezing late-game. We still clear netFx so cosmetic events don't pile up.
+  // host: stream a state snapshot to all guests ~10×/s. Dropping a backed-up
+  // guest's snapshot (only the latest matters) is what keeps a slow joiner from
+  // drowning in a backlog and freezing late-game — but that drop is now decided
+  // per guest (in hostBroadcast), so one slow joiner can't starve the others.
+  // We still clear netFx so cosmetic events don't pile up.
   if (game.mode === 'host') {
     game.netTimer -= dt;
     if (game.netTimer <= 0) {
-      if (snapBacklogged()) { game.netTimer = 0.05; }
-      else { game.netTimer = 0.1; netSend(buildSnap()); }
+      game.netTimer = 0.1;
+      netSend(buildSnap());
       game.netFx.length = 0;
     }
   }
@@ -110,6 +111,7 @@ function endGame(winner) {
 
 function backToMenu() {
   game = null;
+  rejoinInfo = null; rejoining = false; // gave up on / finished the match — no stale reconnect
   document.getElementById('endscreen').style.display = 'none';
   document.getElementById('hud').style.display = 'none';
   document.getElementById('menu').style.display = 'flex';

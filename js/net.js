@@ -139,24 +139,27 @@ function guestTick(dt) {
 // Up to 4 players (humans + AI) share one lobby, joined by a 5-letter code.
 const PEER_PREFIX = 'trifold-rts-v1-';
 const net = { peer: null, hostConn: null, connected: false, slot: -1, code: '', host: false, players: [], aiCount: 1, inGame: false };
-let room = null; // host only: { started, members:[{ pid, conn, slot, fac, host }] }
+let room = null; // host only: { started, roster, seed, members:[{ pid, conn, slot, fac, host }] }
+
+// failsafe: what a guest needs to reconnect to a running match after a freeze/drop.
+// Kept outside `net` (which onDisconnect wipes) so the Rejoin button survives a drop.
+let rejoinInfo = null;       // { code, slot, fac } for the guest's live match
+let lastSnapAt = 0;          // performance.now() of the last snapshot a guest applied
+let rejoining = false;       // true while a reconnect attempt is in flight
 
 function netConnected() { return net.connected; }
 
-// host: is any guest's data channel backed up? Each snapshot is the full state
+// host: is THIS guest's data channel backed up? Each snapshot is the full state
 // of the world, so when a guest can't keep up the right move is to DROP the next
-// snapshot rather than queue it — a growing backlog is what freezes the joiner in
-// long matches (PeerJS overflow-buffers above 8 MB and the guest never catches up).
+// snapshot for that guest rather than queue it — a growing backlog is what freezes
+// a joiner in long matches (PeerJS overflow-buffers above 8 MB and the guest never
+// catches up). Checked per member so one slow joiner can't starve the others.
 const SNAP_BUFFER_LIMIT = 256 * 1024; // bytes already queued on the RTCDataChannel
-function snapBacklogged() {
-  if (!room) return false;
-  for (const m of room.members) {
-    if (m.pid === 'HOST' || !m.conn || !m.conn.open) continue;
-    if (m.conn.bufferSize > 0) return true; // PeerJS already overflow-buffering
-    const dc = m.conn.dataChannel;
-    if (dc && dc.bufferedAmount > SNAP_BUFFER_LIMIT) return true;
-  }
-  return false;
+function memberBacklogged(m) {
+  if (m.pid === 'HOST' || !m.conn || !m.conn.open) return false;
+  if (m.conn.bufferSize > 0) return true; // PeerJS already overflow-buffering
+  const dc = m.conn.dataChannel;
+  return !!(dc && dc.bufferedAmount > SNAP_BUFFER_LIMIT);
 }
 function mpStatus(s) { document.getElementById('mpStatus').textContent = s || ''; }
 
@@ -189,7 +192,11 @@ function hostSendTo(pid, o) {
   if (m && m.conn && m.conn.open) { try { m.conn.send(o); } catch (e) {} }
 }
 function hostBroadcast(o, exceptPid) {
-  for (const m of room.members) if (m.pid !== exceptPid) hostSendTo(m.pid, o);
+  for (const m of room.members) {
+    if (m.pid === exceptPid) continue;
+    if (o.t === 'snap' && memberBacklogged(m)) continue; // drop this frame for a slow guest only
+    hostSendTo(m.pid, o);
+  }
 }
 function hostHandleMsg(pid, m) {
   const mem = room && room.members.find(x => x.pid === pid);
@@ -200,6 +207,16 @@ function hostHandleMsg(pid, m) {
     mem.slot = freeSlot();
     hostSendTo(pid, { t: 'joined', code: net.code, slot: mem.slot });
     hostBroadcast(lobbyMsg());
+  } else if (m.t === 'rejoin') {
+    // a guest who froze/crashed reconnects (with a fresh peer id) and reclaims its
+    // original slot+faction; we hand back the roster+seed so it can rebuild the
+    // world, then the normal snapshot stream catches it up to the live match.
+    if (!mem) return;
+    if (!room.started || !room.roster) { hostSendTo(pid, { t: 'err', msg: 'There is no match to rejoin.' }); return; }
+    const r = room.roster.find(x => !x.ai && x.slot === m.slot && x.fac === m.fac);
+    if (!r) { hostSendTo(pid, { t: 'err', msg: 'Could not match you to that game.' }); return; }
+    mem.slot = m.slot; mem.fac = m.fac;
+    hostSendTo(pid, { t: 'start', roster: room.roster, seed: room.seed });
   } else if (!mem || mem.slot < 0) {
     // ignore anything before this peer has joined a slot
   } else if (m.t === 'pick') {
@@ -207,6 +224,7 @@ function hostHandleMsg(pid, m) {
     hostBroadcast(lobbyMsg());
   } else if (m.t === 'start') {
     room.started = true;
+    room.roster = m.roster; room.seed = m.seed; // kept so dropped guests can rejoin
     hostBroadcast({ t: 'start', roster: m.roster, seed: m.seed }); // to everyone, host included
   } else {
     hostBroadcast(m, pid); // relay gameplay (snap / cmd / msg / end) to the others
@@ -241,7 +259,16 @@ function hostGame() {
   });
 }
 
-function joinGame(code) {
+// status text during a join goes to the lobby panel; during a rejoin it goes to
+// the CONNECTION LOST end screen (the menu/lobby isn't visible mid-match).
+function joinStatus(s) {
+  if (rejoining) document.getElementById('endDetail').textContent = s || '';
+  else mpStatus(s);
+}
+
+// `rejoin` (optional) = { slot, fac }: reconnect to a running match instead of
+// joining a fresh lobby. The host validates it and replies with a fresh `start`.
+function joinGame(code, rejoin) {
   const peer = new Peer({ debug: 1 });
   net.peer = peer; let opened = false;
   peer.on('open', () => {
@@ -249,17 +276,39 @@ function joinGame(code) {
     net.hostConn = conn;
     conn.on('open', () => {
       opened = true; net.host = false; net.connected = true;
-      conn.send({ t: 'join', code: code.toUpperCase() });
+      if (rejoin) conn.send({ t: 'rejoin', code: code.toUpperCase(), slot: rejoin.slot, fac: rejoin.fac });
+      else conn.send({ t: 'join', code: code.toUpperCase() });
     });
     conn.on('data', msg => handleNet(msg));
     conn.on('close', () => { if (opened) onDisconnect(); });
-    conn.on('error', () => { if (!opened) mpStatus('Could not reach that room.'); else onDisconnect(); });
-    setTimeout(() => { if (!opened) mpStatus('No room with that code (or the host went offline).'); }, 9000);
+    conn.on('error', () => { if (!opened) { joinStatus(rejoin ? 'Could not reach the host to rejoin.' : 'Could not reach that room.'); rejoinFailed(); } else onDisconnect(); });
+    setTimeout(() => { if (!opened) { joinStatus(rejoin ? 'The host is no longer reachable.' : 'No room with that code (or the host went offline).'); rejoinFailed(); } }, 9000);
   });
   peer.on('error', e => {
-    if (e.type === 'peer-unavailable') mpStatus('No room with that code.');
-    else if (!opened) mpStatus('Could not connect (' + (e.type || e) + '). Check your internet connection.');
+    if (e.type === 'peer-unavailable') { joinStatus(rejoin ? 'The host is no longer reachable.' : 'No room with that code.'); rejoinFailed(); }
+    else if (!opened) { joinStatus('Could not connect (' + (e.type || e) + '). Check your internet connection.'); rejoinFailed(); }
   });
+}
+
+// ---- guest failsafe: rejoin a match we froze out of / dropped from ----
+function tryRejoin() {
+  if (!rejoinInfo || rejoining) return;
+  rejoining = true;
+  if (net.peer) { try { net.peer.destroy(); } catch (e) {} net.peer = null; }
+  net.hostConn = null; net.connected = false;
+  net.code = rejoinInfo.code; net.slot = rejoinInfo.slot; // restore so `start` maps us to our faction
+  document.getElementById('endRejoin').style.display = 'none';
+  document.getElementById('endTitle').textContent = 'CONNECTION LOST';
+  document.getElementById('endTitle').style.color = '#e0b84d';
+  document.getElementById('endDetail').textContent = 'Reconnecting…';
+  document.getElementById('endscreen').style.display = 'flex';
+  joinGame(rejoinInfo.code, { slot: rejoinInfo.slot, fac: rejoinInfo.fac });
+}
+function rejoinFailed() {
+  if (!rejoining) return;
+  rejoining = false;
+  const btn = document.getElementById('endRejoin');
+  if (rejoinInfo) btn.style.display = 'inline-block';
 }
 
 function handleNet(m) {
@@ -267,14 +316,15 @@ function handleNet(m) {
     case 'created': net.code = m.code; net.slot = m.slot; net.host = true; net.aiCount = 1; showLobby(); break;
     case 'joined':  net.code = m.code; net.slot = m.slot; net.host = false; showLobby(); break;
     case 'lobby':   net.players = m.players; updateLobby(); break;
-    case 'err':     mpStatus(m.msg); break;
+    case 'err':     if (rejoining) { joinStatus(m.msg); rejoining = false; if (rejoinInfo) document.getElementById('endRejoin').style.display = 'inline-block'; } else mpStatus(m.msg); break;
     case 'start': {
-      net.inGame = true;
+      net.inGame = true; rejoining = false;
       const me = m.roster.find(r => r.slot === net.slot) || m.roster[0];
       buildMatch(m.roster.map(r => ({ fac: r.fac, ai: r.ai, diff: r.diff })), me.fac, net.host ? 'host' : 'guest', m.seed);
+      if (!net.host) { rejoinInfo = { code: net.code, slot: net.slot, fac: me.fac }; lastSnapAt = performance.now(); }
       break;
     }
-    case 'snap': if (game && game.mode === 'guest' && !game.over) applySnap(m); break;
+    case 'snap': if (game && game.mode === 'guest' && !game.over) { lastSnapAt = performance.now(); applySnap(m); } break;
     case 'cmd':  if (game && game.mode === 'host' && !game.over) handleCmd(m); break;
     case 'msg':  if (!m.to || m.to === game.localFac) floatMsg(m.text); break;
     case 'end':  if (game && game.mode !== 'host' && !game.over) endGame(m.winner); break;
@@ -315,11 +365,17 @@ function handleCmd(m) {
 }
 
 function onDisconnect() {
+  if (rejoining) return; // a reconnect is already in flight — ignore the stale drop
+  // a guest mid-match can climb back into the running game; the host stays authoritative
+  const canRejoin = !!(game && game.mode === 'guest' && !game.over && rejoinInfo);
   if (game && game.mode !== 'sp' && !game.over) {
     game.over = true;
     document.getElementById('endTitle').textContent = 'CONNECTION LOST';
     document.getElementById('endTitle').style.color = '#e0b84d';
-    document.getElementById('endDetail').textContent = 'The peer-to-peer connection dropped.';
+    document.getElementById('endDetail').textContent = canRejoin
+      ? 'The connection dropped — trying to reconnect…'
+      : 'The peer-to-peer connection dropped.';
+    document.getElementById('endRejoin').style.display = 'none';
     document.getElementById('endscreen').style.display = 'flex';
   }
   if (net.peer) { try { net.peer.destroy(); } catch (e) {} }
@@ -328,8 +384,21 @@ function onDisconnect() {
   document.getElementById('mpLobby').style.display = 'none';
   document.getElementById('mpPanel').style.display = 'none';
   for (const c of document.querySelectorAll('#cards .card')) c.classList.remove('picked');
+  if (canRejoin) { tryRejoin(); return; } // auto-attempt; the Rejoin button appears if it fails
+  rejoinInfo = null;
   if (document.getElementById('menu').style.display !== 'none') showScreen('home');
 }
+
+// Guest watchdog: a WebRTC data channel can silently stall — no 'close'/'error'
+// event fires — so the joiner just freezes on a stale frame with no way out. If
+// we're an in-game guest and no snapshot has landed for a while, declare the link
+// dead so the failsafe (auto-reconnect + Rejoin button) takes over.
+const SNAP_TIMEOUT = 8000; // ms without a snapshot before the link is presumed dead
+setInterval(() => {
+  if (rejoining || !net.connected) return;
+  if (!game || game.mode !== 'guest' || game.over) return;
+  if (lastSnapAt && performance.now() - lastSnapAt > SNAP_TIMEOUT) onDisconnect();
+}, 1000);
 
 // ---------------- lobby ----------------
 function showLobby() {

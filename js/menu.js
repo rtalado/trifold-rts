@@ -73,6 +73,24 @@ $('mpJoinGo').addEventListener('click', () => {
 });
 $('mpJoinCode').addEventListener('keydown', ev => { if (ev.key === 'Enter') $('mpJoinGo').click(); });
 $('mpStart').addEventListener('click', hostStart);
+$('endRejoin').addEventListener('click', tryRejoin);
+
+// copy the room code to the clipboard so the host can paste it to a friend
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+}
+$('lobbyCopy').addEventListener('click', () => {
+  const code = net.code || $('lobbyCode').textContent;
+  if (!code || code === '—') return;
+  const flash = () => { $('lobbyCopy').textContent = '✓ COPIED'; setTimeout(() => { $('lobbyCopy').textContent = '⧉ COPY'; }, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(flash).catch(() => { fallbackCopy(code); flash(); });
+  } else { fallbackCopy(code); flash(); }
+});
 $('mpAiMinus').addEventListener('click', () => { net.aiCount = Math.max(0, net.aiCount - 1); updateLobby(); });
 $('mpAiPlus').addEventListener('click', () => { net.aiCount = Math.min(4 - net.players.length, net.aiCount + 1); updateLobby(); });
 

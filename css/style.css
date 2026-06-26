@@ -108,6 +108,9 @@
     background:#0e131c; border:1px solid #2a5440; border-radius:8px; padding:16px 18px; }
   #lobbyCodeWrap { font-size:14px; color:#9fd9b4; letter-spacing:2px; margin-bottom:12px; }
   #lobbyCode { font-size:26px; font-weight:700; color:#7dffa8; letter-spacing:8px; font-family:monospace; }
+  #lobbyCopy { margin-left:10px; padding:5px 10px; font-size:11px; letter-spacing:1px; vertical-align:middle;
+    background:#173b2a; color:#9fd9b4; border:1px solid #2a5440; border-radius:5px; cursor:pointer; }
+  #lobbyCopy:hover { background:#1f5038; }
   #lobbyPlayers { display:inline-block; text-align:left; margin-bottom:12px; }
   .lobbyrow { font-size:13px; color:#cdd6e4; line-height:1.7; }
   #mpAiWrap { display:none; align-items:center; justify-content:center; gap:10px; margin-bottom:10px; }
