@@ -1,4 +1,15 @@
 // ---------------- rendering ----------------
+// is a world point within the current camera view (+pad)? The renderer works in
+// world space and leans on canvas clipping, but clipping only skips rasterising
+// off-screen pixels — it still pays the JS/canvas cost of every command. So on a
+// big map (up to 260×170 tiles) we'd issue draw calls for the WHOLE world every
+// frame. Culling each thing to the viewport is what keeps a sprawling late-game
+// fight — especially against the map-blanketing Myriad creep — smooth.
+function inView(x, y, pad = 0) {
+  return x >= game.cam.x - pad && x <= game.cam.x + viewW() + pad
+      && y >= game.cam.y - pad && y <= game.cam.y + viewH() + pad;
+}
+
 function draw() {
   ctx.fillStyle = '#0d1117';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -8,20 +19,29 @@ function draw() {
   ctx.scale(game.cam.z, game.cam.z);
   ctx.translate(-game.cam.x, -game.cam.y);
 
-  // grid
+  // visible world rect (with a tile of slack), used to cull the grid & creep
+  const vx0 = Math.max(0, game.cam.x - TILE), vy0 = Math.max(0, game.cam.y - TILE);
+  const vx1 = Math.min(WORLD_W, game.cam.x + viewW() + TILE);
+  const vy1 = Math.min(WORLD_H, game.cam.y + viewH() + TILE);
+
+  // grid — only the lines crossing the visible rect
   ctx.strokeStyle = '#161e2a'; ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let x = 0; x <= WORLD_W; x += TILE * 2) { ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_H); }
-  for (let y = 0; y <= WORLD_H; y += TILE * 2) { ctx.moveTo(0, y); ctx.lineTo(WORLD_W, y); }
+  for (let x = Math.floor(vx0 / (TILE * 2)) * TILE * 2; x <= vx1; x += TILE * 2) { ctx.moveTo(x, vy0); ctx.lineTo(x, vy1); }
+  for (let y = Math.floor(vy0 / (TILE * 2)) * TILE * 2; y <= vy1; y += TILE * 2) { ctx.moveTo(vx0, y); ctx.lineTo(vx1, y); }
   ctx.stroke();
 
-  // creep
+  // creep — only the tiles on screen (the grid can span the whole map, so scanning
+  // and filling all of it every frame is a big late-game cost, worst vs Myriad)
   const pulse = 0.78 + 0.1 * Math.sin(game.t * 2);
-  for (let ty = 0; ty < GH; ty++)
-    for (let tx = 0; tx < GW; tx++) {
+  const facKeys = Object.keys(FACTIONS);
+  const ctx0 = Math.max(0, Math.floor(vx0 / TILE)), ctx1 = Math.min(GW - 1, Math.floor(vx1 / TILE));
+  const cty0 = Math.max(0, Math.floor(vy0 / TILE)), cty1 = Math.min(GH - 1, Math.floor(vy1 / TILE));
+  for (let ty = cty0; ty <= cty1; ty++)
+    for (let tx = ctx0; tx <= ctx1; tx++) {
       const v = game.creep[ty * GW + tx];
       if (!v) continue;
-      const fac = Object.keys(FACTIONS)[v - 1];
+      const fac = facKeys[v - 1];
       ctx.fillStyle = fac === 'myriad' ? 'rgba(74,29,92,' + pulse + ')' : FACTIONS[fac].dark;
       ctx.fillRect(tx * TILE, ty * TILE, TILE, TILE);
     }
@@ -55,7 +75,8 @@ function draw() {
   // entities (buildings first, then units, sorted by y) — hidden by fog of war
   const sorted = [...game.entities].sort((a, b) =>
     (a.def.kind === 'building' ? 0 : 1) - (b.def.kind === 'building' ? 0 : 1) || a.y - b.y);
-  for (const e of sorted) if (visibleEnt(e)) drawEnt(e);
+  // (pad covers oversized flourishes — a maxed Ark's corona reaches ~1.7× its size)
+  for (const e of sorted) if (visibleEnt(e) && inView(e.x, e.y, e.size * 1.8 + 24)) drawEnt(e);
 
   // siphon tether (derived from proximity so it renders identically on guest)
   for (const e of ents(o => o.type === 'ark' && o.deployed)) {
@@ -70,7 +91,7 @@ function draw() {
 
   // projectiles (hidden if they're flying through unseen territory)
   for (const pr of game.proj) {
-    if (!tileVis(pr.x, pr.y)) continue;
+    if (!tileVis(pr.x, pr.y) || !inView(pr.x, pr.y, 16)) continue;
     ctx.fillStyle = pr.color;
     ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.r, 0, Math.PI * 2); ctx.fill();
   }
@@ -78,7 +99,7 @@ function draw() {
   // fx
   for (const f of game.fx) {
     const ox = f.x != null ? f.x : f.x1, oy = f.y != null ? f.y : f.y1;
-    if (ox != null && !tileVis(ox, oy)) continue;
+    if (ox != null && (!tileVis(ox, oy) || !inView(ox, oy, (f.r || 0) + 64))) continue;
     const a = f.ttl / f.max;
     if (f.kind === 'boom') {
       ctx.strokeStyle = f.color; ctx.globalAlpha = a; ctx.lineWidth = 2.5;
