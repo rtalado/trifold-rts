@@ -396,6 +396,11 @@ function updateHUD() {
   }
   document.getElementById('hudArmy').innerHTML = armyHtml;
 
+  // match timer (elapsed match time — game.t is shared across host/guest/SP)
+  const secs = Math.max(0, Math.floor(game.t));
+  document.getElementById('hudTime').innerHTML =
+    '⏱ <b>' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + '</b>';
+
   // selection info
   renderSelInfo(document.getElementById('selinfo'));
 
