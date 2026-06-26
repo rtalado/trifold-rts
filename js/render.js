@@ -1115,6 +1115,19 @@ function drawEnt(e) {
         ctx.strokeStyle = 'rgba(255,217,125,' + (0.5 + 0.3 * Math.sin(game.t * 4)) + ')';
         ctx.beginPath(); ctx.arc(x, y, s + 10, 0, Math.PI * 2); ctx.stroke();
       }
+      // point-defence gun ring — grows from 4 to 8 barrels as the Ark ascends, each
+      // tracking its own target (mirrors the apex machine-gun ring)
+      const guns = auxGunsOf(e), auxT = e.auxTgt || [];
+      for (let i = 0; i < guns; i++) {
+        const ga = i * Math.PI * 2 / guns + Math.PI / guns;
+        const gx = x + Math.cos(ga) * s * 0.82, gy = y + Math.sin(ga) * s * 0.82;
+        ctx.fillStyle = '#4a3a14'; ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(gx, gy, Math.max(2.4, s * 0.13), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        const gt = auxT[i] ? byId(auxT[i]) : null;
+        const ba = gt ? Math.atan2(gt.y - gy, gt.x - gx) : ga;
+        ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ba) * s * 0.3, gy + Math.sin(ba) * s * 0.3); ctx.stroke();
+      }
     } else if (e.type === 'guardian') {
       ctx.strokeStyle = 'rgba(125,213,255,0.35)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(x, y, e.def.aura, 0, Math.PI * 2); ctx.stroke();

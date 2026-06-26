@@ -18,20 +18,29 @@ You have no buildings, so no passive economy. Two income streams:
   more to scale. Like the Vanguard, **nodes are finite** — keep the Ark and Collectors moving to
   fresh nodes.
 - **Ark siphon** — move the Ark onto a crystal node and **Deploy** it to siphon Energy fast
-  (+4.5/s). Deployed, the Ark is stationary but pulls hard.
+  (+6/s). Deployed, the Ark is stationary but pulls hard.
+- **Wellsprings (NEW)** — the nomads now **harness fonts**: park **Collectors or the Ark** within
+  range of a Wellspring to claim it for **+6/s** (uncapped). Sending a couple of idle Collectors
+  to sit on fonts across the map is now a major, scalable income stream — your reward for ranging.
+- **Obelisks** — capture with your units for **+5/s each** (Exodus earns a bonus on top of the
+  standard rate). With your low cap, every Obelisk matters a lot — grab and hold them.
 
-The Exodus *cannot* harness Wellsprings (it already chases nodes) but **can** capture Obelisks
-with its units for +3.4/s — do it; the low cap means each Obelisk matters a lot.
+**Scale by exploring the map.** Between finite nodes, harnessed fonts and Obelisks, your whole
+economy is now about spreading Collectors and the Ark across contested ground and holding it.
 
 ---
 
 ## 2. The Ark ascension ladder — your tech tree AND your superweapon
 
-Select the Ark and **Upgrade** it through **eight tiers**. Each makes it dramatically
-bigger, tougher and deadlier (size, HP, shields, beam damage, range *and* its Solar Lance
-all scale), and it visibly grows — from a cathedral-fortress into a literal **walking sun**.
-The first three tiers are affordable power spikes; the last four are a long, ruinously
-expensive climb that ends in a **roaming superweapon surpassing the Warden's Worldbreaker**.
+The Ark is a **heavy gunship from tier 1**: a **splashing main beam** plus a ring of **four
+point-defence guns** — so even a fresh Ark hits groups hard and defends itself, no longer a
+soft target. Select the Ark and **Upgrade** it through **eight tiers**. Each makes it
+dramatically bigger, tougher and deadlier — size, HP, shields, beam damage, **splash radius**,
+range, **gun count (4 → 8)** *and* the Solar Lance all scale — and it visibly grows from a
+cathedral-fortress into a literal **walking sun**. The first three tiers are affordable power
+spikes; the last four are a long, ruinously expensive climb that ends in a **roaming superweapon
+surpassing the Warden's Worldbreaker** (a fully-ascended Ark sustains ~700 DPS with huge splash,
+an eight-gun ring and 25,000 HP, on top of the Solar Lance).
 
 | Tier | Upgrade | Cost | HP / Shield | ×stats |
 |---|---|---|---|---|

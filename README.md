@@ -88,9 +88,9 @@ so scouting matters. Objectives worth fighting over:
   **Verdant** Bloom (which pours out bonus **Sap + Pollen + Loam** *and* grows a
   *thriving ecosystem* — a fertilising buff over nearby plants & beasts) · **Stormforge**
   Dynamo (a *Storm Font* whose payout **ramps the longer you hold it**) · **Pact** Bone
-  Shrine · **Myriad** by simply blanketing the font in **creep**. The nomadic **Solari
-  Exodus** already roams for finite crystal; the turtling **Warden Covenant** — a walled,
-  secretive brotherhood — *cannot* tap them at all, by design.
+  Shrine · **Myriad** by simply blanketing the font in **creep** · **Solari Exodus** by
+  parking **Collectors or the Ark** beside it. Only the turtling **Warden Covenant** — a
+  walled, secretive brotherhood — *cannot* tap Wellsprings at all, by design.
 - **Supply Caches** — small, lightly-guarded jungle camps dotted everywhere.
   Crack one open for a quick **+160 bounty**.
 - **Munitions Bunkers** — heavily-guarded strongpoints, several of them, often sat
@@ -210,11 +210,14 @@ Miasma Vents, and cast the Hive's **Corruption Bloom** to infect a whole army at
 swarm with a rally point; it heals on creep and is just meat off it. Elites: Broodmother, **Ravager**.
 
 ### SOLARI EXODUS — the Pilgrims · *Energy* · core: **The Ark**
-No base, ever. The Ark is fortress, factory and treasury in one — it walks and
-shoots. **Deploy** it on a crystal node to siphon fast (anchored = vulnerable).
-**Collectors** mine to scale your economy. A handful of priceless, **shielded**
-elites — Seekers, Lancers, Guardians, Phoenixes, Templars, and the heavy **Aegis** —
-whose shields regenerate out of combat. Lose nothing, or lose everything.
+No base, ever. The Ark is fortress, factory and treasury in one — a **heavy gunship from
+the start** (a splashing main beam + a ring of point-defence guns). **Deploy** it on a
+crystal node to siphon fast; **scale by ranging the map** — park **Collectors or the Ark**
+beside **Wellsprings** to harness them and seize **Obelisks** (the nomads earn extra on
+each). A handful of priceless, **shielded** elites — Seekers, Lancers, Guardians, Phoenixes,
+Templars, the heavy **Aegis**. **Ascend the Ark** through eight tiers — more HP, shields,
+guns (4 → 8), splash and reach — into a roaming **superweapon** with a map-scorching **Solar
+Lance** that surpasses the Worldbreaker. Shields regenerate. Lose nothing, or lose everything.
 
 ### ASHEN CHOIR — the Revenants · *Essence* · core: **Ossuary**
 All death anywhere pays you Essence — carnage enriches you, stalemates starve you. Your

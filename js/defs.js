@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.21';
+const APP_VERSION = '1.0.22';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -44,7 +44,7 @@ const FACTIONS = {
   warden:    { name: 'WARDEN COVENANT',  color: '#c3ccd6', dark: '#232c38', res: 'Stone',  cap: 60, res2: 'Iron', res3: 'Powder' },
   ember:     { name: 'EMBER NOMADS',     color: '#ff8a2a', dark: '#4a2a0e', res: 'Plunder',cap: 66 },
   verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 84, res2: 'Pollen', res3: 'Loam' },
-  stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 36 },
+  stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 42 },
   pact:      { name: 'OBSIDIAN PACT',    color: '#c0303a', dark: '#3a0e12', res: 'Blood',  cap: 72 },
 };
 
@@ -56,7 +56,7 @@ const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 const HINTS = {
   vanguard: 'A full Earth war machine. Workers harvest crystal automatically — but the nodes are FINITE, so once your starter patch runs dry you MUST push Workers out to claim fresh nodes across the map. SUPPLY DEPOTS are forward drop-offs (and raise your cap) so far nodes are worth mining; a Depot beside a WELLSPRING harnesses it for a flood of extra crystal. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
   myriad: 'Your creep IS your economy — every covered tile feeds you biomass, but a home creep-blob MAXES OUT fast. To grow you must creep OUTWARD and blanket WELLSPRINGS — each font you cover pours out far more biomass than any tile. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. The swarm also CORRUPTS: every attack rots and weakens the foe (deals less damage, slows, decays), and a corrupted enemy that dies bursts free LARVA from its corpse. Breed Larva at an Infestation Pit, hire corrosive elites (Corruptor / Defiler / Mawflyer) from a Corruption Den, anchor Miasma Vents — and cast the Hive’s CORRUPTION BLOOM to infect a whole army at once. Right-click with the Hive selected to set the swarm rally. The swarm heals on creep.',
-  exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. ASCEND the Ark through eight tiers (each pricier than the last) — and pour a fortune into the final tiers to forge it into a roaming SUPERWEAPON that surpasses the Worldbreaker, armed with the map-scorching SOLAR LANCE that grows stronger with every tier. If the Ark dies, all is lost.',
+  exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. SCALE BY RANGING THE MAP: park Collectors (or the Ark) beside a WELLSPRING to harness it for a big flow, and seize OBELISKS — the nomads earn extra from every one they hold. Every warrior is priceless — shields regenerate, so strike and fall back. ASCEND the Ark through eight tiers (each pricier than the last) — and pour a fortune into the final tiers to forge it into a roaming SUPERWEAPON that surpasses the Worldbreaker, armed with the map-scorching SOLAR LANCE that grows stronger with every tier. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence, so SCALING means fighting across the map. Your home Soul Conduits only trickle (and soon max out); crawl the lattice OUT to plant a Conduit beside a WELLSPRING for a real surge of Essence. Near your lattice spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice. Guard the Ossuary.',
   syndicate: 'Gold breeds gold: your treasury earns compound interest — but the interest CAP is set by the TERRITORY you hold. A bank in a corner stalls; every Obelisk you capture and Wellspring you harness (park a Watchpost beside one) lifts the cap and lets the fortune compound (Countinghouses & Bullion Vaults raise it a little). Mercenaries arrive INSTANTLY for a price — the Haven hires the core four; a MERCENARY GUILD hires specialists (fast Gun Hands, aerial Dragoons, mending Sawbones, armoured Ironhides, siege Demolishers). Every kill pays a bounty, a fallen merc refunds part of its hire price (SEVERANCE), Watchposts air-drop across the map, and the Haven can DROP a free squad of Enforcers anywhere. Hoard or hire — and guard the Haven.',
   warden: 'Slow, armoured, unstoppable, and SELF-SUFFICIENT: alone among the powers you needn’t march out for the map — your standing buildings ARE your economy, the more you raise the more Stone you mint (Forges add Iron). A walled, secretive brotherhood: wall up, turret up, and grind forward with heavy troops and siege. (You cannot tap Wellsprings — you don’t need to.) Hold the Keep.',
@@ -134,7 +134,12 @@ const DEFS = {
   mawflyer:    { fac:'myriad', kind:'unit', name:'Mawflyer', hp:120, size:10, speed:118, cost:160, time:11, dmg:12, range:120, cd:0.8, aggro:200, shot:'glob', corrupt:4 },
 
   // ----- SOLARI EXODUS -----
-  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true,
+  // The Ark is a heavy gunship from the very first tier: a splashing main beam PLUS a
+  // ring of point-defence guns (`aux`), both of which scale hard with its ascension —
+  // by the top tiers it is a devastating walking fortress (see ARK_TIERS / auxGunsOf).
+  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true,
+              dmg:16, range:185, cd:1.0, aggro:205, shot:'beam', splash:32, dropoff:true, researchLab:true,
+              aux:{ dmg:6, range:165, cd:0.4, shot:'bullet', guns:4 },
               produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis','sovereign'],
               // the Ark's signature active: a telegraphed orbital lance whose damage AND
               // blast SCALE with the Ark's ascension tier — modest early, apocalyptic once
@@ -297,15 +302,15 @@ const DEFS = {
   // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
   reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','galvan','voltaic','gladius'], grows:['dynamo','pylon','tesla','foundry_s','stormlab','arcfoundry'] },
   dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
-  pylon:     { fac:'stormforge', kind:'building', name:'Charge Pylon', hp:460, size:16, cost:170, time:12, aura:140, shieldHeal:16, heal:2 },
-  tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:16, range:195, cd:1.1, aggro:205, shot:'beam' },
+  pylon:     { fac:'stormforge', kind:'building', name:'Charge Pylon', hp:460, size:16, cost:170, time:12, aura:155, shieldHeal:24, heal:3 },
+  tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:18, range:200, cd:1.1, aggro:210, shot:'beam' },
   foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus'] },
-  arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:90, shield:40, size:9, speed:118, cost:110, time:8, dmg:9, range:115, cd:0.4, aggro:205, shot:'bullet' },
-  galvan:    { fac:'stormforge', kind:'unit', name:'Galvan', hp:170, shield:120, size:12, speed:90, cost:180, time:11, dmg:18, range:64, cd:0.7, aggro:180, shot:'beam', splash:22 },
-  voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:80, shield:60, size:9, speed:62, cost:210, time:13, dmg:30, range:230, cd:2.0, aggro:245, shot:'beam' },
-  colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:520, shield:160, size:18, speed:48, cost:420, time:24, dmg:40, range:175, cd:2.4, aggro:200, shot:'shell', splash:55 },
+  arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:100, shield:50, size:9, speed:118, cost:110, time:8, dmg:11, range:118, cd:0.4, aggro:205, shot:'bullet' },
+  galvan:    { fac:'stormforge', kind:'unit', name:'Galvan', hp:190, shield:150, size:12, speed:92, cost:180, time:11, dmg:20, range:66, cd:0.7, aggro:185, shot:'beam', splash:24 },
+  voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:90, shield:75, size:9, speed:62, cost:210, time:13, dmg:36, range:235, cd:2.0, aggro:250, shot:'beam' },
+  colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:560, shield:210, size:18, speed:48, cost:420, time:24, dmg:46, range:180, cd:2.3, aggro:205, shot:'shell', splash:58 },
   stormlab:  { fac:'stormforge', kind:'building', name:'Research Bay', hp:520, size:22, cost:150, time:14, researchLab:true },
-  gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:200, shield:90, size:13, speed:70, cost:230, time:14, dmg:22, range:130, cd:1.0, aggro:195, shot:'shell', splash:24 },
+  gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:220, shield:110, size:13, speed:72, cost:230, time:14, dmg:25, range:135, cd:1.0, aggro:200, shot:'shell', splash:26 },
 
   // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying) -----
   altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth','cultist'], grows:['shrine','spike','sanctum','grandaltar'] },
@@ -364,9 +369,9 @@ const DEFS = {
 
   // STORMFORGE DYNASTY — a storm titan: heavy shields, long beam + four arc turrets
   arcfoundry:{ fac:'stormforge', kind:'building', name:'Grand Foundry', hp:1000, size:30, cost:580, time:22, apex:true, produces:['tempest'] },
-  tempest:   { fac:'stormforge', kind:'unit', name:'Storm Titan', hp:1100, shield:500, size:23, speed:46, cost:780, time:38, apex:true,
-               dmg:44, range:230, cd:2.2, aggro:240, shot:'beam', splash:50,
-               aux:{ dmg:12, range:160, cd:0.3, shot:'beam', guns:4 } },
+  tempest:   { fac:'stormforge', kind:'unit', name:'Storm Titan', hp:1200, shield:650, size:23, speed:46, cost:780, time:38, apex:true,
+               dmg:48, range:235, cd:2.1, aggro:245, shot:'beam', splash:54,
+               aux:{ dmg:13, range:165, cd:0.3, shot:'beam', guns:4 } },
 
   // OBSIDIAN PACT — an avatar of slaughter that births Thralls and heals the horde
   grandaltar:{ fac:'pact', kind:'building', name:'Grand Altar', hp:1000, size:28, cost:500, time:14, apex:true, spawns:'thrall', spawnEvery:4, produces:['bloodavatar'] },
@@ -433,7 +438,7 @@ const META = {
   defiler:   { desc: 'Heavy bile-beast: long-range corrosive splash that both sieges and deeply CORRUPTS clumped foes. Your turtle-breaker.', req: 'corruptden' },
   mawflyer:  { desc: 'Fast flying acid-spitter — the swarm’s air. Raids, chases flyers and corrupts what it bites.', req: 'corruptden' },
   // SOLARI EXODUS
-  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. Deploy on a crystal node to siphon. ASCEND it up eight tiers: each costs more but adds huge HP, shields, firepower and reach, and at the top tiers it becomes a roaming superweapon (surpassing the Worldbreaker) with a devastating Solar Lance. Lose it and all is lost.' },
+  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. A heavy gunship from tier 1: a splashing main beam PLUS a ring of point-defence guns. Deploy on a crystal node to siphon, or park it (or Collectors) beside a Wellspring to harness it. ASCEND it up eight tiers: each costs more but adds huge HP, shields, more guns, bigger splash and reach — at the top tiers a roaming superweapon (surpassing the Worldbreaker) with a devastating Solar Lance. Lose it and all is lost.' },
   collector: { desc: 'Harvester that mines crystal and hauls it back to the Ark. Build more to scale your economy.' },
   seeker:    { desc: 'Cheap shielded skirmisher that blinks onto its target.' },
   lancer:    { desc: 'Long-range beam unit; fragile but deals heavy damage.' },
@@ -585,7 +590,7 @@ const META = {
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
   cache:     { desc: 'Lightly-guarded neutral supply cache. Crack it open for a small bounty.' },
   munitions: { desc: 'A heavily-guarded neutral strongpoint holding a hoard of munitions. Crack it for a big bounty — and a cache of Powder if you are the Warden.' },
-  wellspring:{ desc: 'A font of raw potential. You cannot capture it by standing on it — HARNESS it by raising your own economy structure beside it (Vanguard Supply Depot · Choir Soul Conduit · Syndicate Watchpost · Ember War Camp · Verdant Bloom · Stormforge Dynamo · Pact Bone Shrine), or, as the Myriad, by covering it in creep. Each harnessed Wellspring pours out your primary resource — and a Verdant font grows a thriving ecosystem that buffs nearby plants & beasts. March out and hold them; the Warden alone cannot tap them.' },
+  wellspring:{ desc: 'A font of raw potential. You cannot capture it by standing on it — HARNESS it by raising your own economy structure beside it (Vanguard Supply Depot · Choir Soul Conduit · Syndicate Watchpost · Ember War Camp · Verdant Bloom · Stormforge Dynamo · Pact Bone Shrine), by covering it in creep (Myriad), or by parking Collectors / the Ark beside it (Solari Exodus). Each harnessed Wellspring pours out your primary resource — and a Verdant font grows a thriving ecosystem that buffs nearby plants & beasts. March out and hold them; the Warden alone cannot tap them.' },
 };
 const meta = t => META[t] || {};
 // has this faction met the tech requirement (a finished prerequisite building) for `type`?
@@ -766,6 +771,13 @@ function baseHp(e)      { return e.type === 'ark' ? arkTierData(e.fac).hp : e.de
 function baseShield(e)  { return e.type === 'ark' ? arkTierData(e.fac).shield : (e.def.shield || 0); }
 function baseSize(e)    { return e.type === 'ark' ? arkTierData(e.fac).size : e.def.size; }
 function arkStatMul(e)  { return e.type === 'ark' ? arkTierData(e.fac).statMul : 1; }
+// how many aux point-defence guns an entity fields. The Ark grows its ring as it
+// ascends (4 → 8), so a maxed Ark bristles with guns; others use their fixed `aux.guns`.
+function auxGunsOf(e) {
+  if (!e.def.aux) return 0;
+  if (e.type === 'ark') return Math.min(8, 4 + Math.ceil((((game.players[e.fac] || {}).arkTier) || 0) / 2));
+  return e.def.aux.guns || 1;
+}
 
 // effective stats of an entity, with its owner's researched upgrades applied.
 // (damage/range/cooldown/splash apply to buildings too; speed/cap only to units.)
@@ -797,7 +809,7 @@ function cdOf(e) {
   if (p && p.gMoon) m *= VERD.moonCd;             // Moonsign Graft: faster attacks
   return e.def.cd * m;
 }
-function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1); }
+function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1) * arkStatMul(e); }
 function capOf(fac) {
   const p = game.players[fac];
   let bonus = (p && p.capBonus) || 0;
@@ -853,7 +865,10 @@ const ECON = {
   // myriad: biomass per creep tile, but the tile income PLATEAUS at myriadCapTiles — a
   // home creep-blob maxes out fast, so to grow you must creep OUT over Wellsprings/ground.
   myriadBase: 2.0, myriadPerTile: 0.012, myriadCapTiles: 480,
-  exodusBase: 1.5, exodusSiphon: 4.5,
+  // exodus: a small base trickle + a strong Ark siphon on a crystal node. The nomads now
+  // also HARNESS Wellsprings (park Collectors/the Ark beside a font — see WELL.income.exodus)
+  // and earn a bonus on every Obelisk, so the pilgrimage scales by ranging and holding the map.
+  exodusBase: 2.0, exodusSiphon: 6.0, exodusObeliskBonus: 1.6,
   // choir: a small lattice trickle that PLATEAUS at choirConduitCap conduits, plus a cut
   // of every death on the map — so the Choir scales by fighting, not by stacking conduits.
   choirBase: 1.8, choirConduit: 0.8, choirConduitCap: 5, choirDeathFlat: 5, choirDeathPct: 0.06,
@@ -888,7 +903,7 @@ const ECON = {
   // stormforge: the engine that accelerates — but no longer just by waiting. Home Dynamo
   // output is flat and PLATEAUS at stormDynamoCap; the acceleration now lives on the map:
   // each harnessed Storm Font (Wellspring) ramps its payout the longer you hold it.
-  stormBase: 1.8, stormPerDynamo: 1.0, stormDynamoCap: 6, stormFontRamp: 0.0022,
+  stormBase: 2.4, stormPerDynamo: 1.4, stormDynamoCap: 7, stormFontRamp: 0.0032,
   // pact: Blood gained when your OWN units die (flat + a share of their max HP) — there is
   // no passive home income to speak of, so the Pact must throw itself into the fight.
   pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
@@ -902,9 +917,9 @@ const ECON = {
 // With home economies hard-capped (see ECON), harnessed Wellsprings are HOW you scale —
 // not a little bonus, the main event. Each faction harnesses a font by raising its
 // designated econ structure within HARNESS_R of it (the Myriad instead blankets it in
-// creep), and is paid a hefty flow of its primary resource. Two deliberate exceptions:
-// the nomadic Solari Exodus already chases finite crystal nodes around the map, and the
-// turtling Warden Covenant — a secretive, walled brotherhood — cannot tap them at all.
+// creep; the nomadic Solari Exodus parks Collectors/the Ark beside it), and is paid a
+// hefty flow of its primary resource. The lone exception is the turtling Warden Covenant —
+// a secretive, walled brotherhood — which cannot tap Wellsprings at all.
 const WELL = {
   harnessR: 215,        // how close your harness structure must be to claim a font
   verdBuffR: 230,       // radius of the Verdant ecosystem buff around a harnessed font
@@ -918,7 +933,7 @@ const WELL = {
   // also pour Pollen + Loam and grow an ecosystem buff — see tickEconomy)
   income: {
     vanguard: 5.5, myriad: 5.2, choir: 5.0, syndicate: 5.5,
-    ember: 4.6, verdant: 4.2, stormforge: 5.0, pact: 5.0,
+    ember: 4.6, verdant: 4.2, stormforge: 5.0, pact: 5.0, exodus: 6.0,
   },
   defaultIncome: 5.0,
 };

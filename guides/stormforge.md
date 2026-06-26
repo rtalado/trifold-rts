@@ -5,7 +5,7 @@
 
 - **Core:** Storm Reactor (2000 HP) — assembles machines
 - **Resource:** Power
-- **Base unit cap:** 36 (low — your units are big, shielded and expensive)
+- **Base unit cap:** 42 (low — your units are big, shielded and expensive)
 - **Identity:** Snowball through escalating industry + shield-sustained pushes. Seize ground
   early and never let go.
 
@@ -13,7 +13,7 @@
 
 ## 1. Economy — flat at home, accelerating on the map
 
-- **Dynamos** pay a **flat** rate and **plateau at 6** (`1.8 + 1.0 per Dynamo`). Idling at home no
+- **Dynamos** pay a **flat** rate and **plateau at 7** (`2.4 + 1.4 per Dynamo`). Idling at home no
   longer scales you — the acceleration moved onto the map.
 - **Storm Fonts (Wellsprings):** raise a **Dynamo beside a Wellspring** to harness it — and the
   payout **ramps the longer you hold it** (`× (1 + time × 0.0022)`). A font held since minute 2 is

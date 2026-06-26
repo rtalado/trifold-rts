@@ -450,9 +450,12 @@ function splash(e, center) {
 // secondary rapid-fire turrets (e.g. the Citadel's side machine guns): several
 // independent guns, each tracking and shooting its own nearest target.
 function updateAux(e, dt) {
-  const ax = e.def.aux, guns = ax.guns || 1, p = game.players[e.fac];
-  const reach = ax.range * ((p && p.rangeMul) || 1), cd = ax.cd * ((p && p.cdMul) || 1);
-  if (!e.auxCd) { e.auxCd = new Array(guns).fill(0); e.auxTgt = new Array(guns).fill(0); }
+  const ax = e.def.aux, guns = auxGunsOf(e), p = game.players[e.fac];
+  const mul = arkStatMul(e);   // the Ark's aux damage & reach also scale with its tier
+  const reach = ax.range * ((p && p.rangeMul) || 1) * mul, cd = ax.cd * ((p && p.cdMul) || 1);
+  const auxDmg = ax.dmg * mul;
+  // (re)size the per-gun state when the gun count changes (the Ark adds guns as it ascends)
+  if (!e.auxCd || e.auxCd.length !== guns) { e.auxCd = new Array(guns).fill(0); e.auxTgt = new Array(guns).fill(0); }
   for (let i = 0; i < guns; i++) {
     e.auxCd[i] = Math.max(0, e.auxCd[i] - dt);
     let t = e.auxTgt[i] ? byId(e.auxTgt[i]) : null;
@@ -468,7 +471,7 @@ function updateAux(e, dt) {
     if (t && e.auxCd[i] <= 0 && dist(e, t) <= reach + e.size + t.size) {
       e.auxCd[i] = cd;
       game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed: 380,
-        dmg: ax.dmg, splash: 0, fac: e.fac, attackerId: e.id, color: facColor(e.fac), r: 2.5 });
+        dmg: auxDmg, splash: 0, fac: e.fac, attackerId: e.id, color: facColor(e.fac), r: 2.5 });
     }
   }
 }
@@ -666,7 +669,10 @@ function updateUnit(e, dt) {
       if (!site || !site.constructing) { e.order = { type: 'idle' }; break; }
       if (dist(e, site) > site.size + e.size + 8) { navMove(e, site.x, site.y, dt); break; }
       site.progress += dt;
-      site.hp = Math.min(site.hpMax, site.hpMax * (0.12 + 0.88 * site.progress / site.def.time));
+      // construction ADDS hp over time rather than setting it, so a half-built site can
+      // still be damaged (and destroyed) mid-build — the build rate carries a pristine
+      // site from its 12% start to full over its build time.
+      site.hp = Math.min(site.hpMax, site.hp + site.hpMax * 0.88 * (dt / site.def.time));
       if (site.progress >= site.def.time) { site.constructing = false; site.hp = site.hpMax; e.order = { type: 'idle' }; }
       break;
     }
@@ -732,7 +738,9 @@ function updateBuilding(e, dt) {
     const p = game.players[e.fac];
     if (p && p.gMoon) dt *= VERD.moonProd;
     e.progress += dt;
-    e.hp = Math.min(e.hpMax, e.hpMax * (0.25 + 0.75 * e.progress / d.time));
+    // grow ADDS hp over time rather than setting it, so a growing structure can still be
+    // damaged (and destroyed) mid-grow instead of being effectively invincible.
+    e.hp = Math.min(e.hpMax, e.hp + e.hpMax * 0.75 * (dt / d.time));
     if (e.progress >= d.time) { e.growing = false; e.hp = e.hpMax; }
     return;
   }
@@ -968,17 +976,25 @@ function recomputeCreep() {
 // A faction harnesses a Wellspring if its designated econ structure is the closest one
 // within WELL.harnessR (the Myriad instead needs the font under its creep). The owner
 // is stored on the entity (so it colours in and syncs to guests like an Obelisk) and
-// tallied per player for tickEconomy. Exodus (nomad) and Warden (turtle) never harness.
+// tallied per player for tickEconomy. The Warden (turtle) never harnesses; the nomadic
+// Exodus harnesses a font by parking Collectors or the Ark beside it (no econ buildings).
 function recomputeWellsprings() {
   for (const fac in game.players) game.players[fac].wellHarness = 0;
   for (const w of game.entities) {
     if (w.dead || !w.def.wellspring) continue;
     let best = null, bestD = WELL.harnessR;
     for (const fac in game.players) {
-      if (fac === 'warden' || fac === 'exodus') continue;
+      if (fac === 'warden') continue;
       let d = Infinity;
       if (fac === 'myriad') {
         if (onCreep('myriad', w.x, w.y)) d = 0;        // covered in creep
+      } else if (fac === 'exodus') {
+        // nomads: any Collector or the Ark parked within range claims the font
+        for (const e of game.entities) {
+          if (e.dead || e.fac !== fac || (e.type !== 'collector' && e.type !== 'ark')) continue;
+          const dd = Math.hypot(e.x - w.x, e.y - w.y);
+          if (dd < d) d = dd;
+        }
       } else {
         const ht = WELL.harness[fac]; if (!ht) continue;
         for (const e of game.entities) {
@@ -1061,6 +1077,7 @@ function tickEconomy(dt) {
     }
     // ---- TERRITORY: the dominant, uncapped income (bar the self-sufficient Warden) ----
     gain += obs * ECON.obeliskIncome;
+    if (fac === 'exodus') gain += obs * ECON.exodusObeliskBonus; // nomads live off held ground
     // harnessed Wellsprings pour out your primary resource. The Stormforge's Storm Fonts
     // ramp the longer they're held — its 'engine that accelerates', re-homed onto the map.
     let wellPay = wells * (WELL.income[fac] || WELL.defaultIncome);
