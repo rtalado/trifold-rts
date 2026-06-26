@@ -170,6 +170,12 @@ function aiTick(fac) {
       else if (templars < 1 && guards >= 1 && p.res >= 260 && game.t > 240) enqueue(ark, 'templar');
       else if (p.res >= 120) enqueue(ark, 'seeker');
     }
+    // ascend the Ark when flush with Energy (keep a buffer so it still builds an army)
+    if ((p.arkTier || 0) < ARK_UPGRADES.length && !ark.constructing
+        && p.res >= ARK_UPGRADES[p.arkTier || 0].cost + 500) upgradeArk(fac, ark);
+    // unleash the Solar Lance on the enemy core whenever it's ready and in range
+    if (ark.def.ability && (ark.abilityCd || 0) <= 0 && enemyCore
+        && dist(ark, enemyCore) <= ark.def.ability.range) fireAbility(fac, ark, enemyCore.x, enemyCore.y);
     // siphon management
     const arkHurt = (ark.hp + ark.shield) / (ark.hpMax + ark.shieldMax) < 0.45;
     if (arkHurt) {

@@ -25,18 +25,42 @@ with its units for +3.4/s — do it; the low cap means each Obelisk matters a lo
 
 ---
 
-## 2. The Ark upgrade ladder — your tech tree
+## 2. The Ark ascension ladder — your tech tree AND your superweapon
 
-Select the Ark and **Upgrade** it through four tiers. Each makes it dramatically bigger,
-tougher and deadlier (and it visibly grows into a walking cathedral-fortress):
+Select the Ark and **Upgrade** it through **eight tiers**. Each makes it dramatically
+bigger, tougher and deadlier (size, HP, shields, beam damage, range *and* its Solar Lance
+all scale), and it visibly grows — from a cathedral-fortress into a literal **walking sun**.
+The first three tiers are affordable power spikes; the last four are a long, ruinously
+expensive climb that ends in a **roaming superweapon surpassing the Warden's Worldbreaker**.
 
-| Tier | Upgrade | Cost | Effect |
-|---|---|---|---|
-| 1 | Reinforced Ark | 600 | 3400 HP / 1400 shield, ×1.3 stats |
-| 2 | Radiant Ark | 1500 | 4900 HP / 2100 shield, ×1.65 |
-| 3 | Ascendant Ark | 3200 | 6800 HP / 3000 shield, ×2.05 |
+| Tier | Upgrade | Cost | HP / Shield | ×stats |
+|---|---|---|---|---|
+| 1 | Reinforced Ark | 600 | 3400 / 1400 | ×1.3 |
+| 2 | Radiant Ark | 1500 | 4900 / 2100 | ×1.65 |
+| 3 | Ascendant Ark | 3200 | 6800 / 3000 | ×2.05 |
+| 4 | Empyrean Ark | 5500 | 9500 / 4200 | ×2.6 |
+| 5 | Sunforged Ark | 8500 | 13000 / 5800 | ×3.3 |
+| 6 | Dawnbringer Ark | 13000 | 18000 / 8000 | ×4.2 |
+| 7 | **Solar Apotheosis** | **20000** | **25000 / 11000** | **×5.2** |
 
-A maxed Ark is a monster that can solo whole armies. Upgrading it is often better than more units.
+**Cumulative cost to fully ascend: ~52,300 Energy** — a genuine win-the-game investment.
+At the apex the Ark has **25,000 HP** (the Worldbreaker has 9,000), a beam that out-DPSes
+and out-ranges the Worldbreaker's cannon, and a **Solar Lance** (see below) that hits harder,
+splashes wider and reloads faster than the Worldbreaker's Gustav Strike. Reaching it is hard
+and slow by design — but a Solar Apotheosis Ark is, unit-for-unit, the strongest thing in the game.
+
+Upgrading the Ark is usually better than more units (your cap is only 28). Take tiers 1–3 as
+soon as you can afford them; treat tiers 4–7 as your late-game victory project, funded by deep
+map control (Obelisks + siphon).
+
+## 2b. Active ability — the Solar Lance
+
+The Ark can fire a **Solar Lance**: a telegraphed orbital beam that scorches a wide blast at any
+point in great range (2600), on a 46s reload. Target it from the Ark's command card (left-click
+the impact point; Esc/right-click cancels). **Its damage and blast scale with the Ark's tier** —
+modest at tier 0 (175 dmg), apocalyptic at the apex (~910 dmg / 322 splash, out-doing the
+Worldbreaker's nuke). Fire it on cooldown: into clumps, onto turtled bases, or to soften a core
+before you walk in. A telegraph warns the enemy, so aim where they can't easily scatter.
 
 ---
 

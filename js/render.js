@@ -1063,6 +1063,26 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.arc(x, y, s + 7, 0, Math.PI * 2); ctx.stroke();
         ctx.globalAlpha = 1;
       }
+      // the superweapon tiers (4+): a slowly-rotating ring of solar spokes, a hot core
+      // glow, and at the apex a full corona — the Ark reads as a walking sun
+      if (tier >= 4) {
+        const spokes = 8 + (tier - 4) * 2, rot = game.t * (0.3 + 0.12 * (tier - 4));
+        ctx.strokeStyle = 'rgba(255,210,120,0.9)'; ctx.lineWidth = 2;
+        for (let i = 0; i < spokes; i++) {
+          const a2 = rot + i * Math.PI * 2 / spokes;
+          const r1 = s + 9, r2 = s + 9 + (8 + (tier - 4) * 5) * (0.6 + 0.4 * Math.sin(game.t * 4 + i));
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a2) * r1, y + Math.sin(a2) * r1);
+          ctx.lineTo(x + Math.cos(a2) * r2, y + Math.sin(a2) * r2); ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,244,210,' + (0.5 + 0.3 * Math.sin(game.t * 5)) + ')';
+        ctx.beginPath(); ctx.arc(x, y, s * (0.3 + 0.06 * (tier - 3)), 0, Math.PI * 2); ctx.fill();
+      }
+      if (tier >= 7) { // apotheosis: a radiant corona halo
+        ctx.globalAlpha = 0.18 + 0.12 * Math.sin(game.t * 2.5);
+        ctx.fillStyle = '#ffe9b0';
+        ctx.beginPath(); ctx.arc(x, y, s * 1.7, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       if (e.deployed) {
         ctx.strokeStyle = 'rgba(255,217,125,' + (0.5 + 0.3 * Math.sin(game.t * 4)) + ')';
         ctx.beginPath(); ctx.arc(x, y, s + 10, 0, Math.PI * 2); ctx.stroke();

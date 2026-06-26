@@ -484,10 +484,15 @@ function fireAbility(fac, e, wx, wy) {
     return true;
   }
   e.abilityCd = ab.cd;
-  game.strikes.push({ x: wx, y: wy, t: ab.delay, dmg: ab.dmg, splash: ab.splash, fac, attackerId: e.id });
+  // ground-strike abilities scale with the Ark's ascension tier (arkStatMul is 1 for
+  // every non-Ark caster, so the Worldbreaker's Gustav Strike is unaffected): damage
+  // grows with the full tier multiplier, the blast radius grows more gently.
+  const mul = arkStatMul(e);
+  const dmg = ab.dmg * mul, splash = ab.splash * (0.6 + 0.4 * mul);
+  game.strikes.push({ x: wx, y: wy, t: ab.delay, dmg, splash, fac, attackerId: e.id });
   // a long-lived warning marker (forwarded to guests as cosmetic fx) telegraphs the
   // hit. sx/sy carry the gun's muzzle so the renderer can fly a huge shell in.
-  addFx({ kind: 'strikewarn', x: wx, y: wy, sx: e.x, sy: e.y, r: ab.splash, ttl: ab.delay, max: ab.delay, color: facColor(fac) });
+  addFx({ kind: 'strikewarn', x: wx, y: wy, sx: e.x, sy: e.y, r: splash, ttl: ab.delay, max: ab.delay, color: facColor(fac) });
   // muzzle flash + a streak from the gun toward the impact point
   addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#ffd9a0' });
   localMsg(fac, ab.name + ' away!');

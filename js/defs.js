@@ -12,6 +12,8 @@
    ============================================================ */
 
 // ---------------- constants ----------------
+// Displayed in the main menu. Keep in sync with "version" in package.json on each release.
+const APP_VERSION = '1.0.20';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -54,7 +56,7 @@ const facDark  = f => (FACTIONS[f] || NEUTRAL).dark;
 const HINTS = {
   vanguard: 'A full Earth war machine. Workers harvest crystal automatically — but the nodes are FINITE, so once your starter patch runs dry you MUST push Workers out to claim fresh nodes across the map. SUPPLY DEPOTS are forward drop-offs (and raise your cap) so far nodes are worth mining; a Depot beside a WELLSPRING harnesses it for a flood of extra crystal. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
   myriad: 'Your creep IS your economy — every covered tile feeds you biomass, but a home creep-blob MAXES OUT fast. To grow you must creep OUTWARD and blanket WELLSPRINGS — each font you cover pours out far more biomass than any tile. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. Right-click with the Hive selected to set the swarm rally. The swarm heals on creep.',
-  exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. If the Ark dies, all is lost.',
+  exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. Every warrior is priceless — shields regenerate, so strike and fall back. ASCEND the Ark through eight tiers (each pricier than the last) — and pour a fortune into the final tiers to forge it into a roaming SUPERWEAPON that surpasses the Worldbreaker, armed with the map-scorching SOLAR LANCE that grows stronger with every tier. If the Ark dies, all is lost.',
   choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence, so SCALING means fighting across the map. Your home Soul Conduits only trickle (and soon max out); crawl the lattice OUT to plant a Conduit beside a WELLSPRING for a real surge of Essence. Near your lattice spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice. Guard the Ossuary.',
   syndicate: 'Gold breeds gold: your treasury earns compound interest — but the interest CAP is set by the TERRITORY you hold. A bank in a corner stalls; every Obelisk you capture and Wellspring you harness (park a Watchpost beside one) lifts the cap and lets the fortune compound (Countinghouses & Bullion Vaults raise it a little). Mercenaries arrive INSTANTLY for a price — the Haven hires the core four; a MERCENARY GUILD hires specialists (fast Gun Hands, aerial Dragoons, mending Sawbones, armoured Ironhides, siege Demolishers). Every kill pays a bounty, a fallen merc refunds part of its hire price (SEVERANCE), Watchposts air-drop across the map, and the Haven can DROP a free squad of Enforcers anywhere. Hoard or hire — and guard the Haven.',
   warden: 'Slow, armoured, unstoppable, and SELF-SUFFICIENT: alone among the powers you needn’t march out for the map — your standing buildings ARE your economy, the more you raise the more Stone you mint (Forges add Iron). A walled, secretive brotherhood: wall up, turret up, and grind forward with heavy troops and siege. (You cannot tap Wellsprings — you don’t need to.) Hold the Keep.',
@@ -114,7 +116,13 @@ const DEFS = {
   ravager:     { fac:'myriad', kind:'unit', name:'Ravager', hp:170, size:11, speed:84, cost:200, time:13, dmg:20, range:150, cd:1.2, aggro:195, shot:'glob', splash:24 },
 
   // ----- SOLARI EXODUS -----
-  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true, produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis','sovereign'] },
+  ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true, dmg:12, range:175, cd:1.0, aggro:195, shot:'beam', dropoff:true, researchLab:true,
+              produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis','sovereign'],
+              // the Ark's signature active: a telegraphed orbital lance whose damage AND
+              // blast SCALE with the Ark's ascension tier — modest early, apocalyptic once
+              // fully ascended (out-damaging the Worldbreaker's Gustav Strike).
+              ability:{ key:'solar', name:'Solar Lance', range:2600, cd:46, delay:1.8, dmg:175, splash:120,
+                        desc:'Focus the Ark’s reactors into a lance of solar fire at any point in great range — its power GROWS with the Ark’s ascension. A telegraphed beam scorches a wide blast after a short delay.' } },
   collector:{ fac:'exodus', kind:'unit', name:'Collector', hp:70, shield:30, size:8, speed:84, cost:60, time:6, aggro:0, harvester:true },
   seeker:   { fac:'exodus', kind:'unit', name:'Seeker', hp:65, shield:45, size:8, speed:112, cost:120, time:9, dmg:10, range:55, cd:0.6, aggro:205, shot:'melee', blink:true },
   lancer:   { fac:'exodus', kind:'unit', name:'Lancer', hp:70, shield:55, size:9, speed:60, cost:220, time:14, dmg:30, range:235, cd:2.1, aggro:250, shot:'beam' },
@@ -399,7 +407,7 @@ const META = {
   hunter:    { desc: 'Free fast melee striker that runs units down.' },
   broodmother:{ desc: 'Elite splashing bruiser bred from the Hive.', req: 'hunterden' },
   // SOLARI EXODUS
-  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. Deploy on a crystal node to siphon.' },
+  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. Deploy on a crystal node to siphon. ASCEND it up eight tiers: each costs more but adds huge HP, shields, firepower and reach, and at the top tiers it becomes a roaming superweapon (surpassing the Worldbreaker) with a devastating Solar Lance. Lose it and all is lost.' },
   collector: { desc: 'Harvester that mines crystal and hauls it back to the Ark. Build more to scale your economy.' },
   seeker:    { desc: 'Cheap shielded skirmisher that blinks onto its target.' },
   lancer:    { desc: 'Long-range beam unit; fragile but deals heavy damage.' },
@@ -691,20 +699,32 @@ function recalcMul(p) {
     if (r.cap) p.capBonus += r.cap;
   }
 }
-// ---- Solari Exodus: the Ark upgrade ladder ----
-// Buying an upgrade raises the Ark's tier (stored on the player), which scales
-// its size, HP, shields and firepower — and the model is redrawn larger and more
-// imposing at each step. Tier 0 mirrors the base `ark` definition.
+// ---- Solari Exodus: the Ark ascension ladder ----
+// Buying an upgrade raises the Ark's tier (stored on the player), which scales its
+// size, HP, shields and firepower (statMul drives damage, range AND the Solar Lance
+// ability) — and the model is redrawn larger and more imposing at each step. Tier 0
+// mirrors the base `ark` definition. The final tiers turn the Ark into a roaming
+// SUPERWEAPON whose stats and Solar Lance surpass even the Warden's Worldbreaker —
+// but the cost climbs viciously (the last leap alone outprices the Worldbreaker),
+// so a fully-ascended Ark is a long, hard-won, win-the-game investment.
 const ARK_TIERS = [
-  { size: 38, hp: 2300, shield: 900,  statMul: 1.0 },
-  { size: 48, hp: 3400, shield: 1400, statMul: 1.3 },
-  { size: 60, hp: 4900, shield: 2100, statMul: 1.65 },
-  { size: 74, hp: 6800, shield: 3000, statMul: 2.05 },
+  { size: 38,  hp: 2300,  shield: 900,   statMul: 1.0 },
+  { size: 48,  hp: 3400,  shield: 1400,  statMul: 1.3 },
+  { size: 60,  hp: 4900,  shield: 2100,  statMul: 1.65 },
+  { size: 74,  hp: 6800,  shield: 3000,  statMul: 2.05 },
+  { size: 88,  hp: 9500,  shield: 4200,  statMul: 2.6 },   // Empyrean — eclipses the Worldbreaker's HP
+  { size: 104, hp: 13000, shield: 5800,  statMul: 3.3 },   // Sunforged
+  { size: 122, hp: 18000, shield: 8000,  statMul: 4.2 },   // Dawnbringer
+  { size: 144, hp: 25000, shield: 11000, statMul: 5.2 },   // Solar Apotheosis — a walking sun
 ];
 const ARK_UPGRADES = [
-  { name: 'Reinforced Ark', cost: 600,  desc: 'Forge-plate the hull and over-charge the reactors: far more HP, shields, firepower and reach. The Ark visibly grows.' },
-  { name: 'Radiant Ark',    cost: 1500, desc: 'Bind the pilgrimage’s light into the chassis: another leap in durability and power, and the Ark looms larger.' },
-  { name: 'Ascendant Ark',  cost: 3200, desc: 'The Ark ascends into a walking cathedral-fortress — colossal, radiant and devastating.' },
+  { name: 'Reinforced Ark', cost: 600,   desc: 'Forge-plate the hull and over-charge the reactors: far more HP, shields, firepower and reach. The Ark visibly grows.' },
+  { name: 'Radiant Ark',    cost: 1500,  desc: 'Bind the pilgrimage’s light into the chassis: another leap in durability and power, and the Ark looms larger.' },
+  { name: 'Ascendant Ark',  cost: 3200,  desc: 'The Ark ascends into a walking cathedral-fortress — colossal, radiant and devastating.' },
+  { name: 'Empyrean Ark',   cost: 5500,  desc: 'Open the empyrean conduits: the hull swells past any fortress in the war and the Solar Lance burns hotter.' },
+  { name: 'Sunforged Ark',  cost: 8500,  desc: 'Reforge the chassis in captured starfire — staggering durability and a Lance that levels armies.' },
+  { name: 'Dawnbringer Ark',cost: 13000, desc: 'The Ark becomes a herald of the dawn: titanic HP and shields, and reach and firepower few can answer.' },
+  { name: 'Solar Apotheosis',cost: 20000, desc: 'APOTHEOSIS — the Ark ascends into a walking sun. Its hull, weapons and Solar Lance surpass every other engine of war, the Worldbreaker included. The single most expensive ascension in the game; the price of godhood.' },
 ];
 function arkTierData(fac) { const p = game.players[fac]; return ARK_TIERS[Math.min((p && p.arkTier) || 0, ARK_TIERS.length - 1)]; }
 function baseHp(e)      { return e.type === 'ark' ? arkTierData(e.fac).hp : e.def.hp; }

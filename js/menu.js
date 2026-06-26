@@ -155,6 +155,7 @@ $('setSfxVol').addEventListener('input', e => {
 });
 
 // boot: cards live in the single-player holder; start on the home screen
+$('version').textContent = 'v' + APP_VERSION;
 mountCards('cardsHolderSP');
 showScreen('home');
 applyMusicVol(); // arm the soundtrack at the saved volume (starts on first gesture)
