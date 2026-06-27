@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.25';
+const APP_VERSION = '1.0.26';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -104,7 +104,7 @@ const DEFS = {
   // ----- MYRIAD SWARM -----
   hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11,
                  produces:['broodmother','ravager'],
-                 grows:['tumor','spawnpit','spittermound','hunterden','spine','infestpit','corruptden','miasma','evochamber','broodnexus'],
+                 grows:['tumor','spawnpit','spittermound','hunterden','spine','infestpit','corruptden','miasma','radar_myr','evochamber','broodnexus'],
                  spawns:'drone', spawnEvery:7,
                  // the swarm's active: erupt a corrupting spore-bloom that heavily corrupts
                  // (and rots) every enemy in a wide radius — corrupted foes that die burst
@@ -138,7 +138,7 @@ const DEFS = {
   // ring of point-defence guns (`aux`), both of which scale hard with its ascension —
   // by the top tiers it is a devastating walking fortress (see ARK_TIERS / auxGunsOf).
   ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true,
-              dmg:16, range:185, cd:1.0, aggro:205, shot:'beam', splash:32, dropoff:true, researchLab:true,
+              dmg:16, range:185, cd:1.0, aggro:205, shot:'beam', splash:32, dropoff:true, researchLab:true, radarR:1300,
               aux:{ dmg:6, range:165, cd:0.4, shot:'bullet', guns:4 },
               produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis','sovereign'],
               // the Ark's signature active: a telegraphed orbital lance whose damage AND
@@ -158,7 +158,7 @@ const DEFS = {
   //   lattice but lifesteal. NEW — REANIMATION: a share of every unit that falls anywhere
   //   rises again as a free Husk under the Choir; the Ossuary's DIRGE reaps a whole field) -----
   ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'],
-               grows:['conduit','reliquary','spire','oracle','sepulchre','necropolis','dreadspire','charnel'],
+               grows:['conduit','reliquary','spire','oracle','sepulchre','necropolis','dreadspire','radar_choir','charnel'],
                // the Choir's active: a death-nova at range — withers every enemy caught
                // (the slain then reanimate) and channels grave-cold into nearby spirits, mending them.
                ability:{ key:'dirge', name:'Dirge of the Damned', range:2400, cd:42, radius:215, dmg:70, heal:0.45,
@@ -190,7 +190,7 @@ const DEFS = {
   // Bullion Vault fattens the treasury; the Gun Bastion anchors a hold.
   haven:         { fac:'syndicate', kind:'building', name:'The Haven', hp:1700, size:40, core:true, dmg:10, range:185, cd:0.8, aggro:205, shot:'bullet',
                    produces:['enforcer','arbalest','juggernaut','marauder'],
-                   grows:['watchpost','gunbastion','countinghouse','vault','guild','blackmarket','exchange'],
+                   grows:['watchpost','gunbastion','countinghouse','vault','guild','blackmarket','radar_syn','exchange'],
                    ability:{ key:'reinforce', name:'Reinforcement Drop', range:4200, cd:42, delay:0, spawn:'enforcer', count:3,
                              desc:'Air-drop a squad of three Enforcers anywhere on the map (not into enemy territory). ~40s reload.' } },
   watchpost:     { fac:'syndicate', kind:'building', name:'Watchpost', hp:380, size:13, cost:140, time:6, dmg:8, range:175, cd:0.7, aggro:195, shot:'bullet', forward:true },
@@ -220,7 +220,7 @@ const DEFS = {
   // all from the Keep — select a War College to place its halls, a War Foundry to
   // place siege works, a Grand Arsenal to raise the doomsday engines. The chain ends
   // at the Bulwark and, beyond even that, the world-ending Worldbreaker siege gun.
-  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g','pikeman'], grows:['rampart','bastion','quarry','forge','powdermill','cauldron','foundry_w','college'] },
+  keep:      { fac:'warden', kind:'building', name:'Bastion Keep', hp:2400, size:42, core:true, dmg:11, range:190, cd:0.9, aggro:210, shot:'bullet', produces:['sentinel','warden_g','pikeman'], grows:['rampart','bastion','quarry','forge','powdermill','cauldron','radar_war','foundry_w','college'] },
   // -- Tier 1: Stone only --
   rampart:   { fac:'warden', kind:'building', name:'Rampart', hp:1100, size:15, cost:70, time:6 },
   bastion:   { fac:'warden', kind:'building', name:'Bastion', hp:640, size:15, cost:150, time:10, dmg:12, range:200, cd:0.7, aggro:210, shot:'bullet' },
@@ -265,7 +265,7 @@ const DEFS = {
   //   ALSO pays Plunder, so the inferno funds the war. The Pyre's FIRESTORM razes a field) -----
   pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:10, range:175, cd:0.65, aggro:205, shot:'bullet',
                produces:['raider','slinger','firebrand','warbeast','firewagon'],
-               grows:['warcamp','totem','cinderpit','bonfire','warlodge','emberforge','greatpyre'],
+               grows:['warcamp','totem','cinderpit','bonfire','radar_ember','warlodge','emberforge','greatpyre'],
                // the nomads' active: a roaring firestorm at range that ignites and burst-burns
                // every enemy caught — and burning foes keep paying Plunder as they cook.
                ability:{ key:'firestorm', name:'Firestorm', range:2400, cd:38, radius:205, dmg:55, burnDur:7,
@@ -299,7 +299,7 @@ const DEFS = {
   // Build menu is split across buildings so no card overflows (see ui.js cap):
   // Heartwood = whole army + core economy; Grove = defences + Heartwood Sapling;
   // Arboretum = the three Grafts, the Erdtree and the apex Heart Grove.
-  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient','bramblehorn','sporecaller'], grows:['bloom','petalspire','mulchbed','grove','arboretum'], spawns:'sapling', spawnEvery:8 },
+  heart:     { fac:'verdant', kind:'building', name:'Heartwood', hp:2100, size:44, core:true, produces:['thornling','treant','ancient','bramblehorn','sporecaller'], grows:['bloom','petalspire','mulchbed','grove','radar_verd','arboretum'], spawns:'sapling', spawnEvery:8 },
   bloom:     { fac:'verdant', kind:'building', name:'Bloom', hp:300, size:18, cost:90, time:14 },
   petalspire:{ fac:'verdant', kind:'building', name:'Pollen Spire', hp:300, size:16, cost:110, time:12, ironPerSec:0.9 },
   mulchbed:  { fac:'verdant', kind:'building', name:'Mulch Bed', hp:360, size:19, cost:120, time:12, powderPerSec:0.7 },
@@ -333,7 +333,7 @@ const DEFS = {
   sporecaller:{ fac:'verdant', kind:'unit', name:'Spore Caller', hp:320, size:14, speed:42, cost:300, cost2:50, time:18, dmg:38, range:255, cd:2.3, aggro:275, shot:'glob', splash:50 },
 
   // ----- STORMFORGE DYNASTY (escalating industry: income ramps with game time) -----
-  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','galvan','voltaic','gladius'], grows:['dynamo','pylon','tesla','foundry_s','stormlab','arcfoundry'] },
+  reactor:   { fac:'stormforge', kind:'building', name:'Storm Reactor', hp:2000, size:42, core:true, dmg:13, range:185, cd:1.0, aggro:205, shot:'beam', produces:['arclight','galvan','voltaic','gladius'], grows:['dynamo','pylon','tesla','radar_storm','foundry_s','stormlab','arcfoundry'] },
   dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
   pylon:     { fac:'stormforge', kind:'building', name:'Charge Pylon', hp:460, size:16, cost:170, time:12, aura:155, shieldHeal:24, heal:3 },
   tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:18, range:200, cd:1.1, aggro:210, shot:'beam' },
@@ -351,7 +351,7 @@ const DEFS = {
   //   field of foes and enrages the swarm) -----
   altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob',
                produces:['thrall','flayer','zealot','behemoth','cultist'],
-               grows:['shrine','spike','bloodtower','fleshvats','sanctum','grandaltar'],
+               grows:['shrine','spike','bloodtower','fleshvats','radar_pact','sanctum','grandaltar'],
                // the Pact's active: a blood-rite at range that ruptures every enemy caught
                // (a burst of damage) and sends every nearby Pact unit into a killing frenzy.
                ability:{ key:'rite', name:'Crimson Rite', range:2300, cd:40, radius:200, dmg:60, frenzyDur:6,
@@ -429,6 +429,24 @@ const DEFS = {
   bloodavatar:{ fac:'pact', kind:'unit', name:'Blood Avatar', hp:1600, size:22, speed:52, cost:600, time:32, apex:true,
                dmg:48, range:26, cd:1.4, aggro:190, shot:'melee', splash:55, aura:150, heal:6 },
 
+  // ===== RADAR / SENSORS =====
+  // Every faction can raise a cheap sensor building that DETECTS enemy movement at long
+  // range (`radarR`) — but only as imprecise "contacts" (fuzzy, cell-quantised blips), never
+  // the clear line-of-sight your units and buildings give. Early warning, not a clear
+  // picture: you learn that something hostile is out there, roughly where, but not what or
+  // exactly how many. (The base-less Solari Exodus has no buildings, so its radar is built
+  // into the Ark — see the `ark` def.) Stats are identical across factions; only the name
+  // and look differ. No weapon: a sensor, not a turret.
+  radar_van:   { fac:'vanguard',  kind:'building', name:'Radar Station',  hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_myr:   { fac:'myriad',    kind:'building', name:'Sensory Pod',    hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_choir: { fac:'choir',     kind:'building', name:'Augury Spire',   hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_syn:   { fac:'syndicate', kind:'building', name:'Listening Post', hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_war:   { fac:'warden',    kind:'building', name:'Signal Tower',   hp:420, size:14, cost:130, time:11, radarR:1100 },
+  radar_ember: { fac:'ember',     kind:'building', name:'Watchfire',      hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_verd:  { fac:'verdant',   kind:'building', name:'Pollen Sensor',  hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_storm: { fac:'stormforge',kind:'building', name:'Sensor Array',   hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_pact:  { fac:'pact',      kind:'building', name:'Scrying Pool',   hp:360, size:14, cost:130, time:11, radarR:1100 },
+
   // ----- NEUTRAL (capture / fight) -----
   // Obelisk: indestructible capture point — hold ground nearby to claim its income.
   obelisk:       { fac:'neutral', kind:'building', name:'Obelisk', hp:1, size:22, noTarget:true, captureR:140, captureTime:6 },
@@ -489,7 +507,7 @@ const META = {
   defiler:   { desc: 'Heavy bile-beast: long-range corrosive splash that both sieges and deeply CORRUPTS clumped foes. Your turtle-breaker.', req: 'corruptden' },
   mawflyer:  { desc: 'Fast flying acid-spitter — the swarm’s air. Raids, chases flyers and corrupts what it bites.', req: 'corruptden' },
   // SOLARI EXODUS
-  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. A heavy gunship from tier 1: a splashing main beam PLUS a ring of point-defence guns. Deploy on a crystal node to siphon, or park it (or Collectors) beside a Wellspring to harness it. ASCEND it up eight tiers: each costs more but adds huge HP, shields, more guns, bigger splash and reach — at the top tiers a roaming superweapon (surpassing the Worldbreaker) with a devastating Solar Lance. Lose it and all is lost.' },
+  ark:       { desc: 'Your mobile core — fortress, factory and treasury in one. A heavy gunship from tier 1: a splashing main beam PLUS a ring of point-defence guns. Deploy on a crystal node to siphon, or park it (or Collectors) beside a Wellspring to harness it. ASCEND it up eight tiers: each costs more but adds huge HP, shields, more guns, bigger splash and reach — at the top tiers a roaming superweapon (surpassing the Worldbreaker) with a devastating Solar Lance. It also carries the pilgrimage’s long-range RADAR, sensing distant enemies as imprecise contacts (the base-less Exodus’ answer to a sensor building). Lose it and all is lost.' },
   collector: { desc: 'Harvester that mines crystal and hauls it back to the Ark. Build more to scale your economy.' },
   seeker:    { desc: 'Cheap shielded skirmisher that blinks onto its target.' },
   lancer:    { desc: 'Long-range beam unit; fragile but deals heavy damage.' },
@@ -654,6 +672,18 @@ const META = {
   tempest:   { desc: 'Storm titan — long arc-beam + four arc turrets behind heavy shields. Needs Siege Ordnance.', reqResearch:'stormforge_ord' },
   grandaltar:{ desc: 'Pact apex altar. Summons the Blood Avatar + free Thralls. Needs a Blood Sanctum and Bone Shrine.', reqs:['sanctum','shrine'] },
   bloodavatar:{ desc: 'Avatar of slaughter — splashing strikes, a horde-healing aura, an endless Thrall tide. Needs Siege Ordnance.', reqResearch:'pact_ord' },
+  // RADAR / SENSORS — long-range early warning, but only imprecise "contacts" (fuzzy
+  // blips), never the clear picture line-of-sight gives. Build them forward to watch the
+  // approaches; a contact tells you something hostile is out there, roughly where — not what.
+  radar_van:   { desc: 'Radar Station — sweeps a wide area far beyond your line of sight and paints approaching enemies as imprecise contacts (fuzzy blips) on the map & minimap. Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_myr:   { desc: 'Sensory Pod — a living organ that feels enemy movement far across the map, surfacing it as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_choir: { desc: 'Augury Spire — the dead whisper of the living moving far off, marking them as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_syn:   { desc: 'Listening Post — a paid network of eyes and ears that reports enemy movement far afield as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_war:   { desc: 'Signal Tower — a far-seeing watchtower that flags enemy movement well beyond the walls as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units. (The one map intel the walled Covenant can muster.)' },
+  radar_ember: { desc: 'Watchfire — scouts read the smoke from afar, marking enemy movement as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_verd:  { desc: 'Pollen Sensor — a drifting pollen-haze that senses enemies moving far across the map as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_storm: { desc: 'Sensor Array — sweeps a wide field and paints distant enemy movement as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_pact:  { desc: 'Scrying Pool — blood-divination glimpses enemies moving far off, marking them as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
   // NEUTRAL
   obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },

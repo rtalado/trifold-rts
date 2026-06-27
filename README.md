@@ -69,7 +69,15 @@ in random spots (League-of-Legends style) so the map feels alive instead of a
 single lane of stuff aimed at your foe. The more players, the more the map fills
 out. A **fog of war** hides the map beyond what your own units and buildings can
 see — dark where you've never been, dimmed where you've been but aren't looking now —
-so scouting matters. Objectives worth fighting over:
+so scouting matters. For early warning, **every faction can raise a cheap RADAR / sensor
+building** (the Vanguard Radar Station, Myriad Sensory Pod, Choir Augury Spire, Syndicate
+Listening Post, Warden Signal Tower, Ember Watchfire, Verdant Pollen Sensor, Stormforge
+Sensor Array, Pact Scrying Pool — and the base-less **Solari Exodus** carries one inside
+the Ark). A radar detects enemy movement *far* beyond line of sight, but only as
+**imprecise contacts** — fuzzy, pulsing red blips on the map and minimap, quantised to
+coarse cells so a clump reads as a vague cluster. It tells you *something hostile is out
+there, roughly where* — never **what** or exactly how many, and you can't target it; only
+true line of sight gives the real picture. Objectives worth fighting over:
 
 - **Crystal nodes** — the mineable resource (Vanguard Workers, Exodus Collectors
   and the deployed Ark feed on them). Dozens are scattered across the map.

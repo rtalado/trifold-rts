@@ -15,6 +15,7 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!game) return;
   computeVision();
+  computeRadar();
   ctx.save();
   ctx.scale(game.cam.z, game.cam.z);
   ctx.translate(-game.cam.x, -game.cam.y);
@@ -179,6 +180,25 @@ function draw() {
     }
   }
 
+  // radar contacts: imprecise enemy blips, drawn OVER the fog so they read through it — a
+  // pulsing hollow ring (sized loosely by how much is clustered there) with a faint core.
+  // Deliberately vague: a hostile contact, not an identified unit.
+  if (radarContacts.length) {
+    const pulse = 0.5 + 0.5 * Math.sin(game.t * 3);
+    ctx.lineWidth = 1.6;
+    for (const c of radarContacts) {
+      if (!inView(c.x, c.y, 48)) continue;
+      const rr = 11 + Math.min(c.n, 6) * 2.5;
+      ctx.globalAlpha = 0.22 + 0.28 * pulse;
+      ctx.strokeStyle = '#ff5a5a';
+      ctx.beginPath(); ctx.arc(c.x, c.y, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.5 + 0.3 * pulse;
+      ctx.fillStyle = '#ff7a6a';
+      ctx.beginPath(); ctx.arc(c.x, c.y, 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   // placement ghost
   if (game.placing) {
     const d = DEFS[game.placing];
@@ -311,6 +331,39 @@ function tileExplored(x, y) {
 // is an entity currently shown? Own things always; enemy/neutral only while in sight.
 function visibleEnt(e) { return e.fac === game.localFac || tileVis(e.x, e.y); }
 
+// ---------------- radar (imprecise long-range detection) ----------------
+// A radar/sensor building (or the Solari Ark) detects enemy movement far beyond true
+// line of sight — but only as imprecise CONTACTS, never a clear picture: every detected
+// enemy is quantised to a coarse cell, so positions blur and a clump reads as a vague
+// cluster, not exact units. It never lifts the fog or reveals the real entity (you can't
+// click/target a contact) — pure early warning. Recomputed alongside vision (throttled).
+const RADAR_CELL = TILE * 3;       // detection resolution: contacts snap to ~3-tile cells
+let radarContacts = [];            // [{x,y,n}] approximate enemy clusters this sweep
+function computeRadar() {
+  radarContacts = [];
+  if (!game || !game.localFac || fogRevealed()) return;
+  const fac = game.localFac;
+  const sources = [];
+  for (const e of game.entities)
+    if (!e.dead && e.fac === fac && e.def.radarR && !e.constructing && !e.growing) sources.push(e);
+  if (!sources.length) return;
+  const cells = new Map();
+  for (const e of game.entities) {
+    if (e.dead || e.fac === fac || e.fac === 'neutral' || e.def.noTarget) continue; // enemies only
+    if (tileVis(e.x, e.y)) continue;                                                // already seen clearly
+    let inRange = false;
+    for (const s of sources) {
+      const dx = e.x - s.x, dy = e.y - s.y, rr = s.def.radarR;
+      if (dx * dx + dy * dy <= rr * rr) { inRange = true; break; }
+    }
+    if (!inRange) continue;
+    const gx = Math.round(e.x / RADAR_CELL), gy = Math.round(e.y / RADAR_CELL);
+    const key = gx + ',' + gy, c = cells.get(key);
+    if (c) c.n++; else cells.set(key, { x: gx * RADAR_CELL, y: gy * RADAR_CELL, n: 1 });
+  }
+  radarContacts = [...cells.values()];
+}
+
 // the local player's researched range multiplier (range is shown/used with upgrades)
 function rangeMulOf(fac) { const p = game.players[fac]; return (p && p.rangeMul) || 1; }
 
@@ -381,6 +434,22 @@ function drawEnt(e) {
     ctx.beginPath(); ctx.arc(x, y, s + 5, 0, Math.PI * 2); ctx.stroke();
   }
   if (e.constructing || e.growing) ctx.globalAlpha = 0.6;
+
+  // radar/sensor: a slow rotating sweep marks any building (or the Ark) that's a sensor,
+  // and its full detection radius is shown as a faint dashed ring while it's selected, so
+  // you can see (and place) its coverage. Own sensors only.
+  if (e.def.radarR && e.fac === game.localFac && !e.constructing && !e.growing) {
+    const sweep = game.t * 1.1 + e.id;
+    ctx.save();
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(sweep) * (s + 7), y + Math.sin(sweep) * (s + 7)); ctx.stroke();
+    if (sel) {
+      ctx.globalAlpha = 0.28; ctx.setLineDash([9, 9]); ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(x, y, e.def.radarR, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
 
   // Myriad corruption: a sickly, pulsing violet aura marks an infected enemy
   if (e.corruptUntil > game.t) {
@@ -1300,6 +1369,12 @@ function drawMinimap() {
         }
       }
     }
+  }
+  // radar contacts — imprecise enemy blips, drawn OVER the fog veil so they show through it
+  if (radarContacts.length) {
+    const pulse = 0.4 + 0.6 * Math.abs(Math.sin(game.t * 3));
+    mmCtx.fillStyle = 'rgba(255,90,90,' + (0.45 + 0.4 * pulse).toFixed(2) + ')';
+    for (const c of radarContacts) mmCtx.fillRect(c.x * sx - 1.6, c.y * sy - 1.6, 3.2, 3.2);
   }
   // camera
   mmCtx.strokeStyle = '#cdd6e4'; mmCtx.lineWidth = 1;
