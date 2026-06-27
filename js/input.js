@@ -8,7 +8,7 @@ canvas.addEventListener('mousemove', ev => {
 });
 
 canvas.addEventListener('mousedown', ev => {
-  if (!game || game.over) return;
+  if (!game || game.over || game.netPaused) return;   // world frozen while a player reconnects
   if (ev.button === 0) {
     if (game.targeting) {        // designating an active-ability strike point
       fireAbilityAt(mouse.wx, mouse.wy);
@@ -178,6 +178,9 @@ addEventListener('keydown', ev => {
     openPauseMenu(); return;
   }
   if (pauseOpen) return; // swallow game hotkeys while the pause menu is up
+  // while the match is network-paused (a player reconnecting), allow only camera & selection
+  // — no production, building, tech or abilities, so the frozen world stays untouched
+  if (game.netPaused && ![' ', 'f', 'w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return;
   if (k === 't') { ev.preventDefault(); toggleTechTree(); return; }
   if (k === ' ') {
     ev.preventDefault();

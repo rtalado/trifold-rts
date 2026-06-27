@@ -159,8 +159,24 @@ PeerJS broker.
 
 The host's browser is authoritative: it runs the simulation, streams compact
 snapshots to every guest (~10×/s), and runs the lobby/room logic in-browser; guests
-send their commands back. If the host disconnects the match ends; if a guest leaves,
-the others play on. After a match everyone returns to the lobby for a rematch.
+send their commands back. After a match everyone returns to the lobby for a rematch.
+
+**Finishing every match — pause & rejoin.** If a guest drops or its connection silently
+freezes, the **host pauses the whole match** and holds it on a *MATCH PAUSED* screen
+until that player reconnects — nobody's world advances while someone is missing. The
+dropped player auto-reconnects (reclaiming their original slot and faction) and the
+match resumes the instant they're back. So that a match can never get *stuck*, there's a
+fallback on the fallback: a grace countdown after which the host auto-continues without
+the missing player (or the host can press **CONTINUE WITHOUT THEM**), and the absent
+player can still rejoin the running game later. Detection uses a guest→host heartbeat, so
+even a silent channel stall (which fires no disconnect event) trips the pause. (If the
+*host* leaves, the match ends — the host is the authority.)
+
+**Security.** The host treats every guest message as untrusted input: commands are
+validated against the sender's own faction, coordinates are bounds-checked and clamped,
+selection sizes are capped, unknown types are rejected, a per-guest **rate limiter**
+throttles command floods, and a reconnecting peer can't hijack a slot whose owner is
+still live. The 5-letter room code only admits players while the lobby is open.
 
 The only outside contact is the PeerJS broker (matchmaking) and a public STUN lookup
 (so each browser learns its own address); all game traffic flows directly between

@@ -74,6 +74,7 @@ $('mpJoinGo').addEventListener('click', () => {
 $('mpJoinCode').addEventListener('keydown', ev => { if (ev.key === 'Enter') $('mpJoinGo').click(); });
 $('mpStart').addEventListener('click', hostStart);
 $('endRejoin').addEventListener('click', tryRejoin);
+$('netpauseContinue').addEventListener('click', hostForceResume);
 
 // copy the room code to the clipboard so the host can paste it to a friend
 function fallbackCopy(text) {

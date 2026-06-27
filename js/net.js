@@ -67,7 +67,11 @@ function applySnap(m) {
     const p = game.players[f], a = m.players[f];
     if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3];
       p.research = new Set(a[4] || []); p.iron = a[5] || 0; p.ironInc = a[6] || 0;
-      p.arkTier = a[7] || 0; p.powder = a[8] || 0; p.powderInc = a[9] || 0; recalcMul(p); }
+      p.arkTier = a[7] || 0; p.powder = a[8] || 0; p.powderInc = a[9] || 0;
+      // research only ever grows, so its upgrade multipliers only need recomputing when the
+      // set actually changes — skip the per-snapshot recalc (×players ×10/s) otherwise.
+      const rc = (a[4] || []).length;
+      if (p._rc !== rc) { p._rc = rc; recalcMul(p); } }
   }
   game.nodes = m.nodes.map(a => ({ id: a[0], x: a[1], y: a[2], amount: a[3], max: a[4], r: 20 }));
   unrle(m.creep, game.creep);
@@ -153,6 +157,20 @@ let rejoinInfo = null;       // { code, slot, fac } for the guest's live match
 let lastSnapAt = 0;          // performance.now() of the last snapshot a guest applied
 let rejoining = false;       // true while a reconnect attempt is in flight
 
+// ---- match-pause failsafe (so a dropped/frozen player can always rejoin & finish) ----
+// When a human guest drops or silently freezes, the host PAUSES the whole simulation and
+// holds it until they reconnect — nobody advances while a player is missing. Guests send a
+// heartbeat so the host can spot a silent freeze (no close/error event ever fires). A grace
+// timer is the escape hatch: if a player never comes back, the host auto-continues without
+// them after PAUSE_GRACE_MS (or the host clicks CONTINUE WITHOUT THEM) so the rest can finish.
+const GUEST_PING_MS   = 2000;    // guest → host heartbeat cadence
+const MEMBER_STALL_MS = 6000;    // no word from a guest for this long ⇒ presumed frozen ⇒ pause
+const PAUSE_GRACE_MS  = 120000;  // auto-continue without a missing player after this long
+const CMD_RATE_LIMIT  = 120;     // max gameplay commands a guest may have executed per second
+const MAX_ORDER_IDS   = 800;     // cap a single order's selection size (anti-flood / anti-OOM)
+let netPauseTarget = 0;          // client: performance.now() deadline for the pause countdown
+const numOk = v => typeof v === 'number' && isFinite(v);
+
 function netConnected() { return net.connected; }
 
 // host: is THIS guest's data channel backed up? Each snapshot is the full state
@@ -205,7 +223,13 @@ function hostBroadcast(o, exceptPid) {
   }
 }
 function hostHandleMsg(pid, m) {
+  if (!m || typeof m.t !== 'string') return;     // ignore malformed traffic
   const mem = room && room.members.find(x => x.pid === pid);
+  if (mem) mem.lastSeen = performance.now();      // any word from a peer proves it's alive
+  if (m.t === 'ping') {                           // heartbeat only — liveness, nothing else
+    if (mem && room && room.paused) hostCheckPresence(); // a stalled peer just spoke up → maybe resume
+    return;
+  }
   if (m.t === 'join') {
     if (!mem) return;
     if (room.started) { hostSendTo(pid, { t: 'err', msg: 'That match has already started.' }); return; }
@@ -221,8 +245,13 @@ function hostHandleMsg(pid, m) {
     if (!room.started || !room.roster) { hostSendTo(pid, { t: 'err', msg: 'There is no match to rejoin.' }); return; }
     const r = room.roster.find(x => !x.ai && x.slot === m.slot && x.fac === m.fac);
     if (!r) { hostSendTo(pid, { t: 'err', msg: 'Could not match you to that game.' }); return; }
+    // anti-hijack: refuse to hand a slot to a stranger while its real owner is still live
+    const live = room.members.find(x => x.slot === m.slot && x.pid !== pid
+      && x.conn && x.conn.open && (performance.now() - (x.lastSeen || 0) < MEMBER_STALL_MS));
+    if (live) { hostSendTo(pid, { t: 'err', msg: 'That slot is still active in the match.' }); return; }
     mem.slot = m.slot; mem.fac = m.fac;
     hostSendTo(pid, { t: 'start', roster: room.roster, seed: room.seed });
+    hostCheckPresence(); // the missing player is back — lift the pause if everyone's present
   } else if (!mem || mem.slot < 0) {
     // ignore anything before this peer has joined a slot
   } else if (m.t === 'pick') {
@@ -232,9 +261,58 @@ function hostHandleMsg(pid, m) {
     room.started = true;
     room.roster = m.roster; room.seed = m.seed; // kept so dropped guests can rejoin
     hostBroadcast({ t: 'start', roster: m.roster, seed: m.seed }); // to everyone, host included
+  } else if (m.t === 'cmd' && pid !== 'HOST') {
+    // rate-limit a guest's gameplay commands so a buggy or hostile peer can't flood the
+    // authoritative host (the host's own loopback traffic is trusted and never throttled).
+    const now = performance.now();
+    if (now - (mem.cmdWin || 0) > 1000) { mem.cmdWin = now; mem.cmdCount = 0; }
+    if (++mem.cmdCount > CMD_RATE_LIMIT) return;
+    hostBroadcast(m, pid);
   } else {
     hostBroadcast(m, pid); // relay gameplay (snap / cmd / msg / end) to the others
   }
+}
+
+// ---- host: presence tracking + the match-pause failsafe ----
+function rosterName(r) { return 'Player ' + (r.slot + 1) + ' (' + (FACTIONS[r.fac] ? FACTIONS[r.fac].name : '?') + ')'; }
+// which human roster slots are NOT currently held by a live connection (dropped or frozen).
+function hostMissing() {
+  if (!room || !room.roster) return [];
+  const now = performance.now();
+  const hostMem = room.members.find(x => x.host);
+  const hostSlot = hostMem ? hostMem.slot : 0;
+  const out = [];
+  for (const r of room.roster) {
+    if (r.ai || r.slot === hostSlot) continue;   // AI and the host itself are always present
+    const m = room.members.find(x => x.slot === r.slot && !x.host);
+    const present = m && m.conn && m.conn.open && (now - (m.lastSeen || 0) < MEMBER_STALL_MS);
+    if (!present) out.push(r);
+  }
+  return out;
+}
+// pause the world the instant a human goes missing; resume the instant they're all back;
+// and, as a last resort, auto-continue without anyone who never returns (grace timeout).
+function hostCheckPresence() {
+  if (!net.host || !room || !room.started) return;
+  const now = performance.now();
+  const missing = hostMissing();
+  if (missing.length && !room.paused) {
+    room.paused = true; room.pauseDeadline = now + PAUSE_GRACE_MS;
+    hostBroadcast({ t: 'netpause', names: missing.map(rosterName), grace: Math.round(PAUSE_GRACE_MS / 1000) });
+  } else if (room.paused && !missing.length) {
+    room.paused = false; room.pauseDeadline = 0;
+    hostBroadcast({ t: 'netresume' });
+  } else if (room.paused && now > room.pauseDeadline) {
+    room.paused = false; room.pauseDeadline = 0;
+    hostBroadcast({ t: 'netresume', dropped: missing.map(rosterName) });
+  }
+}
+// host-only: the player at the keyboard gives up waiting and forces the match onward.
+function hostForceResume() {
+  if (!net.host || !room || !room.paused) return;
+  const dropped = hostMissing().map(rosterName);
+  room.paused = false; room.pauseDeadline = 0;
+  hostBroadcast({ t: 'netresume', dropped });
 }
 
 function hostGame() {
@@ -258,7 +336,8 @@ function hostGame() {
     const drop = () => {
       if (!room) return;
       room.members = room.members.filter(x => x.pid !== pid);
-      hostBroadcast(lobbyMsg());
+      if (room.started) hostCheckPresence();   // a player just dropped mid-match → pause & wait
+      else hostBroadcast(lobbyMsg());
     };
     conn.on('close', drop);
     conn.on('error', drop);
@@ -335,18 +414,33 @@ function handleNet(m) {
     case 'msg':  if (!m.to || m.to === game.localFac) floatMsg(m.text); break;
     case 'end':  if (game && game.mode !== 'host' && !game.over) endGame(m.winner); break;
     case 'hostleft': onDisconnect(); break;
+    // the host paused the world because a human dropped/froze — hold here until they're back
+    case 'netpause': if (game && !game.over) { game.netPaused = true; netPauseTarget = performance.now() + (m.grace || 120) * 1000; showNetPause(m.names || []); } break;
+    case 'netresume': if (game) { game.netPaused = false; hideNetPause(); if (m.dropped && m.dropped.length) floatMsg('Continuing without ' + m.dropped.join(', ')); } break;
   }
 }
 
-// host: execute a guest command, validated against that guest's own faction
+// host: execute a guest command, validated against that guest's own faction. Every field
+// is sanity-checked before use — the host is authoritative, so a guest's message is
+// untrusted input: bad coordinates, oversized selections, unknown types and commands for a
+// faction the sender doesn't own are all rejected rather than acted on.
 function handleCmd(m) {
+  if (game.netPaused) return;                     // the world is frozen — ignore gameplay input
+  if (!m || typeof m.fac !== 'string') return;
   const fac = m.fac;
-  if (!fac || !game.players[fac] || game.eliminated.has(fac)) return;
+  if (!game.players[fac] || game.eliminated.has(fac)) return;
+  if (m.fac && game.players[fac].isAI) return;    // commands may only drive a human faction
+  // coordinates (when present) must be finite, and are clamped into the world bounds
+  if (m.x != null && !numOk(m.x)) return;
+  if (m.y != null && !numOk(m.y)) return;
+  const cx = m.x != null ? clamp(m.x, 0, WORLD_W) : 0;
+  const cy = m.y != null ? clamp(m.y, 0, WORLD_H) : 0;
   if (m.kind === 'order') {
-    const sel = (m.ids || []).map(byId).filter(e => e && e.fac === fac);
-    if (sel.length) applyOrder(fac, sel, m.x, m.y, m.mode || (m.amove ? 'amove' : 'move'));
+    if (!Array.isArray(m.ids) || m.ids.length > MAX_ORDER_IDS) return;
+    const sel = m.ids.map(byId).filter(e => e && e.fac === fac);
+    if (sel.length) applyOrder(fac, sel, cx, cy, m.mode || (m.amove ? 'amove' : 'move'));
   } else if (m.kind === 'place') {
-    if (DEFS[m.type] && DEFS[m.type].fac === fac) placeBuilding(fac, m.type, m.x, m.y);
+    if (DEFS[m.type] && DEFS[m.type].fac === fac) placeBuilding(fac, m.type, cx, cy);
   } else if (m.kind === 'enq') {
     const e = byId(m.id);
     if (e && e.fac === fac && e.def.produces && e.def.produces.includes(m.type)) enqueue(e, m.type);
@@ -366,7 +460,7 @@ function handleCmd(m) {
     sellBuilding(fac, m.id);
   } else if (m.kind === 'ability') {
     const e = byId(m.id);
-    if (e && e.fac === fac && e.def.ability) fireAbility(fac, e, m.x, m.y);
+    if (e && e.fac === fac && e.def.ability) fireAbility(fac, e, cx, cy);
   }
 }
 
@@ -405,6 +499,48 @@ setInterval(() => {
   if (!game || game.mode !== 'guest' || game.over) return;
   if (lastSnapAt && performance.now() - lastSnapAt > SNAP_TIMEOUT) onDisconnect();
 }, 1000);
+
+// Guest heartbeat: a steady ping UP to the host so it can tell a live-but-idle player
+// apart from one whose channel has silently stalled (no close/error event ever fires).
+setInterval(() => {
+  if (net.connected && !net.host && net.hostConn && net.hostConn.open
+      && game && game.mode === 'guest' && !game.over) {
+    try { net.hostConn.send({ t: 'ping' }); } catch (e) {}
+  }
+}, GUEST_PING_MS);
+
+// Host watchdog: re-evaluate who's present every second so a SILENT guest freeze (which
+// fires no close/error) still trips the pause once its heartbeat goes quiet, and the grace
+// timeout can auto-continue a match whose missing player never comes back.
+setInterval(() => { if (net.host && room && room.started) hostCheckPresence(); }, 1000);
+
+// ---- the "match paused, waiting to reconnect" overlay (shown to everyone still in) ----
+function showNetPause(names) {
+  const el = document.getElementById('netpause'); if (!el) return;
+  document.getElementById('netpauseWho').textContent = names.length
+    ? 'Waiting for ' + names.join(', ') + ' to reconnect…'
+    : 'Waiting for a player to reconnect…';
+  document.getElementById('netpauseContinue').style.display = net.host ? 'inline-block' : 'none';
+  el.style.display = 'flex';
+  updateNetPauseCountdown();
+}
+function hideNetPause() { const el = document.getElementById('netpause'); if (el) el.style.display = 'none'; }
+function updateNetPauseCountdown() {
+  const el = document.getElementById('netpauseCount'); if (!el) return;
+  const left = Math.max(0, Math.ceil((netPauseTarget - performance.now()) / 1000));
+  el.textContent = net.host
+    ? 'Auto-continuing in ' + left + 's if they don’t return — or continue now.'
+    : 'The match is held until they return (up to ' + left + 's).';
+}
+setInterval(() => { if (game && game.netPaused) updateNetPauseCountdown(); }, 500);
+
+// host-only network heartbeat while paused: keep streaming the (frozen) world so a
+// reconnecting guest still resyncs to the live state, without advancing the simulation.
+function hostPausedTick(dt) {
+  if (!game || game.mode !== 'host') return;
+  game.netTimer -= dt;
+  if (game.netTimer <= 0) { game.netTimer = 0.1; netSend(buildSnap()); game.netFx.length = 0; }
+}
 
 // ---------------- lobby ----------------
 function showLobby() {

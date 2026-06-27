@@ -249,6 +249,20 @@
     border-radius:6px; font-size:15px; letter-spacing:2px; cursor:pointer; }
   #endscreen button:hover { background:#1f3f6b; }
 
+  /* ---- network-pause overlay (a player dropped/froze; match held for rejoin) ---- */
+  #netpause { display:none; position:fixed; inset:0; z-index:65; background:#05070ae8;
+    flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(2px); }
+  .netpausebox { display:flex; flex-direction:column; align-items:center; text-align:center; }
+  #netpause h1 { font-size:38px; letter-spacing:9px; font-weight:200; margin:14px 0 12px 0; color:#e0b84d; }
+  #netpause .who { color:#cdd9ee; font-size:16px; margin-bottom:8px; }
+  #netpause .count { color:#8fa3c4; font-size:13px; margin-bottom:26px; }
+  #netpause button { padding:12px 36px; background:#3a2c12; color:#f0d48a; border:1px solid #6a531f;
+    border-radius:6px; font-size:14px; letter-spacing:2px; cursor:pointer; }
+  #netpause button:hover { background:#4a3818; }
+  .spinner { width:40px; height:40px; border:3px solid #2a3340; border-top-color:#e0b84d;
+    border-radius:50%; animation:spin 0.9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
   /* ---- tech tree overlay ---- */
   #techtree { display:none; position:fixed; inset:0; z-index:50; background:rgba(6,9,14,0.82);
     align-items:center; justify-content:center; }

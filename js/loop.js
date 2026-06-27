@@ -4,7 +4,13 @@ function frame(ts) {
   const dt = Math.min(0.05, (ts - lastFrame) / 1000 || 0.016);
   lastFrame = ts;
   if (game && !game.over) {
-    if (!game.paused) {
+    if (game.netPaused) {
+      // a human dropped/froze — the whole match holds here until they reconnect (or the
+      // host's grace timer / CONTINUE lifts it). The host keeps streaming the frozen world
+      // so a reconnecting guest can resync; nobody advances the simulation.
+      panCamera(dt);
+      hostPausedTick(dt);
+    } else if (!game.paused) {
       panCamera(dt);
       if (game.mode === 'guest') guestTick(dt); else update(dt);
     }
@@ -35,6 +41,7 @@ setInterval(() => {
   let dt = Math.min((now - lastBgTick) / 1000, 2);
   lastBgTick = now;
   if (!game || game.over || game.paused) return;
+  if (game.netPaused) { hostPausedTick(Math.min(dt, 0.1)); return; } // frozen: only keep the link warm
   while (dt > 0) {
     const step = Math.min(dt, 0.05);
     if (game.mode === 'guest') guestTick(step); else update(step);

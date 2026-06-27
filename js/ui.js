@@ -214,7 +214,7 @@ function refreshCard() {
         + '<span class="k">' + (hot[i] || '') + '</span></span>'
       + '<span class="cmd-name">' + c.label + '</span>'
       + (sub ? '<span class="c' + (c.poor ? ' poor' : '') + '">' + sub + '</span>' : '');
-    b.onclick = () => { if (c.enabled) c.onClick(); };
+    b.onclick = () => { if (game && game.netPaused) return; if (c.enabled) c.onClick(); };
     b.addEventListener('mouseenter', () => showTip(c));
     b.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
     card.appendChild(b);
@@ -258,6 +258,7 @@ function ensureSelStructure(si) {
   const m = document.createElement('div'); m.className = 'si-main';
   const q = document.createElement('div'); q.className = 'si-queues';
   q.addEventListener('click', ev => {
+    if (game && game.netPaused) return;
     const chip = ev.target.closest('.qchip'); if (!chip) return;
     cancelQueueItem(+chip.dataset.eid, +chip.dataset.idx, chip.dataset.r === '1');
   });
@@ -476,7 +477,7 @@ function buildTechTree() {
     const el = document.createElement('div'); el.className = 'technode';
     const pp = techPos(rid); el.style.left = pp.x + 'px'; el.style.top = pp.y + 'px';
     el.innerHTML = '<div class="tn-name">' + r.name + '</div><div class="tn-desc">' + r.desc + '</div><div class="tn-cost"></div>';
-    el.onclick = () => researchNode(rid);
+    el.onclick = () => { if (game && game.netPaused) return; researchNode(rid); };
     techNodeEls[rid] = el;
     nodes.appendChild(el);
   }
