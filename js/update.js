@@ -22,6 +22,7 @@ function update(dt) {
   tickProjectiles(dt);
   tickStrikes(dt);
   tickCorruption(dt);
+  tickBurning(dt);
 
   // income display (per-second window)
   for (const fac in game.players) {

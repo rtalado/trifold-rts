@@ -313,6 +313,12 @@ function applyDamage(t, dmg, attacker) {
   if (attacker && attacker.fac === 'myriad' && t.fac !== 'myriad' && t.fac !== 'neutral') {
     t.corruptUntil = Math.max(t.corruptUntil || 0, game.t + (attacker.def.corrupt || CORRUPT.baseDur));
   }
+  // ember burning: every Ember attack ignites the foe it strikes (units & buildings,
+  // never neutrals); fire units/towers (`burn`) set a longer blaze. A burning foe takes
+  // a fire DoT that itself keeps paying Plunder (see tickBurning).
+  if (attacker && attacker.fac === 'ember' && t.fac !== 'ember' && t.fac !== 'neutral') {
+    t.burnUntil = Math.max(t.burnUntil || 0, game.t + (attacker.def.burn || BURN.baseDur));
+  }
   // retaliate if idle
   if (attacker && !attacker.dead && t.def.dmg > 0 && !t.def.harvester && t.def.kind === 'unit'
       && !t.def.stationary && t.order.type === 'idle') {
@@ -353,6 +359,24 @@ function applyDamage(t, dmg, attacker) {
     if (choirP) {
       const g = (ECON.choirDeathFlat + t.hpMax * ECON.choirDeathPct) * choirP.incomeMul;
       choirP.res += g; choirP.gainAccum += g;
+      // REANIMATION: a share of every non-Choir unit that falls rises as a free Husk
+      // under the Choir (bounded by the free-Husk cap), so death swells the deathless host.
+      if (t.def.kind === 'unit' && t.fac !== 'choir' && t.fac !== 'neutral'
+          && Math.random() < REANIM.chance && countFree('choir') < freeCapOf('choir')) {
+        const a = Math.random() * Math.PI * 2;
+        spawnEnt('husk', 'choir', t.x + Math.cos(a) * 10, t.y + Math.sin(a) * 10);
+        addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.4, ttl: 0.4, max: 0.4, color: '#3fe0c8' });
+      }
+    }
+    // OBSIDIAN PACT blood frenzy: a Pact unit's death whips every nearby Pact unit into
+    // a frenzy — striking harder and faster for a few seconds (read live in dmgOf/cdOf).
+    if (t.fac === 'pact' && t.def.kind === 'unit' && game.players.pact) {
+      const r2 = PACT.frenzyR * PACT.frenzyR;
+      for (const o of game.entities) {
+        if (o.dead || o === t || o.fac !== 'pact' || o.def.kind !== 'unit') continue;
+        const dx = o.x - t.x, dy = o.y - t.y;
+        if (dx * dx + dy * dy < r2) o.frenzyUntil = game.t + PACT.dur;
+      }
     }
     // syndicate collects a bounty on its kills
     if (attacker && attacker.fac === 'syndicate' && t.fac !== 'syndicate' && game.players.syndicate) {
@@ -518,6 +542,53 @@ function fireAbility(fac, e, wx, wy) {
     localMsg(fac, ab.name + ' — corruption blooms!');
     return true;
   }
+  // dirge-type ability (the Choir's Dirge of the Damned): a death-nova that burst-damages
+  // every enemy in a radius (the slain reanimate via applyDamage) and mends every Choir
+  // spirit caught (`heal` is a fraction of max HP restored).
+  if (ab.key === 'dirge') {
+    e.abilityCd = ab.cd;
+    for (const o of game.entities) {
+      if (o.dead || o.def.noTarget) continue;
+      if (Math.hypot(o.x - wx, o.y - wy) > ab.radius + o.size) continue;
+      if (o.fac === fac) { if (o.hpMax > 0) o.hp = Math.min(o.hpMax, o.hp + o.hpMax * ab.heal); }
+      else if (o.fac !== 'neutral') applyDamage(o, ab.dmg, e);
+    }
+    addFx({ kind: 'shock', x: wx, y: wy, r: ab.radius, ttl: 0.7, max: 0.7, color: '#3fe0c8' });
+    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#9ff0e2' });
+    localMsg(fac, ab.name + ' — the dead answer!');
+    return true;
+  }
+  // firestorm-type ability (the Ember Nomads' Firestorm): ignite and burst-burn every
+  // enemy in a radius (burning foes keep paying Plunder as they cook — see tickBurning).
+  if (ab.key === 'firestorm') {
+    e.abilityCd = ab.cd;
+    for (const o of game.entities) {
+      if (o.dead || o.fac === fac || o.fac === 'neutral' || o.def.noTarget) continue;
+      if (Math.hypot(o.x - wx, o.y - wy) > ab.radius + o.size) continue;
+      o.burnUntil = Math.max(o.burnUntil || 0, game.t + ab.burnDur);
+      applyDamage(o, ab.dmg, e);
+    }
+    addFx({ kind: 'shock', x: wx, y: wy, r: ab.radius, ttl: 0.7, max: 0.7, color: '#ff8a2a' });
+    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#ffd27a' });
+    localMsg(fac, ab.name + ' — the world burns!');
+    return true;
+  }
+  // rite-type ability (the Obsidian Pact's Crimson Rite): rupture every enemy in a radius
+  // for a burst of damage, and whip every nearby Pact unit into a frenzy (dmgOf/cdOf).
+  if (ab.key === 'rite') {
+    e.abilityCd = ab.cd;
+    for (const o of game.entities) {
+      if (o.dead || o.def.noTarget) continue;
+      const within = Math.hypot(o.x - wx, o.y - wy) <= ab.radius + o.size;
+      if (!within) continue;
+      if (o.fac === fac) { if (o.def.kind === 'unit') o.frenzyUntil = game.t + ab.frenzyDur; }
+      else if (o.fac !== 'neutral') applyDamage(o, ab.dmg, e);
+    }
+    addFx({ kind: 'shock', x: wx, y: wy, r: ab.radius, ttl: 0.7, max: 0.7, color: '#c0303a' });
+    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#ff5a5a' });
+    localMsg(fac, ab.name + ' — the horde rages!');
+    return true;
+  }
   e.abilityCd = ab.cd;
   // ground-strike abilities scale with the Ark's ascension tier (arkStatMul is 1 for
   // every non-Ark caster, so the Worldbreaker's Gustav Strike is unaffected): damage
@@ -545,6 +616,24 @@ function tickCorruption(dt) {
     const e = es[i];
     if (e.dead || e.fac === 'myriad' || e.fac === 'neutral') continue;
     if (e.corruptUntil > game.t) applyDamage(e, CORRUPT.dps * dt, null);
+  }
+}
+
+// Ember burning: a burning enemy takes a fire DoT — and because Plunder is paid on the
+// damage the warband deals, the burn keeps paying out as the foe cooks. We damage with a
+// null attacker (so applyDamage doesn't double-credit) and bank the Plunder here.
+// Runs on the simulating side (SP/host). `n` is captured so deaths this frame are safe.
+function tickBurning(dt) {
+  const ep = game.players.ember;
+  const es = game.entities, n = es.length;
+  for (let i = 0; i < n; i++) {
+    const e = es[i];
+    if (e.dead || e.fac === 'ember' || e.fac === 'neutral') continue;
+    if (e.burnUntil > game.t) {
+      const dmg = BURN.dps * dt;
+      applyDamage(e, dmg, null);
+      if (ep) { const g = dmg * ECON.emberLootPerDmg * ep.incomeMul; ep.res += g; ep.gainAccum += g; }
+    }
   }
 }
 

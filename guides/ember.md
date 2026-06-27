@@ -7,7 +7,7 @@
 - **Resource:** Plunder (from damage dealt)
 - **Base unit cap:** 66
 - **Identity:** Relentless aggression. Standing still is economic suicide. Fast cheap raiders up
-  front; a heavy warband behind.
+  front; a heavy warband behind. **Everything you touch catches fire** — and fire pays.
 
 ---
 
@@ -26,7 +26,20 @@ spins while you're swinging.
 
 ---
 
-## 2. Units
+## 2. Burning — the fire keeps paying
+
+**Every Ember attack sets the target ablaze** — a burning DoT that keeps ticking after the hit
+lands. Crucially, **burn damage is damage dealt, so it keeps paying Plunder** as the enemy cooks:
+you get paid for fights even between your own swings. Fire units and towers (**Bonfire, Emberling,
+Cinder Drake, Magmaur**) set a **longer, fiercer** blaze.
+
+- **Stack the fire:** a horde of cheap burners lights everything and the DoT does the rest.
+- The War Pyre's **Firestorm** (active) razes a whole area — every enemy caught is **ignited and
+  burst-burned**, and keeps bleeding Plunder. ~38s reload. Drop it on the densest fight.
+
+---
+
+## 3. Units
 
 **From the War Pyre / War Camp (forward muster):**
 - **Raider** (45) — dirt-cheap, very fast melee. Your swarm and harasser.
@@ -34,29 +47,37 @@ spins while you're swinging.
 - **Firebrand** (150) — splashing molotov thrower (needs War Camp).
 - **War Beast** (280) — fast heavy charger that bowls through lines.
 - **Fire Wagon** (160) — fast splashing pitch-flinger (needs War Camp).
+- **Emberling** (free) — tiny, very fast fire-imp that **ignites on bite**; bred by the **Cinder Pit** (separate cap).
 
 **Ember Foundry (the heavy warband):**
 - **Cinderguard** (180) — 480-HP armoured brawler; a tanky wall so your raiders survive to plunder.
 - **Cinderbow** (110) — long-range fire-archer, heavy single-target.
 - **Cinder Catapult** (240) — siege; huge range + splash to break turtles/turrets.
 - **Flame Shaman** (130) — mending healing aura.
+- **Cinder Drake** (200) — fire-breathing **flyer** (your air); splashing fire-glob, ignites.
+- **Magmaur** (300) — fast molten brute; heavy splashing melee that deeply burns.
+
+**Buildings:** War Camp (120) · Blaze Totem (110, fire turret) · **Cinder Pit** (150, breeds free
+Emberlings) · **Bonfire** (140, splashing tower that ignites what it hits) · Ember Foundry (190) ·
+War Lodge (research lab).
 
 **Apex:** **Ash Titan** (600) from the **Great Pyre** — a fast inferno engine hosing splashing
 fire + four aux guns. Needs War Lodge + War Camp + Siege Ordnance. Very fast for a titan.
 
 ---
 
-## 3. Build order
+## 4. Build order
 1. Pyre → **Raiders** immediately; send them to harass enemy workers/expansions (this is income).
 2. **War Camp** forward to muster and unlock Firebrands/War Beasts/Fire Wagons.
-3. Keep attacking — never let the warband idle.
-4. **Ember Foundry** for the heavy line (Cinderguard wall + Cinderbow + Catapult + Shaman).
-5. **War Lodge** for tech. War Camps on Wellsprings for extra Plunder.
-6. Ash Titan late to headline a final push.
+3. **Cinder Pit** for a free Emberling tide — cheap bodies that light everything up.
+4. Keep attacking — never let the warband idle; the burn keeps the Plunder flowing.
+5. **Ember Foundry** for the heavy line (Cinderguard wall + Cinderbow + Catapult + Shaman + Drake + Magmaur).
+6. **War Lodge** for tech. War Camps on Wellsprings; **Bonfires** to anchor a burning kill-zone.
+7. **Firestorm** on the biggest clump; Ash Titan late to headline a final push.
 
 ---
 
-## 4. Tech priorities (War Lodge)
+## 5. Tech priorities (War Lodge)
 - **Offense → Weapons** — more damage is *literally* more income for you. Top priority.
 - **Mobility → Engines** — hit-and-run harder, catch fleeing enemies, dictate every fight.
 - **Siege Ordnance** for Catapult/Titan splash.
@@ -64,9 +85,10 @@ fire + four aux guns. Needs War Lodge + War Camp + Siege Ordnance. Very fast for
 
 ---
 
-## 5. Strengths, weaknesses, win conditions
-**Strengths:** brutal early aggression; self-funding through combat; fast units that pick fights
-on their terms; a strong heavy line once the Foundry is up.
+## 6. Strengths, weaknesses, win conditions
+**Strengths:** brutal early aggression; self-funding through combat **plus burn DoT that pays even
+between swings**; fast units that pick fights on their terms; a strong heavy line (now with air and
+a molten brute) once the Foundry is up.
 **Weaknesses:** **no fallback economy** — if your warband is wiped or contained, you're broke and
 can't rebuild; weak to turtles that deny you good trades (a fortress you can't profitably hit
 starves you); reliant on staying on the offensive.

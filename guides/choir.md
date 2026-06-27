@@ -6,7 +6,7 @@
 - **Core:** Ossuary (1900 HP) — raises spirits, anchors the lattice
 - **Resource:** Essence (from death, everywhere)
 - **Base unit cap:** 45
-- **Identity:** You scale by **fighting**, not by sitting at home. Total war feeds you.
+- **Identity:** You scale by **fighting**, not by sitting at home. Total war feeds you — and **raises the dead** to fight for you.
 
 ---
 
@@ -36,34 +36,56 @@ centre of a bloody map snowballs.
 
 ---
 
-## 3. Units
+## 3. Reanimation — death raises an army
+
+Death doesn't just pay you Essence; it **raises the dead for you**. **A share (~⅓) of every
+non-Choir unit that falls anywhere on the map rises again as a free Husk under your command** —
+bounded by a separate **free-Husk cap** (shown on the HUD), so it never spirals out of control but
+*always* tops up. A big, bloody fight literally rebuilds your front line out of the enemy's dead.
+
+- **Husks** are free chaff — like Wraiths, they fade off the lattice but **heal by dealing damage**.
+- Breed yet more from a **Sepulchre** (a free-Husk factory, like the Bone Shrine / Spawn Pit).
+- The Ossuary's **Dirge of the Damned** (active) tolls a death-knell at range: every enemy caught
+  takes a burst of grave-cold (the slain reanimate), and **every Choir spirit in the blast is mended**
+  — a battlefield heal **and** a reanimation engine in one. ~42s reload.
+
+---
+
+## 4. Units
 
 | Unit | Cost | Role |
 |---|---|---|
+| **Husk** | free | Risen corpse — weak melee chaff that fades off the lattice but lifesteals. Rises from the dead; bred by the **Sepulchre**. |
 | **Wraith** | 50 | Cheap fast melee spirit. Bulk body; lifesteals on hit. |
 | **Banshee** | 130 | Ranged piercing beam. |
 | **Revenant** | 300 | Elite splashing melee horror (from the **Reliquary**). |
-| **Lich** | 180 | Ranged caster with a piercing death-beam — fragile, high damage. |
+| **Lich** | 180 | Ranged caster with a piercing death-beam — fragile, high damage (from the **Necropolis**). |
+| **Harbinger** | 170 | Long-range withering beam, heavy single-target damage (Necropolis). |
+| **Gravewight** | 280 | Heavy undead bruiser — splashing melee wall (Necropolis). |
+| **Nightgaunt** | 150 | Fast flying wraith — the Choir's air; lashes from afar (Necropolis). |
 
 **Buildings:** Soul Conduit (60, lattice + trickle) · Reliquary (180, builds Revenants) ·
-Mourning Spire (130, beam tower) · Bone Oracle (research lab).
+**Sepulchre** (150, breeds free Husks) · **Necropolis** (230, raises the elite undead — needs the
+Bone Oracle) · Mourning Spire (130, beam tower) · **Dread Spire** (150, slows every enemy in a wide
+radius — no attack, pure terror) · Bone Oracle (research lab).
 
 **Apex:** **Soul Devourer** (640) from the **Charnel Throne** — an avatar of death whose huge
 beam **lifesteals everything it burns**. Needs Reliquary + Bone Oracle + Siege Ordnance.
 
 ---
 
-## 4. Build order
+## 5. Build order
 1. Ossuary → a few **Wraiths**; scout and look for a fight.
 2. **Conduit** to start the trickle and extend the lattice toward your first expansion.
-3. Crawl Conduits toward a **Wellspring** and plant one beside it.
-4. **Reliquary** for Revenants; **Bone Oracle** for tech.
-5. Get into fights early and often — the death tithe is most of your income.
-6. Spires on chokes; Devourer late.
+3. **Sepulchre** early — free Husks make every fight cheaper and feed reanimation.
+4. Crawl Conduits toward a **Wellspring** and plant one beside it.
+5. **Reliquary** for Revenants; **Bone Oracle** → **Necropolis** for the elite undead.
+6. Get into fights early and often — the death tithe **and** reanimation are most of your power.
+7. **Dread Spires** on chokes, **Dirge** on the densest fight, Devourer late.
 
 ---
 
-## 5. Tech priorities (Bone Oracle)
+## 6. Tech priorities (Bone Oracle)
 - **Offense → Weapons** — more damage = more lifesteal = more sustain, a double win.
 - **Defense → Plating** to keep your fragile casters alive long enough to leech.
 - **Economy → Logistics** compounds the death tithe.
@@ -71,9 +93,10 @@ beam **lifesteals everything it burns**. Needs Reliquary + Bone Oracle + Siege O
 
 ---
 
-## 6. Strengths, weaknesses, win conditions
-**Strengths:** self-funding through combat (even neutral/3rd-party deaths feed you); lifesteal
-sustain; thrives in the chaos of a free-for-all where bodies are always dropping.
+## 7. Strengths, weaknesses, win conditions
+**Strengths:** self-funding through combat (even neutral/3rd-party deaths feed you); **reanimation
+rebuilds your front line out of the enemy's dead**; lifesteal sustain; thrives in the chaos of a
+free-for-all where bodies are always dropping.
 **Weaknesses:** spirits decay away from the lattice; building is lattice-locked; a passive Choir
 starves; fragile casters need protection.
 **Win conditions:** be the engine of every fight on the map — the bloodier it gets, the faster you

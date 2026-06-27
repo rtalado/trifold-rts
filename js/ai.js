@@ -225,12 +225,28 @@ function aiTick(fac) {
         aiPlaceAt(fac, 'conduit', src.x + Math.cos(ang) * 200, src.y + Math.sin(ang) * 200);
       }
     }
+    const have = t => ents(e => e.fac === fac && e.type === t).length;
     if (reliqs.length < aiGrow(1, 1, 3) && p.res >= 180) aiPlace(fac, 'reliquary', p.base);
+    else if (have('sepulchre') < aiGrow(2, 1, 6) && p.res >= 150 && game.t > 70) aiPlace(fac, 'sepulchre', p.base);
+    else if (have('necropolis') < aiGrow(1, 1, 3) && p.res >= 230 && game.t > 130 && techMet(fac, 'necropolis')) aiPlace(fac, 'necropolis', p.base);
     else if (spires.length < aiGrow(2, 1, 6) && p.res >= 130 && game.t > 130) aiPlace(fac, 'spire', p.base);
+    else if (have('dreadspire') < aiGrow(1, 1, 4) && p.res >= 150 && game.t > 160) aiPlace(fac, 'dreadspire', p.base);
     if (oss && !oss.queue.length && p.res >= 50)
       enqueue(oss, (Math.random() < 0.35 && p.res >= 130) ? 'banshee' : 'wraith');
-    for (const b of reliqs) if (!b.growing && !b.queue.length && p.res >= 180)
-      enqueue(b, (p.res >= 300 && Math.random() < 0.6) ? 'revenant' : 'lich');
+    for (const b of reliqs) if (!b.growing && !b.queue.length && p.res >= 300)
+      enqueue(b, 'revenant');
+    // raise the elite undead from the Necropolis
+    for (const np of ents(e => e.fac === fac && e.type === 'necropolis' && !e.growing)) {
+      if (np.queue.length || p.res < 150) continue;
+      const r = Math.random();
+      enqueue(np, r < 0.3 ? 'gravewight' : r < 0.6 ? 'harbinger' : r < 0.85 ? 'nightgaunt' : 'lich');
+    }
+    // toll the Dirge: on the attackers when defending, else on the enemy core
+    if (oss && oss.def.ability && (oss.abilityCd || 0) <= 0) {
+      const tgt = (defendPt && dist(oss, defendPt) <= oss.def.ability.range) ? defendPt
+        : (enemyCore && dist(oss, enemyCore) <= oss.def.ability.range) ? enemyCore : null;
+      if (tgt) fireAbility(fac, oss, tgt.x, tgt.y);
+    }
   }
 
   else if (fac === 'syndicate') { // bank gold for interest, spend the overflow on mercs
@@ -316,9 +332,12 @@ function aiTick(fac) {
     const camps = ents(e => e.fac === fac && e.type === 'warcamp').length;
     const totems = ents(e => e.fac === fac && e.type === 'totem').length;
     const forges = ents(e => e.fac === fac && e.type === 'emberforge').length;
+    const haveE = t => ents(e => e.fac === fac && e.type === t).length;
     if (camps < aiGrow(2, 1, 5) && p.res >= 120) aiPlace(fac, 'warcamp', p.base);
     else if (forges < 1 && p.res >= 190 && game.t > 80) aiPlace(fac, 'emberforge', p.base);
+    else if (haveE('cinderpit') < aiGrow(2, 1, 6) && p.res >= 150 && game.t > 70) aiPlace(fac, 'cinderpit', p.base);
     else if (totems < aiGrow(2, 1, 6) && p.res >= 110 && game.t > 60) aiPlace(fac, 'totem', p.base);
+    else if (haveE('bonfire') < aiGrow(1, 1, 4) && p.res >= 140 && game.t > 130) aiPlace(fac, 'bonfire', p.base);
     const prod = e => {
       if (!e || e.queue.length || e.growing) return;
       const beasts = ents(o => o.fac === fac && o.type === 'warbeast').length;
@@ -337,14 +356,24 @@ function aiTick(fac) {
       const catas = ents(o => o.fac === fac && o.type === 'catapult').length;
       const shamans = ents(o => o.fac === fac && o.type === 'shaman').length;
       const bows = ents(o => o.fac === fac && o.type === 'cinderbow').length;
+      const drakes = ents(o => o.fac === fac && o.type === 'cinderdrake').length;
+      const maurs = ents(o => o.fac === fac && o.type === 'magmaur').length;
       if (guards < aiGrow(2, 1, 6) && p.res >= 180) enqueue(e, 'cinderguard');
+      else if (maurs < aiGrow(2, 1, 6) && p.res >= 300) enqueue(e, 'magmaur');
       else if (catas < aiGrow(1, 1, 4) && p.res >= 240) enqueue(e, 'catapult');
+      else if (drakes < aiGrow(2, 1, 6) && p.res >= 200) enqueue(e, 'cinderdrake');
       else if (shamans < aiGrow(1, 1, 3) && p.res >= 130) enqueue(e, 'shaman');
       else if (bows < aiGrow(4, 1, 10) && p.res >= 110) enqueue(e, 'cinderbow');
     };
     prod(pyre);
     for (const c of ents(e => e.fac === fac && e.type === 'warcamp' && !e.growing)) prod(c);
     for (const fb of ents(e => e.fac === fac && e.type === 'emberforge' && !e.growing)) prodForge(fb);
+    // call the Firestorm: on the attackers when defending, else on the enemy core
+    if (pyre && pyre.def.ability && (pyre.abilityCd || 0) <= 0) {
+      const tgt = (defendPt && dist(pyre, defendPt) <= pyre.def.ability.range) ? defendPt
+        : (enemyCore && dist(pyre, enemyCore) <= pyre.def.ability.range) ? enemyCore : null;
+      if (tgt) fireAbility(fac, pyre, tgt.x, tgt.y);
+    }
     // raiders are restless — keep pushing even below full wave size
     if (army.length >= 5 && game.t > 60) for (const u of army)
       if (u.order.type === 'idle') u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
@@ -407,18 +436,36 @@ function aiTick(fac) {
 
   else if (fac === 'pact') { // throw cheap bodies into the grinder, reap Blood, raise giants
     const altar = myCore;
-    const shrines = ents(e => e.fac === fac && e.type === 'shrine').length;
-    const spikes = ents(e => e.fac === fac && e.type === 'spike').length;
+    const have = t => ents(e => e.fac === fac && e.type === t).length;
+    const shrines = have('shrine');
     if (shrines < aiGrow(3, 1, 9) && p.res >= 120) aiPlace(fac, 'shrine', p.base);
-    else if (spikes < aiGrow(2, 1, 6) && p.res >= 110 && game.t > 80) aiPlace(fac, 'spike', p.base);
+    else if (have('fleshvats') < aiGrow(1, 1, 3) && p.res >= 200 && game.t > 120 && techMet(fac, 'fleshvats')) aiPlace(fac, 'fleshvats', p.base);
+    else if (have('spike') < aiGrow(2, 1, 6) && p.res >= 110 && game.t > 80) aiPlace(fac, 'spike', p.base);
+    else if (have('bloodtower') < aiGrow(1, 1, 4) && p.res >= 160 && game.t > 140) aiPlace(fac, 'bloodtower', p.base);
     if (altar && !altar.queue.length && p.res >= 30) {
-      const behes = ents(e => e.fac === fac && e.type === 'behemoth').length;
-      const zeals = ents(e => e.fac === fac && e.type === 'zealot').length;
-      const cults = ents(e => e.fac === fac && e.type === 'cultist').length;
+      const behes = have('behemoth');
+      const zeals = have('zealot');
+      const cults = have('cultist');
+      const flayers = have('flayer');
       if (behes < 3 && p.res >= 340 && game.t > 150 && techMet(fac, 'behemoth')) enqueue(altar, 'behemoth');
       else if (cults < zeals && p.res >= 70) enqueue(altar, 'cultist');
       else if (zeals < 6 && p.res >= 110 && techMet(fac, 'zealot')) enqueue(altar, 'zealot');
+      else if (flayers < aiGrow(4, 1, 10) && p.res >= 80) enqueue(altar, 'flayer');
       else if (p.res >= 30) enqueue(altar, 'thrall');
+    }
+    // raise the elite horrors from the Flesh Vats
+    for (const fv of ents(e => e.fac === fac && e.type === 'fleshvats' && !e.growing)) {
+      if (fv.queue.length || p.res < 130) continue;
+      const aboms = have('abomination'), priests = have('bloodpriest'), gargs = have('gargoyle');
+      if (aboms < aiGrow(2, 1, 6) && p.res >= 300) enqueue(fv, 'abomination');
+      else if (priests < aiGrow(1, 1, 3) && p.res >= 130) enqueue(fv, 'bloodpriest');
+      else if (gargs < aiGrow(2, 1, 6) && p.res >= 150) enqueue(fv, 'gargoyle');
+    }
+    // work the Crimson Rite: on the attackers when defending, else on the enemy core
+    if (altar && altar.def.ability && (altar.abilityCd || 0) <= 0) {
+      const tgt = (defendPt && dist(altar, defendPt) <= altar.def.ability.range) ? defendPt
+        : (enemyCore && dist(altar, enemyCore) <= altar.def.ability.range) ? enemyCore : null;
+      if (tgt) fireAbility(fac, altar, tgt.x, tgt.y);
     }
   }
 

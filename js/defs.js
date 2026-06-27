@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.23';
+const APP_VERSION = '1.0.24';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -57,13 +57,13 @@ const HINTS = {
   vanguard: 'A full Earth war machine. Workers harvest crystal automatically — but the nodes are FINITE, so once your starter patch runs dry you MUST push Workers out to claim fresh nodes across the map. SUPPLY DEPOTS are forward drop-offs (and raise your cap) so far nodes are worth mining; a Depot beside a WELLSPRING harnesses it for a flood of extra crystal. Select a Worker to BUILD (Barracks → Marines/Rocketeers/Snipers/Medics, Factory → Outriders/Tanks/Artillery, Airfield → Gunships/Bombers, Turrets & Pillboxes to hold the line). Combined arms beats everything — destroy the enemy core; protect your Headquarters.',
   myriad: 'Your creep IS your economy — every covered tile feeds you biomass, but a home creep-blob MAXES OUT fast. To grow you must creep OUTWARD and blanket WELLSPRINGS — each font you cover pours out far more biomass than any tile. Select the Hive to GROW: Tumors spread creep, Spawn Pits / Spitter Mounds / Hunter Dens breed units FREE, forever; Acid Spines defend. The swarm also CORRUPTS: every attack rots and weakens the foe (deals less damage, slows, decays), and a corrupted enemy that dies bursts free LARVA from its corpse. Breed Larva at an Infestation Pit, hire corrosive elites (Corruptor / Defiler / Mawflyer) from a Corruption Den, anchor Miasma Vents — and cast the Hive’s CORRUPTION BLOOM to infect a whole army at once. Right-click with the Hive selected to set the swarm rally. The swarm heals on creep.',
   exodus: 'You have no base and never will. Build Collectors from the Ark to mine crystal nodes and haul it back — that is how you scale. Move the Ark onto a node and DEPLOY to siphon energy fast too. SCALE BY RANGING THE MAP: park Collectors (or the Ark) beside a WELLSPRING to harness it for a big flow, and seize OBELISKS — the nomads earn extra from every one they hold. Every warrior is priceless — shields regenerate, so strike and fall back. ASCEND the Ark through eight tiers (each pricier than the last) — and pour a fortune into the final tiers to forge it into a roaming SUPERWEAPON that surpasses the Worldbreaker, armed with the map-scorching SOLAR LANCE that grows stronger with every tier. If the Ark dies, all is lost.',
-  choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence, so SCALING means fighting across the map. Your home Soul Conduits only trickle (and soon max out); crawl the lattice OUT to plant a Conduit beside a WELLSPRING for a real surge of Essence. Near your lattice spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice. Guard the Ossuary.',
+  choir: 'ALL death feeds the Choir — every unit that falls, yours or theirs, pays you Essence, so SCALING means fighting across the map. Your home Soul Conduits only trickle (and soon max out); crawl the lattice OUT to plant a Conduit beside a WELLSPRING for a real surge of Essence. Death also RAISES THE DEAD: a share of every unit that dies anywhere rises again as a free HUSK under your command — breed yet more from a SEPULCHRE. Raise a NECROPOLIS for the elite undead (Lich, Harbinger, Gravewight, Nightgaunt), anchor DREAD SPIRES that drag the living to a crawl, and toll the Ossuary’s DIRGE to wither a whole army and reap its dead. Near your lattice spirits are sustained; in the field they fade — but heal by dealing damage. Build only within the lattice. Guard the Ossuary.',
   syndicate: 'Gold breeds gold: your treasury earns compound interest — but the interest CAP is set by the TERRITORY you hold. A bank in a corner stalls; every Obelisk you capture and Wellspring you harness (park a Watchpost beside one) lifts the cap and lets the fortune compound (Countinghouses & Bullion Vaults raise it a little). Mercenaries arrive INSTANTLY for a price — the Haven hires the core four; a MERCENARY GUILD hires specialists (fast Gun Hands, aerial Dragoons, mending Sawbones, armoured Ironhides, siege Demolishers). Every kill pays a bounty, a fallen merc refunds part of its hire price (SEVERANCE), Watchposts air-drop across the map, and the Haven can DROP a free squad of Enforcers anywhere. Hoard or hire — and guard the Haven.',
   warden: 'Slow, armoured, unstoppable, and SELF-SUFFICIENT: alone among the powers you needn’t march out for the map — your standing buildings ARE your economy, the more you raise the more Stone you mint (Forges add Iron). A walled, secretive brotherhood: wall up, turret up, and grind forward with heavy troops and siege. (You cannot tap Wellsprings — you don’t need to.) Hold the Keep.',
-  ember: 'No mines, no farms — you fund the war by WAGING it: every point of damage your warband deals is paid back as Plunder, so keep attacking or starve. Fast, cheap raiders up front; raise an Ember Foundry for a tanky Cinderguard wall, long-range Cinderbows, Cinder Catapult siege and a mending Flame Shaman. Throw forward War Camps beside WELLSPRINGS to bleed extra Plunder from the map. Guard the War Pyre.',
+  ember: 'No mines, no farms — you fund the war by WAGING it: every point of damage your warband deals is paid back as Plunder, so keep attacking or starve. Every attack also IGNITES the foe — a burning DoT that keeps cooking them, and that burn damage ALSO pays Plunder, so the inferno funds itself. Fast, cheap raiders up front; breed free EMBERLINGS from a Cinder Pit, anchor BONFIRES that ignite what they splash, and raise an Ember Foundry for a tanky Cinderguard wall, long-range Cinderbows, Cinder Catapult siege, a mending Flame Shaman, the fire-breathing CINDER DRAKE (your air) and the Molten Brute MAGMAUR. Call the War Pyre’s FIRESTORM to raze a whole army. Throw forward War Camps beside WELLSPRINGS to bleed extra Plunder from the map. Guard the War Pyre.',
   verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. But a home garden CAPS OUT, and the scarce Pollen & Loam are choked. The answer is to spread: plant a Bloom on a WELLSPRING to root a thriving new ecosystem — it pours out bonus Sap, Pollen AND Loam, and grows a fertilising buff that makes every nearby plant & beast hit harder. So claim fertile ground all across the map. The Heartwood musters the whole army (Bramblehorn, Spore Caller need an Arboretum); Groves breed free Saplings; the Arboretum cultivates the Grafts, the Heart Grove and the INDESTRUCTIBLE Erdtree. Protect the Heartwood.',
   stormforge: 'An engine that accelerates — but no longer just by waiting. Your home Dynamos pay a FLAT rate and soon max out; the acceleration now lives on the MAP. Raise a Dynamo beside a WELLSPRING (a Storm Font) to harness it — and the longer you HOLD that font, the more Power it ramps out. So seize ground early and never let it go. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Defend the Reactor.',
-  pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning. Throw cheap Thralls into the grinder and raise Behemoths from their deaths. Raise Bone Shrines beside WELLSPRINGS to bleed extra Blood from the map. Reckless by design. Keep the Altar.',
+  pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning — and whips the horde around it into a BLOOD FRENZY (the survivors strike harder and faster), so your own dying makes the rest deadlier. Throw cheap Thralls and fast Flayers into the grinder and raise Behemoths from their deaths. Raise the FLESH VATS for the elite horrors — a horde-healing BLOOD PRIEST, the heavy ABOMINATION and the winged GARGOYLE — anchor HEMORRHAGE SPIRES, and work the Altar’s CRIMSON RITE to rupture a field of foes and enrage the swarm. Raise Bone Shrines beside WELLSPRINGS to bleed extra Blood from the map. Reckless by design. Keep the Altar.',
 };
 
 // verb shown on a faction's build buttons ('Build X' by default)
@@ -154,8 +154,15 @@ const DEFS = {
   templar:  { fac:'exodus', kind:'unit', name:'Templar', hp:80, shield:70, size:10, speed:65, cost:260, time:15, dmg:24, range:140, cd:2.4, aggro:200, shot:'shell', splash:55 },
   aegis:    { fac:'exodus', kind:'unit', name:'Aegis', hp:240, shield:180, size:14, speed:50, cost:300, time:16, dmg:26, range:60, cd:0.9, aggro:190, shot:'melee', splash:30 },
 
-  // ----- ASHEN CHOIR -----
-  ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'], grows:['conduit','reliquary','spire','oracle','charnel'] },
+  // ----- ASHEN CHOIR (death economy: Essence from every death; spirits decay off the
+  //   lattice but lifesteal. NEW — REANIMATION: a share of every unit that falls anywhere
+  //   rises again as a free Husk under the Choir; the Ossuary's DIRGE reaps a whole field) -----
+  ossuary:   { fac:'choir', kind:'building', name:'Ossuary', hp:1900, size:42, core:true, produces:['wraith','banshee'],
+               grows:['conduit','reliquary','spire','oracle','sepulchre','necropolis','dreadspire','charnel'],
+               // the Choir's active: a death-nova at range — withers every enemy caught
+               // (the slain then reanimate) and channels grave-cold into nearby spirits, mending them.
+               ability:{ key:'dirge', name:'Dirge of the Damned', range:2400, cd:42, radius:215, dmg:70, heal:0.45,
+                         desc:'Toll a death-knell at a point in great range: every enemy caught withers under a burst of grave-cold (the slain reanimate), and every Choir spirit in the radius is mended.' } },
   conduit:   { fac:'choir', kind:'building', name:'Soul Conduit', hp:160, size:11, cost:60, time:7 },
   reliquary: { fac:'choir', kind:'building', name:'Reliquary', hp:600, size:26, cost:180, time:16, produces:['revenant'] },
   spire:     { fac:'choir', kind:'building', name:'Mourning Spire', hp:450, size:14, cost:130, time:12, dmg:12, range:185, cd:1.0, aggro:205, shot:'beam' },
@@ -164,6 +171,16 @@ const DEFS = {
   revenant:  { fac:'choir', kind:'unit', name:'Revenant', hp:380, size:14, speed:58, cost:300, time:18, dmg:30, range:30, cd:1.6, aggro:190, shot:'melee', splash:40 },
   oracle:    { fac:'choir', kind:'building', name:'Bone Oracle', hp:480, size:22, cost:150, time:13, researchLab:true },
   lich:      { fac:'choir', kind:'unit', name:'Lich', hp:120, size:10, speed:64, cost:180, time:12, dmg:24, range:175, cd:1.6, aggro:210, shot:'beam' },
+  // -- the undead host: free Husks risen from the dead, a Sepulchre that breeds more, a
+  // Necropolis raising the elite undead (Lich, Harbinger, Gravewight, Nightgaunt), and a
+  // Dread Spire whose grave-dread drags the living to a crawl --
+  sepulchre: { fac:'choir', kind:'building', name:'Sepulchre', hp:400, size:21, cost:150, time:13, spawns:'husk', spawnEvery:5 },
+  necropolis:{ fac:'choir', kind:'building', name:'Necropolis', hp:560, size:24, cost:230, time:16, produces:['lich','harbinger','gravewight','nightgaunt'] },
+  dreadspire:{ fac:'choir', kind:'building', name:'Dread Spire', hp:420, size:15, cost:150, time:12, slowAura:340 },
+  husk:      { fac:'choir', kind:'unit', name:'Husk', hp:55, size:7, speed:96, dmg:7, range:14, cd:0.65, aggro:175, shot:'melee', freeUnit:true },
+  harbinger: { fac:'choir', kind:'unit', name:'Harbinger', hp:90, size:9, speed:62, cost:170, time:12, dmg:22, range:190, cd:1.5, aggro:215, shot:'beam' },
+  gravewight:{ fac:'choir', kind:'unit', name:'Gravewight', hp:440, size:15, speed:60, cost:280, time:17, dmg:30, range:26, cd:1.4, aggro:185, shot:'melee', splash:42 },
+  nightgaunt:{ fac:'choir', kind:'unit', name:'Nightgaunt', hp:120, size:10, speed:124, cost:150, time:10, dmg:13, range:130, cd:0.7, aggro:200, shot:'beam' },
 
   // ----- GILDED SYNDICATE -----
   // A mercantile cartel that wages war with money: instant-hire mercenaries, kill
@@ -243,8 +260,16 @@ const DEFS = {
                ability:{ key:'gustav', name:'Gustav Strike', range:3800, cd:55, delay:2.4, dmg:820, splash:165,
                          desc:'Nuke any point in huge range; a telegraphed shell levels a wide blast after a short delay.' } },
 
-  // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies) -----
-  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:10, range:175, cd:0.65, aggro:205, shot:'bullet', produces:['raider','slinger','firebrand','warbeast','firewagon'], grows:['warcamp','totem','warlodge','emberforge','greatpyre'] },
+  // ----- EMBER NOMADS (war economy: Plunder from damage dealt to enemies. NEW —
+  //   BURNING: every Ember attack ignites the foe with a fire DoT, and that burn damage
+  //   ALSO pays Plunder, so the inferno funds the war. The Pyre's FIRESTORM razes a field) -----
+  pyre:      { fac:'ember', kind:'building', name:'War Pyre', hp:1500, size:38, core:true, dmg:10, range:175, cd:0.65, aggro:205, shot:'bullet',
+               produces:['raider','slinger','firebrand','warbeast','firewagon'],
+               grows:['warcamp','totem','cinderpit','bonfire','warlodge','emberforge','greatpyre'],
+               // the nomads' active: a roaring firestorm at range that ignites and burst-burns
+               // every enemy caught — and burning foes keep paying Plunder as they cook.
+               ability:{ key:'firestorm', name:'Firestorm', range:2400, cd:38, radius:205, dmg:55, burnDur:7,
+                         desc:'Call down a roaring firestorm at a point in great range: every enemy caught is set ablaze (a lasting burn) and takes a burst of fire. Burning foes keep bleeding Plunder as they cook.' } },
   warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:560, size:24, cost:120, time:9, produces:['raider','slinger'] },
   totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:380, size:13, cost:110, time:7, dmg:14, range:170, cd:0.75, aggro:195, shot:'glob' },
   raider:    { fac:'ember', kind:'unit', name:'Raider', hp:90, size:8, speed:130, cost:45, time:4, dmg:11, range:16, cd:0.55, aggro:190, shot:'melee' },
@@ -255,11 +280,19 @@ const DEFS = {
   firewagon: { fac:'ember', kind:'unit', name:'Fire Wagon', hp:205, size:13, speed:112, cost:160, time:9, dmg:20, range:95, cd:0.65, aggro:180, shot:'glob', splash:44 },
   // the Ember Foundry: a forward war-works that beats out the heavy warband — a
   // tanky frontline, long-range fire archers, siege catapults and a mending shaman
-  emberforge:{ fac:'ember', kind:'building', name:'Ember Foundry', hp:680, size:24, cost:190, time:13, produces:['cinderguard','cinderbow','catapult','shaman'] },
+  emberforge:{ fac:'ember', kind:'building', name:'Ember Foundry', hp:680, size:24, cost:190, time:13, produces:['cinderguard','cinderbow','catapult','shaman','cinderdrake','magmaur'] },
   cinderguard:{ fac:'ember', kind:'unit', name:'Cinderguard', hp:480, size:14, speed:88, cost:180, time:11, dmg:22, range:22, cd:1.0, aggro:185, shot:'melee', splash:22 },
   cinderbow: { fac:'ember', kind:'unit', name:'Cinderbow', hp:80, size:8, speed:94, cost:110, time:7, dmg:20, range:180, cd:1.1, aggro:205, shot:'glob' },
   catapult:  { fac:'ember', kind:'unit', name:'Cinder Catapult', hp:220, size:14, speed:66, cost:240, time:15, dmg:64, range:255, cd:3.0, aggro:275, shot:'shell', splash:62 },
   shaman:    { fac:'ember', kind:'unit', name:'Flame Shaman', hp:130, size:9, speed:98, cost:130, time:8, aggro:0, aura:140, heal:7 },
+  // -- the burning host: a Cinder Pit breeding free Emberlings, a Bonfire that ignites
+  // what it splashes, the fire-breathing Cinder Drake (the nomads' first air) and the
+  // Molten Brute Magmaur. `burn: N` makes a unit/tower's hits set an N-second blaze --
+  cinderpit: { fac:'ember', kind:'building', name:'Cinder Pit', hp:380, size:21, cost:150, time:13, spawns:'emberling', spawnEvery:5 },
+  bonfire:   { fac:'ember', kind:'building', name:'Bonfire', hp:400, size:14, cost:140, time:11, dmg:13, range:170, cd:0.9, aggro:190, shot:'glob', splash:34, burn:5 },
+  emberling: { fac:'ember', kind:'unit', name:'Emberling', hp:42, size:6, speed:128, dmg:6, range:13, cd:0.55, aggro:175, shot:'melee', freeUnit:true, burn:3 },
+  cinderdrake:{ fac:'ember', kind:'unit', name:'Cinder Drake', hp:150, size:11, speed:120, cost:200, time:12, dmg:16, range:130, cd:0.85, aggro:205, shot:'glob', splash:30, burn:5 },
+  magmaur:   { fac:'ember', kind:'unit', name:'Magmaur', hp:520, size:16, speed:72, cost:300, time:16, dmg:32, range:22, cd:1.0, aggro:185, shot:'melee', splash:34, burn:6 },
 
   // ----- VERDANT BLOOM (a 3-harvest garden: Sap from Blooms, Pollen from Pollen
   //   Spires, Loam from Mulch Beds; the grandest plants & beasts demand a MIX) -----
@@ -312,8 +345,17 @@ const DEFS = {
   stormlab:  { fac:'stormforge', kind:'building', name:'Research Bay', hp:520, size:22, cost:150, time:14, researchLab:true },
   gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:220, shield:110, size:13, speed:72, cost:230, time:14, dmg:25, range:135, cd:1.0, aggro:200, shot:'shell', splash:26 },
 
-  // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying) -----
-  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob', produces:['thrall','zealot','behemoth','cultist'], grows:['shrine','spike','sanctum','grandaltar'] },
+  // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying. NEW — BLOOD FRENZY:
+  //   every Pact unit that falls whips the horde around it into a frenzy (harder, faster
+  //   blows), so its own dying makes the rest deadlier. The Altar's CRIMSON RITE bleeds a
+  //   field of foes and enrages the swarm) -----
+  altar:     { fac:'pact', kind:'building', name:'Blood Altar', hp:1800, size:40, core:true, dmg:9, range:165, cd:0.9, aggro:195, shot:'glob',
+               produces:['thrall','flayer','zealot','behemoth','cultist'],
+               grows:['shrine','spike','bloodtower','fleshvats','sanctum','grandaltar'],
+               // the Pact's active: a blood-rite at range that ruptures every enemy caught
+               // (a burst of damage) and sends every nearby Pact unit into a killing frenzy.
+               ability:{ key:'rite', name:'Crimson Rite', range:2300, cd:40, radius:200, dmg:60, frenzyDur:6,
+                         desc:'Work a blood-rite at a point in great range: every enemy caught ruptures for a burst of damage, and every Pact unit nearby is whipped into a frenzy — striking harder and faster.' } },
   shrine:    { fac:'pact', kind:'building', name:'Bone Shrine', hp:420, size:22, cost:120, time:9, spawns:'thrall', spawnEvery:5 },
   spike:     { fac:'pact', kind:'building', name:'Blood Spike', hp:340, size:13, cost:110, time:7, dmg:13, range:168, cd:0.85, aggro:190, shot:'glob' },
   thrall:    { fac:'pact', kind:'unit', name:'Thrall', hp:46, size:7, speed:104, cost:30, time:3, dmg:7, range:14, cd:0.6, aggro:185, shot:'melee' },
@@ -321,6 +363,15 @@ const DEFS = {
   behemoth:  { fac:'pact', kind:'unit', name:'Behemoth', hp:560, size:18, speed:50, cost:340, time:18, dmg:34, range:24, cd:1.4, aggro:185, shot:'melee', splash:40 },
   sanctum:   { fac:'pact', kind:'building', name:'Blood Sanctum', hp:520, size:22, cost:130, time:12, researchLab:true },
   cultist:   { fac:'pact', kind:'unit', name:'Cultist', hp:60, size:8, speed:92, cost:70, time:5, dmg:13, range:130, cd:1.0, aggro:190, shot:'glob' },
+  // -- the blood host: the Flesh Vats raising the elite horrors (frenzied Flayer, horde-
+  // healing Blood Priest, heavy Abomination, winged Gargoyle) and a Hemorrhage Spire that
+  // throws clotting blood-bolts — a heavier wall-gun than the cheap Blood Spike --
+  fleshvats: { fac:'pact', kind:'building', name:'Flesh Vats', hp:560, size:24, cost:200, time:15, produces:['bloodpriest','abomination','gargoyle'] },
+  bloodtower:{ fac:'pact', kind:'building', name:'Hemorrhage Spire', hp:520, size:15, cost:160, time:11, dmg:24, range:195, cd:1.2, aggro:205, shot:'glob', splash:30 },
+  flayer:    { fac:'pact', kind:'unit', name:'Flayer', hp:95, size:8, speed:128, cost:80, time:5, dmg:14, range:16, cd:0.55, aggro:190, shot:'melee' },
+  bloodpriest:{ fac:'pact', kind:'unit', name:'Blood Priest', hp:90, size:9, speed:84, cost:130, time:8, aggro:0, aura:140, heal:7 },
+  abomination:{ fac:'pact', kind:'unit', name:'Abomination', hp:600, size:17, speed:58, cost:300, time:16, dmg:30, range:24, cd:1.2, aggro:185, shot:'melee', splash:40 },
+  gargoyle:  { fac:'pact', kind:'unit', name:'Gargoyle', hp:130, size:10, speed:122, cost:150, time:10, dmg:13, range:125, cd:0.75, aggro:200, shot:'glob' },
 
   // ===== APEX TECH: each faction's late-game super-structure + titan =====
   // Gated behind deep tech (a top-tier production building / research lab) AND the
@@ -446,13 +497,20 @@ const META = {
   phoenix:   { desc: 'Fast shielded flyer with rapid fire.' },
   templar:   { desc: 'Elite shielded warrior with a splashing siege shell.' },
   // ASHEN CHOIR
-  ossuary:   { desc: 'Your core. Raises Wraiths and Banshees and anchors the lattice.' },
+  ossuary:   { desc: 'Your core. Raises Wraiths and Banshees, anchors the lattice, and tolls the DIRGE — a death-nova that withers a whole army (the slain reanimate) and mends nearby spirits. A share of every unit that dies anywhere already rises as a free Husk for you.' },
   conduit:   { desc: 'Extends your lattice (build range) and trickles Essence.' },
   reliquary: { desc: 'Raises elite Revenants.' },
   spire:     { desc: 'Static beam tower. Lattice defence.', req: 'conduit' },
   wraith:    { desc: 'Cheap fast melee spirit. Fades away from the lattice — heals by dealing damage.' },
   banshee:   { desc: 'Ranged spirit with a piercing beam.' },
   revenant:  { desc: 'Elite splashing melee horror raised in the Reliquary.' },
+  sepulchre: { desc: 'Breeds free Husks endlessly — risen chaff that fades off the lattice (kept on its own separate cap, like the dead the Choir already raises across the map).' },
+  necropolis:{ desc: 'Raises the elite undead: the caster Lich, the long-range Harbinger, the heavy Gravewight and the flying Nightgaunt. Gate to the Choir’s deathless host.', req: 'oracle' },
+  dreadspire:{ desc: 'Static spire that exudes the dread of the grave — every enemy unit in a wide radius is dragged to a crawl. No attack; pure terror to slow a push.', req: 'conduit' },
+  husk:      { desc: 'Free risen corpse — weak melee chaff that fades off the lattice but heals by dealing damage. Rises from the dead across the map and from Sepulchres.' },
+  harbinger: { desc: 'Long-range death-caster: a withering beam with heavy single-target damage. Fragile — keep it back.', req: 'necropolis' },
+  gravewight:{ desc: 'Heavy undead bruiser — a wall of grave-cold HP that cleaves with splashing blows. The Necropolis’ front line.', req: 'necropolis' },
+  nightgaunt:{ desc: 'Fast flying wraith — the Choir’s air. Raids, chases stragglers and lashes from afar with a cold beam.', req: 'necropolis' },
   // GILDED SYNDICATE
   haven:     { desc: 'Your core and treasury. Earns compound interest, hires mercenaries instantly, and can air-drop a free squad of Enforcers anywhere on the map (Reinforcement Drop). Fallen mercs refund part of their hire price (severance).' },
   watchpost: { desc: 'Air-dropped static gun. Project control across the map — but not into enemy territory. Harnesses a Wellspring if dropped beside one.' },
@@ -496,8 +554,13 @@ const META = {
   citadel:   { desc: 'A doomsday fortress: a huge long-range siege cannon ringed by four machine-guns, on enormous HP. The anchor of an impenetrable base.', reqs:['foundry_w','college','bunker','redoubt','arsenal'], reqResearch:'warden_wpn2' },
   worldbreaker: { desc: 'The ultimate structure — longest passive range in the game, plus the active GUSTAV STRIKE: nuke any point across most of the map (~1-min reload). Needs an Arsenal, a Bulwark, and Siege Ordnance.', reqs:['arsenal','citadel'], reqResearch:'warden_ord' },
   // EMBER NOMADS
-  pyre:      { desc: 'Your core. Musters the whole warband. Plunder from combat funds it.' },
+  pyre:      { desc: 'Your core. Musters the whole warband and calls the FIRESTORM — a roaring blaze that ignites and burst-burns a whole army. Every Ember attack already sets foes alight, and burn damage pays Plunder. Plunder from combat funds it all.' },
   warcamp:   { desc: 'Forward muster point; trains Raiders and Slingers and unlocks heavier warriors.' },
+  cinderpit: { desc: 'Breeds free Emberlings endlessly — fast little fire-imps that ignite what they bite (kept on their own separate cap).' },
+  bonfire:   { desc: 'Static fire-tower: lobs blazing pitch that splashes AND sets everything it touches ablaze. Anchors a burning kill-zone.' },
+  emberling: { desc: 'Free, tiny, very fast melee fire-imp. Weak alone, but every bite ignites the foe. Bred by the Cinder Pit.' },
+  cinderdrake:{ desc: 'Fire-breathing drake — the nomads’ first air. Fast splashing fire-glob that ignites; raids, chases flyers and softens clumps.', req: 'emberforge' },
+  magmaur:   { desc: 'Molten brute — a fast, heavy melee bruiser whose blazing blows splash and deeply burn. Bowls through a line and leaves it cooking.', req: 'emberforge' },
   totem:     { desc: 'Static fire turret. Cheap defence.' },
   raider:    { desc: 'Dirt-cheap, very fast melee raider.' },
   slinger:   { desc: 'Fast ranged skirmisher.' },
@@ -542,12 +605,18 @@ const META = {
   voltaic:   { desc: 'Long-range shielded beam platform.', req: 'dynamo' },
   colossus:  { desc: 'Huge shielded walker with a splashing siege cannon.' },
   // OBSIDIAN PACT
-  altar:     { desc: 'Your core. Summons Thralls, Zealots and Behemoths. Your fallen units pay Blood.' },
+  altar:     { desc: 'Your core. Summons Thralls, Zealots and Behemoths and works the CRIMSON RITE — a blood-rite that ruptures a field of foes and sends the nearby horde into a frenzy. Your fallen units pay Blood and whip the survivors into a frenzy as they die.' },
   shrine:    { desc: 'Spawns free Thralls and lets the Altar raise greater horrors.' },
   spike:     { desc: 'Static blood turret. Cheap defence.' },
-  thrall:    { desc: 'Dirt-cheap, expendable melee body. Its death spills Blood.' },
+  thrall:    { desc: 'Dirt-cheap, expendable melee body. Its death spills Blood — and frenzies the horde around it.' },
   zealot:    { desc: 'Tougher melee fanatic.', req: 'shrine' },
   behemoth:  { desc: 'Massive splashing horror raised from spilled Blood.', req: 'shrine' },
+  fleshvats: { desc: 'Raises the elite horrors: the horde-healing Blood Priest, the heavy Abomination and the winged Gargoyle. Gate to the Pact’s deadliest summonings.', req: 'sanctum' },
+  bloodtower:{ desc: 'Static blood-cannon — clotting bolts that splash. A heavier, longer-range wall-gun than the cheap Blood Spike.', req: 'shrine' },
+  flayer:    { desc: 'Dirt-cheap, very fast frenzied striker — flings itself into the grinder. Its death spills Blood and frenzies the horde.' },
+  bloodpriest:{ desc: 'The Pact’s only healer — bleeds its own life into an aura that mends the horde around it, so your summonings keep fighting. Non-combat.', req: 'fleshvats' },
+  abomination:{ desc: 'Stitched horror — a heavy splashing bruiser, tougher than a Behemoth-in-waiting and cheaper to mass. The Vats’ front line.', req: 'fleshvats' },
+  gargoyle:  { desc: 'Winged blood-fiend — the Pact’s air. Fast, lashes from afar, and runs down stragglers and flyers.', req: 'fleshvats' },
   // NEW UNITS & BUILDINGS
   techlab:   { desc: 'Research building. Develops the Vanguard’s weapon & armour upgrades.' },
   flametank: { desc: 'Fast short-range tank that hoses a cone of fire — devastating against clumped infantry.' },
@@ -674,6 +743,23 @@ const CORRUPT = {
   baseDur: 3.0, dmgMul: 0.8, slowMul: 0.85, dps: 5, larvaBurst: 2,
 };
 
+// Ashen Choir REANIMATION. A share (`chance`) of every non-Choir unit that dies
+// ANYWHERE on the map rises again as a free Husk under the Choir's command — bounded
+// by the free-Husk cap (the same separate cap Sepulchres breed into). Death literally
+// swells the deathless host, on top of paying Essence.
+const REANIM = { chance: 0.33 };
+
+// Ember Nomads BURNING. Every Ember attack ignites the foe it strikes for `baseDur`
+// seconds; units/towers with a `burn` stat set a longer blaze. A burning enemy takes a
+// fire DoT (`dps`) — and because Plunder is paid on damage dealt, that burn keeps paying
+// out as the foe cooks (credited in tickBurning). Applies to enemy units & buildings.
+const BURN = { baseDur: 3.0, dps: 6 };
+
+// Obsidian Pact BLOOD FRENZY. When a Pact unit dies, every friendly Pact unit within
+// `frenzyR` is whipped into a frenzy for `dur` seconds — striking harder (`frenzyDmg`)
+// and faster (`frenzyCd`, a cooldown multiplier). Read live in dmgOf / cdOf.
+const PACT = { frenzyR: 150, dur: 5, frenzyDmg: 1.30, frenzyCd: 0.78 };
+
 // ---------------- research / upgrades ----------------
 // Every faction shares the same four-branch tech tree (Offense / Defense / Mobility
 // / Economy), laid out as a grid: `branch` is the row, `tier` the column. Each node
@@ -789,6 +875,7 @@ function dmgOf(e) {
   if (e.necroStacks) m *= 1 + Math.min(e.necroStacks, VERD.necroMaxStacks) * VERD.necroStackDmg; // Necrotic Graft
   if (e.mutated) m *= VERD.mutDmg;                                              // Wildgrowth mutation
   if (e.corruptUntil > game.t) m *= CORRUPT.dmgMul;                            // Myriad corruption: weakened
+  if (e.frenzyUntil > game.t) m *= PACT.frenzyDmg;                             // Pact blood frenzy: enraged
   return e.def.dmg * m;
 }
 function spd(e) {
@@ -807,6 +894,7 @@ function cdOf(e) {
   let m = (p && p.cdMul) || 1;
   if (e.fertUntil > game.t) m *= VERD.fertCd;     // Fertiliser Pod: faster attacks
   if (p && p.gMoon) m *= VERD.moonCd;             // Moonsign Graft: faster attacks
+  if (e.frenzyUntil > game.t) m *= PACT.frenzyCd; // Pact blood frenzy: faster attacks
   return e.def.cd * m;
 }
 function splashOf(e) { const p = game.players[e.fac]; return (e.def.splash || 0) * ((p && p.splashMul) || 1) * arkStatMul(e); }

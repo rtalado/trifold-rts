@@ -223,9 +223,14 @@ Lance** that surpasses the Worldbreaker. Shields regenerate. Lose nothing, or lo
 All death anywhere pays you Essence — carnage enriches you, stalemates starve you. Your
 home Soul Conduits only **trickle** (and that trickle soon caps), so you scale by
 fighting across the map and by crawling the lattice OUT to plant a Conduit on a
-**Wellspring**. Near the lattice your spirits are sustained; in the field they fade but
-heal by dealing damage. Build only within the lattice. Units: Wraiths, Banshees,
-Revenants, and the ranged caster **Lich**.
+**Wellspring**. Death also **RAISES THE DEAD**: a share of every unit that falls anywhere
+rises again as a free **Husk** under your command (a separate cap), and you breed yet more
+from a **Sepulchre** — so a bloody field rebuilds your front line. Raise a **Necropolis**
+for the elite undead (the caster **Lich**, long-range **Harbinger**, heavy **Gravewight**,
+flying **Nightgaunt**), anchor **Dread Spires** that drag the living to a crawl, and toll
+the Ossuary's **Dirge of the Damned** to wither a whole army and mend your spirits at once.
+Near the lattice your spirits are sustained; in the field they fade but heal by dealing
+damage. Build only within the lattice. See the [full Choir guide](guides/choir.md).
 
 ### GILDED SYNDICATE — the Magnates · *Gold* · core: **The Haven**
 Gold breeds gold: your treasury earns **compound interest** — but only up to a cap set
@@ -274,13 +279,17 @@ Bulwark, and the Siege Ordnance doctrine.
 
 ### EMBER NOMADS — the Warband · *Plunder* · core: **War Pyre**
 No mines — you fund the war by waging it: every point of damage you deal pays
-Plunder, so idleness is death. The War Pyre and War Camps churn out dirt-cheap,
-blazing-fast **Raiders** and **Slingers**, then **Firebrands**, **War Beasts** and the
-splashing **Fire Wagon**. Raise an **Ember Foundry** to round out the warband: the
-armoured **Cinderguard** (a tanky front wall that soaks fire so your raiders live to
-plunder), long-range **Cinderbows**, the **Cinder Catapult** (slow siege with huge range
-and splash to crack turtles), and the **Flame Shaman**, whose healing aura keeps the
-fragile horde fighting. Tech to the **Great Pyre** for the fast, fire-hosing **Ash Titan**.
+Plunder, so idleness is death. Every Ember attack also **IGNITES** the foe — a burning
+DoT that keeps cooking them, and **that burn damage keeps paying Plunder**, so the inferno
+funds itself. The War Pyre and War Camps churn out dirt-cheap, blazing-fast **Raiders** and
+**Slingers**, then **Firebrands**, **War Beasts** and the splashing **Fire Wagon**; breed a
+free tide of fire-imp **Emberlings** from a **Cinder Pit** and anchor **Bonfires** that ignite
+what they splash. Raise an **Ember Foundry** to round out the warband: the armoured
+**Cinderguard**, long-range **Cinderbows**, the siege **Cinder Catapult**, the mending
+**Flame Shaman**, the fire-breathing **Cinder Drake** (the nomads' first air) and the molten
+brute **Magmaur**. Call the War Pyre's **Firestorm** to ignite and burst-burn a whole army,
+and tech to the **Great Pyre** for the fast, fire-hosing **Ash Titan**. See the
+[full Ember guide](guides/ember.md).
 
 ### VERDANT BLOOM — the Grove · *Sap · Pollen · Loam* · core: **Heartwood**
 A slow, unstoppable garden fed by **three harvests**: Sap from Blooms, Pollen from
@@ -311,8 +320,15 @@ towering Colossus.
 
 ### OBSIDIAN PACT — the Martyrs · *Blood* · core: **Blood Altar**
 Death is your harvest — your *own*. Every unit you lose spills Blood for the next,
-greater summoning. Throw cheap Thralls into the grinder; raise Behemoths from their
-deaths. Units: Thralls, Zealots, Behemoths, and the ranged **Cultist**.
+greater summoning — and **BLOOD FRENZY**: each Pact unit that dies whips every nearby
+Pact unit into a rage (harder, faster blows), so because you're always feeding the
+grinder the horde fights in a near-permanent rolling frenzy. Throw cheap **Thralls** and
+fast **Flayers** in; raise **Behemoths** from their deaths. Raise the **Flesh Vats** for
+the elite horrors — the horde-mending **Blood Priest** (your only healer), the heavy
+**Abomination** and the winged **Gargoyle** (the Pact's air) — anchor **Hemorrhage
+Spires**, and work the Altar's **Crimson Rite** to rupture a field of foes and enrage the
+swarm. Bone Shrines on **Wellsprings** bleed extra Blood. See the
+[full Pact guide](guides/pact.md).
 
 ## Controls
 

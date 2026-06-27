@@ -390,6 +390,26 @@ function drawEnt(e) {
     ctx.beginPath(); ctx.arc(x, y, s + 3, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
+  // Ember burning: flickering ember-flames lick up off a burning enemy
+  if (e.burnUntil > game.t) {
+    ctx.save();
+    ctx.globalAlpha = 0.45 + 0.35 * Math.sin(game.t * 11 + e.id * 1.7);
+    ctx.fillStyle = '#ff8a2a';
+    for (let i = 0; i < 3; i++) {
+      const a = game.t * 4 + i * 2.1, fx = x + Math.cos(a) * s * 0.6;
+      const fy = y - s * 0.4 - (0.4 + 0.4 * Math.sin(game.t * 9 + i + e.id)) * s;
+      ctx.beginPath(); ctx.arc(fx, fy, 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // Pact blood frenzy: a hot crimson aura pulses around an enraged Pact unit
+  if (e.frenzyUntil > game.t) {
+    ctx.save();
+    ctx.globalAlpha = 0.4 + 0.35 * Math.sin(game.t * 9 + e.id);
+    ctx.strokeStyle = '#ff2a3a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, s + 2.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
 
   if (e.fac === 'vanguard') {
     if (e.def.kind === 'building') {

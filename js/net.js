@@ -34,6 +34,8 @@ function buildSnap() {
     if (e.withered) fl |= 256;                // Necrotic husk (bit 8)
     if (e.mutated) fl |= 512;                 // Wildgrowth mutated Sapling (bit 9)
     if (e.corruptUntil > game.t) fl |= 1024;  // Myriad corruption (bit 10)
+    if (e.burnUntil > game.t) fl |= 2048;     // Ember burning (bit 11)
+    if (e.frenzyUntil > game.t) fl |= 4096;   // Pact blood frenzy (bit 12)
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
     const rq = e.rqueue && e.rqueue.length ? e.rqueue[0] : null;
@@ -101,6 +103,8 @@ function applySnap(m) {
     e.deployed = !!(fl & 1); e.constructing = !!(fl & 2); e.growing = !!(fl & 4);
     e.withered = !!(fl & 256); e.mutated = !!(fl & 512);
     e.corruptUntil = (fl & 1024) ? game.t + 1 : 0;   // Myriad corruption marker (cosmetic on guests)
+    e.burnUntil = (fl & 2048) ? game.t + 1 : 0;      // Ember burning marker (cosmetic on guests)
+    e.frenzyUntil = (fl & 4096) ? game.t + 1 : 0;    // Pact blood frenzy marker (cosmetic on guests)
     if (e.mutated && e.def.kind === 'unit') e.size = Math.round(baseSize(e) * VERD.mutSize);
     const ownIdx = (fl >> 4) & 15; e.owner = ownIdx ? Object.keys(FACTIONS)[ownIdx - 1] : null;
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };

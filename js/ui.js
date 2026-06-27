@@ -106,7 +106,7 @@ function currentCommands() {
       cmds.push({
         label: (aiming ? '◎ ' : '☢ ') + ab.name, cost: 0, enabled: ready, cat: 'ability',
         sub: aiming ? 'Click a target…' : (ready ? 'READY' : 'Reload ' + Math.ceil(sel0.abilityCd || 0) + 's'),
-        desc: ab.desc + ' Range ' + ab.range + ' · Blast ' + ab.splash + ' · Reload ' + ab.cd + 's.',
+        desc: ab.desc + ' Range ' + ab.range + ' · Blast ' + (ab.splash || ab.radius) + ' · Reload ' + ab.cd + 's.',
         onClick: () => {
           game.targeting = { id: sel0.id, ability: ab.key };
           floatMsg('Designate ' + ab.name + ' impact — left-click (Esc / right-click to cancel)');
@@ -396,6 +396,10 @@ function updateHUD() {
   } else if (fac === 'myriad') {
     const lc = freeCapOf(fac);
     armyHtml += ' · Larva: <b>' + countFree(fac) + '</b>/' + (lc === Infinity ? '∞' : lc);
+  } else if (fac === 'choir') {
+    armyHtml += ' · Husks: <b>' + countFree(fac) + '</b>/' + freeCapOf(fac);
+  } else if (fac === 'ember') {
+    armyHtml += ' · Emberlings: <b>' + countFree(fac) + '</b>/' + freeCapOf(fac);
   }
   document.getElementById('hudArmy').innerHTML = armyHtml;
 
