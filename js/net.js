@@ -222,6 +222,14 @@ function hostBroadcast(o, exceptPid) {
     hostSendTo(m.pid, o);
   }
 }
+// Seat a (re)joining member into a roster slot, evicting any stale "ghost" member still
+// parked on that slot — e.g. the dropped connection that never fired a 'close' event. Left
+// in place, that ghost makes hostMissing() keep reporting the slot empty and the match would
+// stay paused forever even though the real player is back.
+function hostSeat(mem, slot, fac) {
+  room.members = room.members.filter(x => x === mem || x.host || x.slot !== slot);
+  mem.slot = slot; mem.fac = fac;
+}
 function hostHandleMsg(pid, m) {
   if (!m || typeof m.t !== 'string') return;     // ignore malformed traffic
   const mem = room && room.members.find(x => x.pid === pid);
@@ -232,7 +240,20 @@ function hostHandleMsg(pid, m) {
   }
   if (m.t === 'join') {
     if (!mem) return;
-    if (room.started) { hostSendTo(pid, { t: 'err', msg: 'That match has already started.' }); return; }
+    if (room.started) {
+      // A match in progress: rather than turning the joiner away, let them reclaim a slot
+      // whose player is currently missing (dropped/frozen — the match is paused waiting for
+      // them). This covers a guest who recovered from a freeze by RELOADING the page and so
+      // lost the in-memory rejoin info that the ↻ REJOIN button / auto-reconnect relies on.
+      const missing = room.roster ? hostMissing() : [];
+      if (!missing.length) { hostSendTo(pid, { t: 'err', msg: 'That match has already started.' }); return; }
+      const r = missing[0];
+      hostSeat(mem, r.slot, r.fac);
+      hostSendTo(pid, { t: 'joined', code: net.code, slot: r.slot }); // so the client maps itself to its faction
+      hostSendTo(pid, { t: 'start', roster: room.roster, seed: room.seed });
+      hostCheckPresence(); // the missing player is back — lift the pause if everyone's present
+      return;
+    }
     if (room.members.filter(x => x.slot >= 0).length >= 4) { hostSendTo(pid, { t: 'err', msg: 'That room is full (4 players).' }); return; }
     mem.slot = freeSlot();
     hostSendTo(pid, { t: 'joined', code: net.code, slot: mem.slot });
@@ -249,7 +270,7 @@ function hostHandleMsg(pid, m) {
     const live = room.members.find(x => x.slot === m.slot && x.pid !== pid
       && x.conn && x.conn.open && (performance.now() - (x.lastSeen || 0) < MEMBER_STALL_MS));
     if (live) { hostSendTo(pid, { t: 'err', msg: 'That slot is still active in the match.' }); return; }
-    mem.slot = m.slot; mem.fac = m.fac;
+    hostSeat(mem, m.slot, m.fac);
     hostSendTo(pid, { t: 'start', roster: room.roster, seed: room.seed });
     hostCheckPresence(); // the missing player is back — lift the pause if everyone's present
   } else if (!mem || mem.slot < 0) {
