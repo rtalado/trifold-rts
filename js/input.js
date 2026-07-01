@@ -1,5 +1,6 @@
 // ---------------- input ----------------
-const mouse = { x: 0, y: 0, wx: 0, wy: 0, dragging: false, dx0: 0, dy0: 0 };
+const mouse = { x: 0, y: 0, wx: 0, wy: 0, dragging: false, dx0: 0, dy0: 0,
+  rDragging: false, rdx0: 0, rdy0: 0, rMode: 'move' };
 const keys = {};
 
 canvas.addEventListener('mousemove', ev => {
@@ -29,9 +30,10 @@ canvas.addEventListener('mousedown', ev => {
   } else if (ev.button === 2) {
     if (game.targeting) { game.targeting = null; return; }
     if (game.placing) { game.placing = null; return; }
+    // don't fire yet — mouseup decides click (single point) vs. drag (formation line)
+    mouse.rDragging = true; mouse.rdx0 = mouse.x; mouse.rdy0 = mouse.y;
     // Ctrl = attack toward a direction (auto-finds the foe), Shift = attack-move
-    const mode = ev.ctrlKey ? 'adir' : ev.shiftKey ? 'amove' : 'move';
-    issueOrder(mouse.wx, mouse.wy, mode);
+    mouse.rMode = ev.ctrlKey ? 'adir' : ev.shiftKey ? 'amove' : 'move';
   }
 });
 
@@ -47,6 +49,21 @@ function fireAbilityAt(wx, wy) {
 }
 
 addEventListener('mouseup', ev => {
+  if (ev.button === 2) {
+    if (!mouse.rDragging || !game || game.over) { mouse.rDragging = false; return; }
+    mouse.rDragging = false;
+    const dragPx = Math.hypot(mouse.x - mouse.rdx0, mouse.y - mouse.rdy0);
+    if (dragPx < 10 || mouse.rMode === 'adir') {
+      // a plain click (or a directional attack, which has no line form) — the
+      // original single-point order behaviour
+      issueOrder(mouse.wx, mouse.wy, mouse.rMode);
+    } else {
+      // dragged a line: form up along it — see issueFormationOrder
+      const p0 = screenToWorld(mouse.rdx0, mouse.rdy0);
+      issueFormationOrder(p0.x, p0.y, mouse.wx, mouse.wy, mouse.rMode);
+    }
+    return;
+  }
   if (ev.button !== 0 || !mouse.dragging || !game || game.over) { mouse.dragging = false; return; }
   mouse.dragging = false;
   const a0 = screenToWorld(Math.min(mouse.dx0, mouse.x), Math.min(mouse.dy0, mouse.y));
@@ -99,6 +116,20 @@ function issueOrder(wx, wy, mode) {
   applyOrder(game.localFac, game.sel, wx, wy, mode);
 }
 
+// right-click-drag: form the selection up along the dragged line rather than
+// piling everyone onto one point (Beyond All Reason / Supreme Commander style).
+// (x0,y0)-(x1,y1) is the drag in world space; mode is 'move' or 'amove'.
+function issueFormationOrder(x0, y0, x1, y1, mode) {
+  if (!game.sel.length) return;
+  if (game.sel.some(e => e.fac === game.localFac)) playSfx('order');
+  if (game.mode === 'guest') {
+    netSend({ t: 'cmd', fac: game.localFac, kind: 'order', ids: game.sel.map(e => e.id), x: x0, y: y0, fx: x1, fy: y1, mode });
+    addFx({ kind: 'ping', x: (x0 + x1) / 2, y: (y0 + y1) / 2, ttl: 0.4, max: 0.4, color: mode !== 'move' ? '#ff6a6a' : '#7dffa8' });
+    return;
+  }
+  applyOrder(game.localFac, game.sel, x0, y0, mode, { x2: x1, y2: y1 });
+}
+
 // pick the nearest enemy lying in the general direction of (wx,wy) from the
 // selection's centre — the engine behind Ctrl+RMB "attack that way", so you needn't
 // pixel-hunt a tiny unit. Returns null if nothing falls within the aim cone.
@@ -119,11 +150,41 @@ function directionalTarget(fac, selEnts, wx, wy) {
   return best;
 }
 
+// build a per-unit formation destination along a dragged line (x0,y0)-(x1,y1):
+// spread `units` out evenly across the segment (or `minSpacing` apart if the line
+// is short for the headcount), sorted by their projection onto the line so the
+// left-to-right marching order matches their current positions (fewer crossed
+// paths). Returns { pts: Map(id -> {x,y}), facing } — facing is the direction from
+// the group's current centre toward the line, i.e. the way the formation "faces".
+function formationLayout(units, x0, y0, x1, y1) {
+  const n = units.length;
+  const lineAngle = Math.atan2(y1 - y0, x1 - x0);
+  const lineLen = Math.hypot(x1 - x0, y1 - y0);
+  const minSpacing = 30;
+  const spacing = n > 1 ? Math.max(minSpacing, lineLen / (n - 1)) : 0;
+  const midx = (x0 + x1) / 2, midy = (y0 + y1) / 2;
+  let cx = 0, cy = 0;
+  for (const e of units) { cx += e.x; cy += e.y; }
+  cx /= n; cy /= n;
+  const facing = Math.atan2(midy - cy, midx - cx);
+  const ux = Math.cos(lineAngle), uy = Math.sin(lineAngle);
+  const ordered = [...units].sort((a, b) => (a.x * ux + a.y * uy) - (b.x * ux + b.y * uy));
+  const pts = new Map();
+  ordered.forEach((e, i) => {
+    const off = (i - (n - 1) / 2) * spacing;
+    pts.set(e.id, { x: midx + ux * off, y: midy + uy * off });
+  });
+  return { pts, facing };
+}
+
 // runs on the simulating side (SP or host) for either faction.
 // mode 'amove' issues an attack-move (engage on the way); 'adir' aims an attack-move
 // at the nearest foe in the clicked direction; anything else is a plain move that
 // ignores enemies — so you can actually pull units OUT of a fight to retreat.
-function applyOrder(fac, selEnts, wx, wy, mode) {
+// `line`, when given ({x2,y2}, with wx,wy as the other end), came from a
+// right-click-drag: spread the move/attack-move units along it instead of piling
+// them all onto (wx,wy), and leave them facing the way the drag was headed.
+function applyOrder(fac, selEnts, wx, wy, mode, line) {
   if (mode === true) mode = 'amove';        // tolerate the old boolean form
   const target = ents(o => o.fac !== fac && !o.def.noTarget && dist(o, { x: wx, y: wy }) <= o.size + 5)[0];
   const node = game.nodes.find(n => n.amount > 0 && Math.hypot(n.x - wx, n.y - wy) <= n.r + 6);
@@ -135,8 +196,17 @@ function applyOrder(fac, selEnts, wx, wy, mode) {
   }
   let acted = false;
 
+  // a line only makes sense for a plain move/attack-move to open ground — a
+  // specific target or resource node overrides it (nothing to "form up" toward)
+  let form = null;
+  if (line && !target && !node) {
+    const moving = selEnts.filter(e => e.def.kind === 'unit' && !e.def.stationary && !e.def.core);
+    if (moving.length > 1) form = formationLayout(moving, wx, wy, line.x2, line.y2);
+  }
+
   for (const e of selEnts) {
     const d = e.def;
+    e.destFacing = null;   // any fresh order clears a stale formation facing
     if (d.kind === 'building' || (d.produces && d.kind === 'unit' && d.core)) {
       // rally point (also Ark rally); hive sets the global swarm rally
       if (d.produces || d.spawns) { e.rally = { x: wx, y: wy }; acted = true; }
@@ -148,16 +218,22 @@ function applyOrder(fac, selEnts, wx, wy, mode) {
       }
       continue;
     }
+    const p = form && form.pts.get(e.id);
+    const gx = p ? p.x : wx, gy = p ? p.y : wy;
     if (target) {
       // units that can't shoot (medic, guardian) escort to the target instead
       e.order = d.dmg ? { type: 'attack', id: target.id } : { type: 'move', x: target.x, y: target.y };
       acted = true;
     }
     else if (node && d.harvester) { e.order = { type: 'harvest', nodeId: node.id, phase: 'go', timer: 0, carry: 0 }; acted = true; }
-    else if (d.harvester || !d.dmg) { e.order = { type: 'move', x: wx, y: wy }; acted = true; }
-    else { e.order = { type: mode === 'amove' ? 'amove' : 'move', x: wx, y: wy }; acted = true; }
+    else if (d.harvester || !d.dmg) { e.order = { type: 'move', x: gx, y: gy }; acted = true; }
+    else { e.order = { type: mode === 'amove' ? 'amove' : 'move', x: gx, y: gy }; acted = true; }
+    if (p) e.destFacing = form.facing;
   }
-  if (acted) addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: target ? '#ff6a6a' : '#7dffa8' });
+  if (acted) {
+    if (form) addFx({ kind: 'ping', x: (wx + line.x2) / 2, y: (wy + line.y2) / 2, ttl: 0.4, max: 0.4, color: target ? '#ff6a6a' : '#7dffa8' });
+    else addFx({ kind: 'ping', x: wx, y: wy, ttl: 0.4, max: 0.4, color: target ? '#ff6a6a' : '#7dffa8' });
+  }
 }
 
 addEventListener('keydown', ev => {
@@ -190,6 +266,14 @@ addEventListener('keydown', ev => {
   if (k === 'f') { // select all combat units
     game.sel = armyOf(game.localFac);
     refreshCard();
+  }
+  if (k === 'delete' || k === 'backspace') { // scuttle the selected unit(s) — no confirmation, matches the command card
+    const ids = game.sel.filter(e => e.fac === game.localFac && e.def.kind === 'unit' && !e.def.core).map(e => e.id);
+    if (ids.length) {
+      if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'selfdestruct', ids });
+      else selfDestruct(game.localFac, ids);
+      game.sel = []; refreshCard();
+    }
   }
   // command card hotkeys (digits — letters are reserved for camera pan)
   const card = currentCommands();

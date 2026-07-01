@@ -58,6 +58,23 @@ function currentCommands() {
 
   if (types.has('worker')) ['barracks', 'factory', 'depot', 'airfield', 'turret', 'pillbox', 'radar_van', 'techlab', 'dominion'].forEach(buildBtn);
 
+  // scuttle any of your own selected units instantly — no refund, no bounty to the
+  // enemy. Works on the whole selection at once; cores are excluded.
+  const scuttleable = game.sel.filter(e => e.fac === fac && e.def.kind === 'unit' && !e.def.core);
+  if (scuttleable.length) {
+    cmds.push({
+      label: '☠ Self-Destruct', cost: 0, enabled: true, cat: 'sell',
+      sub: scuttleable.length > 1 ? scuttleable.length + ' units' : null,
+      desc: 'Instantly destroy the selected unit' + (scuttleable.length > 1 ? 's' : '') + '. No refund, and the enemy gets no kill credit — handy for denying a doomed unit or clearing a cap slot.',
+      onClick: () => {
+        const ids = scuttleable.map(e => e.id);
+        if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'selfdestruct', ids });
+        else selfDestruct(fac, ids);
+        game.sel = []; refreshCard();
+      },
+    });
+  }
+
   if (game.sel.length === 1) {
     const d = sel0.def;
     if (d.grows) d.grows.forEach(buildBtn);

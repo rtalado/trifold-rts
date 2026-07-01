@@ -106,9 +106,10 @@ function aiTick(fac) {
     }
     for (const b of fact) if (!b.constructing && !b.queue.length && p.res >= 90) {
       const r = Math.random();
-      enqueue(b, (r < 0.18 && p.res >= 250 && techMet(fac, 'artillery')) ? 'artillery'
-        : (r < 0.4 && p.res >= 270) ? 'goliath' : (r < 0.62 && p.res >= 170) ? 'flametank'
-        : (r < 0.82 && p.res >= 200) ? 'tank' : 'outrider');
+      enqueue(b, (r < 0.14 && p.res >= 380 && game.t > 180) ? 'dreadnought'
+        : (r < 0.3 && p.res >= 250 && techMet(fac, 'artillery')) ? 'artillery'
+        : (r < 0.5 && p.res >= 270) ? 'goliath' : (r < 0.7 && p.res >= 170) ? 'flametank'
+        : (r < 0.86 && p.res >= 200) ? 'tank' : 'outrider');
     }
     for (const b of air) if (!b.constructing && !b.queue.length && p.res >= 180)
       enqueue(b, (Math.random() < 0.4 && p.res >= 240) ? 'bomber' : 'gunship');
@@ -177,8 +178,10 @@ function aiTick(fac) {
       const templars = ents(e => e.fac === fac && e.type === 'templar').length;
       const aegises = ents(e => e.fac === fac && e.type === 'aegis').length;
       const sovs = ents(e => e.fac === fac && e.type === 'sovereign').length;
+      const frigates = ents(e => e.fac === fac && e.type === 'solarfrigate').length;
       if (collectors < aiGrow(5, 2, 15) && p.res >= 60) enqueue(ark, 'collector');
       else if (sovs < 2 && p.res >= 820 && techMet(fac, 'sovereign')) enqueue(ark, 'sovereign');
+      else if (frigates < aiGrow(1, 1, 3) && p.res >= 340 && game.t > 220) enqueue(ark, 'solarfrigate');
       else if (aegises < 2 && p.res >= 300 && game.t > 200) enqueue(ark, 'aegis');
       else if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
       else if (lancers <= seekers / 2 && p.res >= 220) enqueue(ark, 'lancer');
@@ -431,7 +434,7 @@ function aiTick(fac) {
       else enqueue(reactor, 'arclight');
     }
     for (const f of ents(e => e.fac === fac && e.type === 'foundry_s' && !e.growing))
-      if (!f.queue.length && p.res >= 420) enqueue(f, 'colossus');
+      if (!f.queue.length && p.res >= 360) enqueue(f, (Math.random() < 0.45 && p.res >= 420) ? 'colossus' : 'stormcruiser');
   }
 
   else if (fac === 'pact') { // throw cheap bodies into the grinder, reap Blood, raise giants
@@ -469,6 +472,53 @@ function aiTick(fac) {
     }
   }
 
+  else if (fac === 'strain') { // masochistic swarm — throw cheap chaff in, let it adapt and get paid
+    const prog = myCore;
+    const have = t => ents(e => e.fac === fac && e.type === t).length;
+    const cysts = have('cyst');
+    // crawl Marrow Cysts outward (toward the enemy or a Wellspring) like tumors/conduits
+    if (cysts < aiGrow(6, 2, 20) && p.res >= 50 && Math.random() < 0.55) {
+      const srcs = ents(e => e.fac === fac && e.def.kind === 'building' && !e.growing);
+      const src = srcs[Math.floor(Math.random() * srcs.length)];
+      if (src) {
+        let goal = enemyCore;
+        if (Math.random() < 0.4) {
+          const w = ents(e => e.def.wellspring && e.owner !== fac && dist(src, e) < 1100)
+            .sort((a, b) => dist(src, a) - dist(src, b))[0];
+          if (w) goal = w;
+        }
+        const ang = Math.atan2(goal.y - src.y, goal.x - src.x) + (Math.random() - 0.5) * 1.6;
+        aiPlaceAt(fac, 'cyst', src.x + Math.cos(ang) * 200, src.y + Math.sin(ang) * 200);
+      }
+    }
+    if (have('vat') < aiGrow(3, 1, 7) && p.res >= 170) aiPlace(fac, 'vat', p.base);
+    else if (have('nest') < aiGrow(2, 1, 5) && p.res >= 170 && game.t > 60) aiPlace(fac, 'nest', p.base);
+    else if (have('spawnwell') < aiGrow(2, 1, 6) && p.res >= 150 && game.t > 60) aiPlace(fac, 'spawnwell', p.base);
+    else if (have('barb') < aiGrow(3, 1, 8) && p.res >= 110 && game.t > 90) aiPlace(fac, 'barb', p.base);
+    else if (have('genlab') < 1 && p.res >= 150 && game.t > 90) aiPlace(fac, 'genlab', p.base);
+    else if (have('mutaworks') < 1 && p.res >= 200 && game.t > 110 && techMet(fac, 'mutaworks')) aiPlace(fac, 'mutaworks', p.base);
+    if (prog && !prog.queue.length && p.res >= 26) {
+      const r = Math.random();
+      enqueue(prog, (r < 0.3 && p.res >= 65) ? 'lurker' : (r < 0.55 && p.res >= 58) ? 'biter' : 'spawnling');
+    }
+    for (const n of ents(e => e.fac === fac && e.type === 'nest' && !e.growing))
+      if (!n.queue.length && p.res >= 85) enqueue(n, (Math.random() < 0.5 && p.res >= 120) ? 'lasher' : 'stinger');
+    for (const mw of ents(e => e.fac === fac && e.type === 'mutaworks' && !e.growing))
+      if (!mw.queue.length && p.res >= 90) {
+        const r = Math.random();
+        enqueue(mw, (r < 0.3 && p.res >= 260) ? 'bloater' : (r < 0.55 && p.res >= 220) ? 'brute'
+          : (r < 0.7 && p.res >= 140) ? 'drifter' : 'mender');
+      }
+    // Adaptive Surge: harden the defending army, or the army before it commits a push
+    if (prog && prog.def.ability && (prog.abilityCd || 0) <= 0) {
+      const tgt = defendPt || (army.length ? { x: army[0].x, y: army[0].y } : null);
+      if (tgt) fireAbility(fac, prog, tgt.x, tgt.y);
+    }
+    // restless chaff — keep pressure on even below full wave size
+    if (army.length >= 8 && game.t > 60) for (const u of army)
+      if (u.order.type === 'idle') u.order = { type: 'amove', x: enemyCore.x, y: enemyCore.y };
+  }
+
   // ---- apex tech (all factions but Exodus, handled above, and the Warden, which
   // already has its Castellan + Bulwark): once the bot has teched deep, raise its
   // super-structure and keep one titan rolling out of it ----
@@ -477,6 +527,7 @@ function aiTick(fac) {
     choir: { b: 'charnel', u: 'devourer' }, syndicate: { b: 'exchange', u: 'warlord' },
     ember: { b: 'greatpyre', u: 'titan' }, verdant: { b: 'heartgrove', u: 'eldertree' },
     stormforge: { b: 'arcfoundry', u: 'tempest' }, pact: { b: 'grandaltar', u: 'bloodavatar' },
+    strain: { b: 'genmaw', u: 'genhorror' },
   };
   const ax = APEX[fac];
   if (ax && game.t > 220) {

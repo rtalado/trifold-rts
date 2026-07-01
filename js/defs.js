@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.27';
+const APP_VERSION = '1.0.29';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -46,6 +46,7 @@ const FACTIONS = {
   verdant:   { name: 'VERDANT BLOOM',    color: '#6fcf5c', dark: '#16401a', res: 'Sap',    cap: 84, res2: 'Pollen', res3: 'Loam' },
   stormforge:{ name: 'STORMFORGE DYNASTY', color:'#ff5ea8', dark: '#4a1338', res: 'Power',  cap: 42 },
   pact:      { name: 'OBSIDIAN PACT',    color: '#c0303a', dark: '#3a0e12', res: 'Blood',  cap: 72 },
+  strain:    { name: 'THE VIRULENT STRAIN', color: '#c8e639', dark: '#3a4a12', res: 'Genome', cap: 90 },
 };
 
 // neutral entities (Obelisks, Hoards) aren't a playable faction; fall back to grey
@@ -64,12 +65,13 @@ const HINTS = {
   verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. But a home garden CAPS OUT, and the scarce Pollen & Loam are choked. The answer is to spread: plant a Bloom on a WELLSPRING to root a thriving new ecosystem — it pours out bonus Sap, Pollen AND Loam, and grows a fertilising buff that makes every nearby plant & beast hit harder. So claim fertile ground all across the map. The Heartwood musters the whole army (Bramblehorn, Spore Caller need an Arboretum); Groves breed free Saplings; the Arboretum cultivates the Grafts, the Heart Grove and the INDESTRUCTIBLE Erdtree. Protect the Heartwood.',
   stormforge: 'An engine that accelerates — but no longer just by waiting. Your home Dynamos pay a FLAT rate and soon max out; the acceleration now lives on the MAP. Raise a Dynamo beside a WELLSPRING (a Storm Font) to harness it — and the longer you HOLD that font, the more Power it ramps out. So seize ground early and never let it go. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Defend the Reactor.',
   pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning — and whips the horde around it into a BLOOD FRENZY (the survivors strike harder and faster), so your own dying makes the rest deadlier. Throw cheap Thralls and fast Flayers into the grinder and raise Behemoths from their deaths. Raise the FLESH VATS for the elite horrors — a horde-healing BLOOD PRIEST, the heavy ABOMINATION and the winged GARGOYLE — anchor HEMORRHAGE SPIRES, and work the Altar’s CRIMSON RITE to rupture a field of foes and enrage the swarm. Raise Bone Shrines beside WELLSPRINGS to bleed extra Blood from the map. Reckless by design. Keep the Altar.',
+  strain: 'Your bodies are weak and dirt-cheap — that is the point. Every unit ADAPTS: survive enough of one kind of damage (bullet, beam, glob, shell, melee) and it hardens a strong resistance to that type — but gaining a new resistance always burns away the old one, so keep switching up how you hit them. Getting hit ALSO pays you: every point of damage your units endure earns Genome, so throwing cheap Spawnlings and Biters into the grinder funds the next wave (a Gene Vat mints a small trickle too). Raise a Feeding Nest for ranged Stingers and beam-lashing Lashers, a Mutagen Works for the heavy Brute, siege Bloater, flying Drifter and the healing Mender; a Spawning Well breeds free Whelps forever. Trigger the Progenitor’s ADAPTIVE SURGE to instantly harden your whole army against everything for a few seconds. Raise Genewells beside WELLSPRINGS for extra Genome. Protect the Progenitor.',
 };
 
 // verb shown on a faction's build buttons ('Build X' by default)
 const BUILD_VERB = {
   myriad: 'Grow ', syndicate: 'Drop ', warden: 'Erect ', ember: 'Raise ',
-  verdant: 'Plant ', stormforge: 'Assemble ', pact: 'Summon ',
+  verdant: 'Plant ', stormforge: 'Assemble ', pact: 'Summon ', strain: 'Evolve ',
 };
 
 // ---------------- unit / building definitions ----------------
@@ -84,7 +86,7 @@ const DEFS = {
   worker:   { fac:'vanguard', kind:'unit', name:'Worker', hp:45, size:8, speed:75, cost:50, time:6, dmg:3, range:12, cd:1, aggro:0, shot:'melee', harvester:true, builder:true },
   depot:    { fac:'vanguard', kind:'building', name:'Supply Depot', hp:560, size:22, cost:175, time:14, dropoff:true, capBonus:6 },
   barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','rocket','sniper','medic'] },
-  factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['outrider','tank','flametank','goliath','artillery'] },
+  factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['outrider','tank','flametank','goliath','artillery','dreadnought'] },
   airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship','bomber'] },
   turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:420, size:14, cost:100, time:12, dmg:9, range:195, cd:0.65, aggro:215, shot:'bullet' },
   pillbox:  { fac:'vanguard', kind:'building', name:'Pillbox', hp:820, size:18, cost:200, time:16, dmg:20, range:215, cd:1.2, aggro:230, shot:'shell', splash:30 },
@@ -100,6 +102,10 @@ const DEFS = {
   flametank:{ fac:'vanguard', kind:'unit', name:'Hellhound', hp:210, size:13, speed:74, cost:170, time:11, dmg:14, range:82, cd:0.5, aggro:150, shot:'glob', splash:34 },
   goliath:  { fac:'vanguard', kind:'unit', name:'Goliath', hp:380, size:15, speed:48, cost:270, time:15, dmg:26, range:185, cd:1.4, aggro:200, shot:'bullet' },
   artillery:{ fac:'vanguard', kind:'unit', name:'Artillery', hp:165, size:13, speed:42, cost:250, time:16, dmg:42, range:252, cd:3.3, aggro:120, shot:'shell', splash:66 },
+  // Landship: a broadside landship. Its guns run the length of the hull, so
+  // it can't just point-and-shoot — it must wheel side-on to a target (turnRate is
+  // slow, so you visibly see it come about) before its heavy shells can fire at all.
+  dreadnought:{ fac:'vanguard', kind:'unit', name:'Landship', hp:520, size:19, speed:38, cost:380, time:22, dmg:70, range:210, cd:2.6, aggro:230, shot:'shell', splash:36, broadside:true, turnRate:0.9 },
 
   // ----- MYRIAD SWARM -----
   hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11,
@@ -140,7 +146,7 @@ const DEFS = {
   ark:      { fac:'exodus', kind:'unit', name:'The Ark', hp:2300, shield:900, size:38, speed:34, core:true, stationary:true,
               dmg:16, range:185, cd:1.0, aggro:205, shot:'beam', splash:32, dropoff:true, researchLab:true, radarR:1300,
               aux:{ dmg:6, range:165, cd:0.4, shot:'bullet', guns:4 },
-              produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis','sovereign'],
+              produces:['collector','seeker','lancer','guardian','phoenix','templar','aegis','solarfrigate','sovereign'],
               // the Ark's signature active: a telegraphed orbital lance whose damage AND
               // blast SCALE with the Ark's ascension tier — modest early, apocalyptic once
               // fully ascended (out-damaging the Worldbreaker's Gustav Strike).
@@ -153,6 +159,9 @@ const DEFS = {
   phoenix:  { fac:'exodus', kind:'unit', name:'Phoenix', hp:70, shield:50, size:9, speed:125, cost:150, time:10, dmg:8, range:110, cd:0.5, aggro:210, shot:'bullet' },
   templar:  { fac:'exodus', kind:'unit', name:'Templar', hp:80, shield:70, size:10, speed:65, cost:260, time:15, dmg:24, range:140, cd:2.4, aggro:200, shot:'shell', splash:55 },
   aegis:    { fac:'exodus', kind:'unit', name:'Aegis', hp:240, shield:180, size:14, speed:50, cost:300, time:16, dmg:26, range:60, cd:0.9, aggro:190, shot:'melee', splash:30 },
+  // Solar Frigate: a second capital ship built straight from the Ark. Its batteries
+  // run broadside — it must wheel side-on (slow turnRate) before it can fire.
+  solarfrigate:{ fac:'exodus', kind:'unit', name:'Solar Frigate', hp:260, shield:220, size:17, speed:40, cost:340, time:19, dmg:52, range:205, cd:2.0, aggro:225, shot:'beam', splash:24, broadside:true, turnRate:0.9 },
 
   // ----- ASHEN CHOIR (death economy: Essence from every death; spirits decay off the
   //   lattice but lifesteal. NEW — REANIMATION: a share of every unit that falls anywhere
@@ -337,13 +346,16 @@ const DEFS = {
   dynamo:    { fac:'stormforge', kind:'building', name:'Dynamo', hp:520, size:22, cost:200, time:12 },
   pylon:     { fac:'stormforge', kind:'building', name:'Charge Pylon', hp:460, size:16, cost:170, time:12, aura:155, shieldHeal:24, heal:3 },
   tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:18, range:200, cd:1.1, aggro:210, shot:'beam' },
-  foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus'] },
+  foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus','stormcruiser'] },
   arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:100, shield:50, size:9, speed:118, cost:110, time:8, dmg:11, range:118, cd:0.4, aggro:205, shot:'bullet' },
   galvan:    { fac:'stormforge', kind:'unit', name:'Galvan', hp:190, shield:150, size:12, speed:92, cost:180, time:11, dmg:20, range:66, cd:0.7, aggro:185, shot:'beam', splash:24 },
   voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:90, shield:75, size:9, speed:62, cost:210, time:13, dmg:36, range:235, cd:2.0, aggro:250, shot:'beam' },
   colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:560, shield:210, size:18, speed:48, cost:420, time:24, dmg:46, range:180, cd:2.3, aggro:205, shot:'shell', splash:58 },
   stormlab:  { fac:'stormforge', kind:'building', name:'Research Bay', hp:520, size:22, cost:150, time:14, researchLab:true },
   gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:220, shield:110, size:13, speed:72, cost:230, time:14, dmg:25, range:135, cd:1.0, aggro:200, shot:'shell', splash:26 },
+  // Storm Cruiser: a shielded broadside battlecruiser — its arc-cannons run along
+  // the hull, so it must wheel side-on (slow turnRate) before it can fire at all.
+  stormcruiser:{ fac:'stormforge', kind:'unit', name:'Storm Cruiser', hp:340, shield:260, size:18, speed:34, cost:360, time:20, dmg:58, range:200, cd:2.2, aggro:225, shot:'beam', splash:26, broadside:true, turnRate:0.9 },
 
   // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying. NEW — BLOOD FRENZY:
   //   every Pact unit that falls whips the horde around it into a frenzy (harder, faster
@@ -372,6 +384,39 @@ const DEFS = {
   bloodpriest:{ fac:'pact', kind:'unit', name:'Blood Priest', hp:90, size:9, speed:84, cost:130, time:8, aggro:0, aura:140, heal:7 },
   abomination:{ fac:'pact', kind:'unit', name:'Abomination', hp:600, size:17, speed:58, cost:300, time:16, dmg:30, range:24, cd:1.2, aggro:185, shot:'melee', splash:40 },
   gargoyle:  { fac:'pact', kind:'unit', name:'Gargoyle', hp:130, size:10, speed:122, cost:150, time:10, dmg:13, range:125, cd:0.75, aggro:200, shot:'glob' },
+
+  // ----- THE VIRULENT STRAIN (evolution: mostly weak, dirt-cheap spam whose units
+  //   ADAPT — survive enough of one damage TYPE and they harden a strong resistance to
+  //   it, always replacing whatever resistance they had before (see applyDamage/evoAdapt
+  //   in sim.js). Every point of damage a Strain unit ENDURES also pays Genome, so
+  //   throwing chaff into the grinder funds the next wave — a masochistic economy that
+  //   mirrors the Ember's damage-DEALT Plunder, but inverted.) -----
+  progenitor: { fac:'strain', kind:'building', name:'The Progenitor', hp:1750, size:40, core:true,
+                dmg:9, range:160, cd:0.85, aggro:190, shot:'glob',
+                produces:['spawnling','biter','lurker'],
+                grows:['cyst','vat','genewell','spawnwell','nest','mutaworks','barb','genlab','radar_strain','genmaw'],
+                // the Strain's active: instantly harden every nearby unit against ALL
+                // damage for a few seconds — a burst of mass adaptation, not attrition.
+                ability:{ key:'surge', name:'Adaptive Surge', range:2200, cd:38, radius:220, dur:6,
+                          desc:'Trigger a mass adaptation at a point in great range: every Strain unit caught instantly hardens a strong, temporary resistance to ALL damage for a few seconds.' } },
+  cyst:      { fac:'strain', kind:'building', name:'Marrow Cyst', hp:130, size:10, cost:50, time:7 },
+  vat:       { fac:'strain', kind:'building', name:'Gene Vat', hp:420, size:22, cost:170, time:12 },
+  genewell:  { fac:'strain', kind:'building', name:'Genewell', hp:380, size:16, cost:140, time:10 },
+  spawnwell: { fac:'strain', kind:'building', name:'Spawning Well', hp:370, size:21, cost:150, time:13, spawns:'whelp', spawnEvery:5 },
+  nest:      { fac:'strain', kind:'building', name:'Feeding Nest', hp:520, size:22, cost:170, time:13, produces:['stinger','lasher'] },
+  barb:      { fac:'strain', kind:'building', name:'Barb Node', hp:370, size:13, cost:110, time:8, dmg:12, range:172, cd:0.85, aggro:190, shot:'glob' },
+  genlab:    { fac:'strain', kind:'building', name:'Mutagen Vault', hp:500, size:22, cost:150, time:13, researchLab:true },
+  mutaworks: { fac:'strain', kind:'building', name:'Mutagen Works', hp:680, size:24, cost:200, time:14, produces:['brute','bloater','drifter','mender'] },
+  spawnling: { fac:'strain', kind:'unit', name:'Spawnling', hp:40, size:6, speed:105, cost:26, time:3, dmg:6, range:13, cd:0.55, aggro:170, shot:'melee' },
+  biter:     { fac:'strain', kind:'unit', name:'Biter', hp:75, size:8, speed:92, cost:58, time:5, dmg:12, range:15, cd:0.7, aggro:182, shot:'melee' },
+  lurker:    { fac:'strain', kind:'unit', name:'Lurker', hp:56, size:8, speed:80, cost:65, time:5, dmg:10, range:135, cd:1.0, aggro:190, shot:'glob' },
+  whelp:     { fac:'strain', kind:'unit', name:'Whelp', hp:30, size:6, speed:108, dmg:5, range:12, cd:0.6, aggro:165, shot:'melee', freeUnit:true },
+  stinger:   { fac:'strain', kind:'unit', name:'Stinger', hp:72, size:8, speed:112, cost:85, time:6, dmg:9, range:110, cd:0.5, aggro:185, shot:'bullet' },
+  lasher:    { fac:'strain', kind:'unit', name:'Lasher', hp:82, size:9, speed:70, cost:120, time:8, dmg:20, range:172, cd:1.4, aggro:200, shot:'beam' },
+  brute:     { fac:'strain', kind:'unit', name:'Brute', hp:340, size:15, speed:60, cost:220, time:13, dmg:26, range:24, cd:1.2, aggro:185, shot:'melee', splash:32 },
+  bloater:   { fac:'strain', kind:'unit', name:'Bloater', hp:200, size:14, speed:44, cost:260, time:16, dmg:46, range:230, cd:3.0, aggro:250, shot:'shell', splash:56 },
+  drifter:   { fac:'strain', kind:'unit', name:'Drifter', hp:90, size:9, speed:118, cost:140, time:9, dmg:14, range:120, cd:0.75, aggro:200, shot:'glob' },
+  mender:    { fac:'strain', kind:'unit', name:'Mender', hp:60, size:8, speed:85, cost:90, time:6, aggro:0, aura:130, heal:6 },
 
   // ===== APEX TECH: each faction's late-game super-structure + titan =====
   // Gated behind deep tech (a top-tier production building / research lab) AND the
@@ -429,6 +474,11 @@ const DEFS = {
   bloodavatar:{ fac:'pact', kind:'unit', name:'Blood Avatar', hp:1600, size:22, speed:52, cost:600, time:32, apex:true,
                dmg:48, range:26, cd:1.4, aggro:190, shot:'melee', splash:55, aura:150, heal:6 },
 
+  // THE VIRULENT STRAIN — the perfected organism: already adapted to everything
+  genmaw:    { fac:'strain', kind:'building', name:'The Genesis Maw', hp:1000, size:28, cost:520, time:16, apex:true, produces:['genhorror'] },
+  genhorror: { fac:'strain', kind:'unit', name:'Genesis Horror', hp:1550, size:22, speed:54, cost:620, time:32, apex:true,
+               dmg:44, range:28, cd:1.3, aggro:195, shot:'melee', splash:58 },
+
   // ===== RADAR / SENSORS =====
   // Every faction can raise a cheap sensor building that DETECTS enemy movement at long
   // range (`radarR`) — but only as imprecise "contacts" (fuzzy, cell-quantised blips), never
@@ -446,6 +496,7 @@ const DEFS = {
   radar_verd:  { fac:'verdant',   kind:'building', name:'Pollen Sensor',  hp:360, size:14, cost:130, time:11, radarR:1100 },
   radar_storm: { fac:'stormforge',kind:'building', name:'Sensor Array',   hp:360, size:14, cost:130, time:11, radarR:1100 },
   radar_pact:  { fac:'pact',      kind:'building', name:'Scrying Pool',   hp:360, size:14, cost:130, time:11, radarR:1100 },
+  radar_strain:{ fac:'strain',    kind:'building', name:'Pheromone Node', hp:360, size:14, cost:130, time:11, radarR:1100 },
 
   // ----- NEUTRAL (capture / fight) -----
   // Obelisk: indestructible capture point — hold ground nearby to claim its income.
@@ -487,6 +538,7 @@ const META = {
   gunship:   { desc: 'Fast flyer with rapid fire. Excellent for raids and mop-up.' },
   bomber:    { desc: 'Fast bombing aircraft that drops a heavy splashing payload — devastating against clumped troops and buildings. Slow to reload.' },
   artillery: { desc: 'Long-range mobile gun with a huge splash. Out-ranges almost everything, but fragile and helpless up close — screen it with armour.', req: 'techlab' },
+  dreadnought:{ desc: 'A broadside landship: heavy shells run the length of the hull, so it must wheel side-on to a target before it can fire at all — slow to turn, devastating once lined up. Screen its flanks; it can’t answer a foe that stays off its beam.' },
   // MYRIAD SWARM
   hive:      { desc: 'Your core. Spreads creep, spawns free Drones, grows every structure — and casts CORRUPTION BLOOM: a wide spore-burst that heavily corrupts enemies (and bursts the corrupted dead into free Larva). Every Myriad attack already inflicts a base dose of corruption.' },
   tumor:     { desc: 'Cheap creep spreader; extends your economy and where you can build.' },
@@ -635,6 +687,26 @@ const META = {
   bloodpriest:{ desc: 'The Pact’s only healer — bleeds its own life into an aura that mends the horde around it, so your summonings keep fighting. Non-combat.', req: 'fleshvats' },
   abomination:{ desc: 'Stitched horror — a heavy splashing bruiser, tougher than a Behemoth-in-waiting and cheaper to mass. The Vats’ front line.', req: 'fleshvats' },
   gargoyle:  { desc: 'Winged blood-fiend — the Pact’s air. Fast, lashes from afar, and runs down stragglers and flyers.', req: 'fleshvats' },
+  // THE VIRULENT STRAIN
+  progenitor:{ desc: 'Your core. Musters the base Spawnling/Biter/Lurker line and works ADAPTIVE SURGE — instantly hardening every nearby unit against ALL damage for a few seconds. Every point of damage your units endure already pays Genome.' },
+  cyst:      { desc: 'Cheap networked outgrowth. Extends your build range toward distant ground.' },
+  vat:       { desc: 'Mints a small, steady trickle of Genome. Stack a few for a base income floor.' },
+  genewell:  { desc: 'Harnesses a Wellspring for a heavy flow of Genome. Build it within range of an unclaimed font.' },
+  spawnwell: { desc: 'Breeds free Whelps endlessly, for free — cheap chaff that costs nothing but still bleeds Genome when it’s hit.' },
+  nest:      { desc: 'Feeding Nest — trains ranged Stingers and the piercing beam-Lasher.' },
+  barb:      { desc: 'Static defensive spore-turret. Cheap base protection.' },
+  genlab:    { desc: 'Research building. Refines the Strain’s mutations and upgrades.' },
+  mutaworks: { desc: 'War-works for the heavier line: the tanky Brute, siege Bloater, flying Drifter and the healing Mender. Gate to the Strain’s heavier mutations.', req: 'genlab' },
+  spawnling: { desc: 'The cheapest body in any war — dirt-cheap melee chaff. Spam these; every hit they soak pays Genome and edges them toward adapting.' },
+  biter:     { desc: 'Slightly tougher melee striker. Still meant to be thrown away in numbers.' },
+  lurker:    { desc: 'Cheap ranged spore-lobber. Softens a line from range while the melee chaff soaks hits.' },
+  whelp:     { desc: 'Free, tiny, very fast melee body. Bred by the Spawning Well — never costs Genome, but its wounds still feed the treasury.' },
+  stinger:   { desc: 'Fast-firing ranged skirmisher.', req: 'nest' },
+  lasher:    { desc: 'Ranged beam-caster with real single-target bite. Out-ranges most early chaff.', req: 'nest' },
+  brute:     { desc: 'Heavy splashing melee bruiser — the line that tanks and adapts.', req: 'mutaworks' },
+  bloater:   { desc: 'Lumbering siege beast that lobs a heavy, splashing shell from extreme range. Fragile up close — screen it.', req: 'mutaworks' },
+  drifter:   { desc: 'Fast flying spore-slinger — the Strain’s air. Raids, chases flyers and softens clumps.', req: 'mutaworks' },
+  mender:    { desc: 'Non-combat support; continuously heals nearby Strain units so the adapted survivors keep fighting.', req: 'mutaworks' },
   // NEW UNITS & BUILDINGS
   techlab:   { desc: 'Research building. Develops the Vanguard’s weapon & armour upgrades.' },
   flametank: { desc: 'Fast short-range tank that hoses a cone of fire — devastating against clumped infantry.' },
@@ -642,6 +714,7 @@ const META = {
   evochamber:{ desc: 'Research building grown on creep. Evolves the swarm’s upgrades.' },
   ravager:   { desc: 'Bred ranged elite that lobs corrosive splash. Needs a Hunter Den.', req: 'hunterden' },
   aegis:     { desc: 'Heavily shielded Solari bruiser. Soaks fire and crushes what it reaches.' },
+  solarfrigate:{ desc: 'A second capital ship, built straight from the Ark. Its batteries run broadside — it must wheel side-on to a target before it can fire, so escort it against anything that can dash past its flanks.' },
   oracle:    { desc: 'Lattice research shrine. Unlocks the Choir’s upgrades.' },
   lich:      { desc: 'Ranged caster spirit with a piercing death-beam. Fragile but hits hard.' },
   blackmarket:{ desc: 'Air-dropped research den. Brokers the Syndicate’s upgrades.' },
@@ -652,6 +725,7 @@ const META = {
   ancient:   { desc: 'Towering elder treant — enormous HP and splashing blows. Needs a Grove.', req: 'grove' },
   stormlab:  { desc: 'Research building. Designs the Dynasty’s upgrades.' },
   gladius:   { desc: 'Shielded mid-weight mech with a splashing cannon. Needs a Dynamo.', req: 'dynamo' },
+  stormcruiser:{ desc: 'A shielded battlecruiser whose arc-cannons run broadside — it must wheel side-on to a target before it can fire, slow but devastating once aligned.' },
   sanctum:   { desc: 'Research building. Channels the Pact’s rites & upgrades.' },
   cultist:   { desc: 'Cheap ranged zealot — the Pact’s only ranged body. Spits hexes from afar.' },
   // APEX TECH — late-game super-structures + titans (each gated on Siege Ordnance)
@@ -672,6 +746,8 @@ const META = {
   tempest:   { desc: 'Storm titan — long arc-beam + four arc turrets behind heavy shields. Needs Siege Ordnance.', reqResearch:'stormforge_ord' },
   grandaltar:{ desc: 'Pact apex altar. Summons the Blood Avatar + free Thralls. Needs a Blood Sanctum and Bone Shrine.', reqs:['sanctum','shrine'] },
   bloodavatar:{ desc: 'Avatar of slaughter — splashing strikes, a horde-healing aura, an endless Thrall tide. Needs Siege Ordnance.', reqResearch:'pact_ord' },
+  genmaw:    { desc: 'Strain apex maw. Births the Genesis Horror. Needs a Mutagen Works and Mutagen Vault.', reqs:['mutaworks','genlab'] },
+  genhorror: { desc: 'The perfected organism — a splashing melee horror, already adapting like the rest of the Strain. Needs Siege Ordnance.', reqResearch:'strain_ord' },
   // RADAR / SENSORS — long-range early warning, but only imprecise "contacts" (fuzzy
   // blips), never the clear picture line-of-sight gives. Build them forward to watch the
   // approaches; a contact tells you something hostile is out there, roughly where — not what.
@@ -684,6 +760,7 @@ const META = {
   radar_verd:  { desc: 'Pollen Sensor — a drifting pollen-haze that senses enemies moving far across the map as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
   radar_storm: { desc: 'Sensor Array — sweeps a wide field and paints distant enemy movement as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
   radar_pact:  { desc: 'Scrying Pool — blood-divination glimpses enemies moving far off, marking them as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
+  radar_strain:{ desc: 'Pheromone Node — scent-trails read enemy movement far across the map, surfacing it as imprecise contacts (fuzzy blips). Early warning, not a clear view — only true line of sight shows the real units.' },
   // NEUTRAL
   obelisk:   { desc: 'Neutral capture point. Hold units nearby to claim it for steady income.' },
   hoard:     { desc: 'Guarded neutral treasure tower. Destroy it for a one-time bounty.' },
@@ -731,7 +808,7 @@ function costMsg(fac, d) {
 // already have their own network rules; Exodus has no base and is exempt. Buildings
 // flagged `forward:true` (the Syndicate's air-dropped Watchpost) bypass the rule.
 const CONNECT_R = 270;
-const NETWORKED = { vanguard: 1, warden: 1, syndicate: 1, ember: 1, verdant: 1, stormforge: 1, pact: 1 };
+const NETWORKED = { vanguard: 1, warden: 1, syndicate: 1, ember: 1, verdant: 1, stormforge: 1, pact: 1, strain: 1 };
 // the Verdant Bloom's garden spreads further than most — and a building can override
 // the radius with its own `connectR` (the Heartwood Sapling reaches far out to expand).
 function connectBase(fac) { return fac === 'verdant' ? 360 : CONNECT_R; }
@@ -789,6 +866,30 @@ const BURN = { baseDur: 3.0, dps: 6 };
 // `frenzyR` is whipped into a frenzy for `dur` seconds — striking harder (`frenzyDmg`)
 // and faster (`frenzyCd`, a cooldown multiplier). Read live in dmgOf / cdOf.
 const PACT = { frenzyR: 150, dur: 5, frenzyDmg: 1.30, frenzyCd: 0.78 };
+
+// ---------------- facing / turning ----------------
+// Every unit has a `facing` (radians) that turns toward its movement heading (or,
+// stationary, toward whatever it's shooting at) at a bounded rate — see
+// turnToward/angleDiff in sim.js. `def.turnRate` overrides the default per unit
+// (the broadside "landships" turn much slower, so you visibly see them wheel about).
+const TURN_RATE = 5.0;          // rad/s — most units snap to a new heading briskly
+// Broadside units (`def.broadside:true`) mount their guns along the hull's sides:
+// they can only fire when a target lies within BROADSIDE_ARC of directly abeam
+// (90°/270° off the nose) — see engage() in sim.js. Forces them to wheel side-on
+// before they can shoot, the whole point of a "ship" unit on a battlefield.
+const BROADSIDE_ARC = 0.32;     // radians of tolerance either side of exactly abeam
+
+// The Virulent Strain's ADAPTATION. Every Strain unit tracks a "streak" of the last
+// damage TYPE (its attacker's `shot`) it has taken; a different type resets the streak.
+// Once the streak's cumulative damage crosses `thresholdFrac` of the unit's own max HP,
+// it ADAPTS: a `resist` reduction to that type kicks in, replacing whatever resistance
+// it had before (only one active at a time — see evoAdapt in sim.js). Adaptive Surge
+// (the Progenitor's active) instead grants a brief, no-strings resistance to everything.
+// Getting hit also pays Genome (`lootPerDmg` of damage endured) — the masochistic mirror
+// of the Ember's damage-DEALT Plunder.
+const EVO = { thresholdFrac: 0.55, resist: 0.45, lootPerDmg: 0.35, surgeResist: 0.6 };
+const SHOT_TYPES = ['melee', 'bullet', 'beam', 'glob', 'shell'];
+const EVO_COLOR = { melee: '#e0574d', bullet: '#e0c94d', beam: '#4dc7e0', glob: '#7de04d', shell: '#b06de0' };
 
 // ---------------- research / upgrades ----------------
 // Every faction shares the same four-branch tech tree (Offense / Defense / Mobility
@@ -1025,6 +1126,10 @@ const ECON = {
   // pact: Blood gained when your OWN units die (flat + a share of their max HP) — there is
   // no passive home income to speak of, so the Pact must throw itself into the fight.
   pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
+  // strain: a small flat trickle + a Gene Vat flat rate, PLATEAUING at strainVatCap — the
+  // real economy is masochistic (see EVO.lootPerDmg in applyDamage): every point of damage
+  // a Strain unit endures pays Genome, so the swarm profits from being attacked.
+  strainBase: 1.6, strainPerVat: 1.2, strainVatCap: 6,
   // neutral capture points pay their holder a steady income. With home economies now
   // capped, captured Obelisks (and harnessed Wellsprings) ARE the economy — the dominant,
   // uncapped way to scale, so the whole match is a fight over the map's ground.
@@ -1044,14 +1149,14 @@ const WELL = {
   // the structure each faction raises to harness a Wellspring (myriad = creep coverage)
   harness: {
     vanguard: 'depot', choir: 'conduit', syndicate: 'watchpost',
-    ember: 'warcamp', verdant: 'bloom', stormforge: 'dynamo', pact: 'shrine',
+    ember: 'warcamp', verdant: 'bloom', stormforge: 'dynamo', pact: 'shrine', strain: 'genewell',
   },
   // primary-resource income per harnessed font — large, because this IS your scaling now
   // (the Stormforge's fonts additionally ramp with how long they're held; the Verdant's
   // also pour Pollen + Loam and grow an ecosystem buff — see tickEconomy)
   income: {
     vanguard: 5.5, myriad: 5.2, choir: 5.0, syndicate: 5.5,
-    ember: 4.6, verdant: 4.2, stormforge: 5.0, pact: 5.0, exodus: 6.0,
+    ember: 4.6, verdant: 4.2, stormforge: 5.0, pact: 5.0, exodus: 6.0, strain: 4.8,
   },
   defaultIncome: 5.0,
 };

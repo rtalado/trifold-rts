@@ -84,6 +84,7 @@ before you walk in. A telegraph warns the enemy, so aim where they can't easily 
 | **Phoenix** | 150 | Fast shielded flyer, rapid fire. Raids and chases. |
 | **Templar** | 260 | Shielded splashing siege shell. |
 | **Aegis** | 300 | 240 HP / 180 shield bruiser — soaks fire up front. |
+| **Solar Frigate** | 340 | 260 HP / 220 shield **broadside** capital ship — must wheel side-on to a target before its batteries can fire. Slow to turn; escort it. |
 
 **Apex:** **Solar Sovereign** (820) — shielded capital ship with a splashing beam + four
 point-defence guns. Built straight from the Ark (no super-structure needed), gated on Siege Ordnance.

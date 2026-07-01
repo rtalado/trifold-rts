@@ -15,6 +15,7 @@ RTS. Each faction plays completely differently — pick one and read its guide.
 | **Verdant Bloom** | Sap/Pollen/Loam | Three-harvest garden | [verdant.md](verdant.md) |
 | **Stormforge Dynasty** | Power | Escalating industry, shielded mechs | [stormforge.md](stormforge.md) |
 | **Obsidian Pact** | Blood | Martyrdom — your own dead fund you | [pact.md](pact.md) |
+| **The Virulent Strain** | Genome | Weak spam that adapts resistance to damage taken | [strain.md](strain.md) |
 
 ---
 
@@ -49,6 +50,23 @@ physically *chain* buildings out toward them. Exceptions: Myriad builds on creep
 within its lattice, Exodus has no buildings, and the Syndicate **Watchpost air-drops anywhere**.
 You can never build within ~300px of an enemy structure (no turret-rushing their base).
 
+### Movement, formations & self-destruct
+Every unit turns to face wherever it's moving or fighting instead of gliding around
+frozen in place. Right-click-**drag** instead of a plain right-click to give a
+**formation move/attack-move**: the selection spreads out evenly along the dragged
+line (in their current left-to-right order, so paths don't cross) and settles facing
+the way the group was headed — draw a line perpendicular to an incoming push to form
+a firing line facing it. Select any of your own units and hit **Delete** (or the
+command card's Self-Destruct button) to scuttle them instantly — no refund, but the
+enemy gets no kill credit either, handy for denying a doomed unit.
+
+A few factions field heavy **broadside** units — the Vanguard's **Landship**, the
+Stormforge's **Storm Cruiser** and the Exodus' **Solar Frigate** — whose guns run
+along the hull instead of the nose. They can't just point-and-shoot: they must wheel
+side-on to a target (slow to turn) before firing at all, then hold that heading while
+they fire. Fast flankers that stay off their beam can neutralise one outright, so
+escort them.
+
 ### Research: the shared four-branch tech tree
 Every faction researches at its own lab building. The tree is identical in structure — four
 branches, each with four tiers:
@@ -67,4 +85,5 @@ own apex line: Castellan → The Bulwark → The Worldbreaker.)
 
 ### Winning
 Free-for-all, last core standing wins. Destroy every enemy **core** (HQ / Hive / Ark / Ossuary /
-Haven / Keep / Pyre / Heartwood / Reactor / Altar); protect your own. Lose your core and you're out.
+Haven / Keep / Pyre / Heartwood / Reactor / Altar / The Progenitor); protect your own. Lose your
+core and you're out.

@@ -1,6 +1,6 @@
 # TRIFOLD — an asymmetric RTS
 
-One war, **ten completely different ways to wage it.** A self-contained desktop RTS
+One war, **eleven completely different ways to wage it.** A self-contained desktop RTS
 (plain HTML5 canvas + vanilla JS wrapped in Electron, no build step, no framework)
 where every faction plays by its own rules — different economy, different
 production, different verbs. Every match is a free-for-all: destroy the enemy
@@ -191,7 +191,7 @@ The only outside contact is the PeerJS broker (matchmaking) and a public STUN lo
 browsers. The one limitation: if both players sit behind very strict NATs a direct
 link can fail — have one switch networks (a phone hotspot usually works).
 
-## The ten factions
+## The eleven factions
 
 Each has a unique economy, a single **core** that ends the game if it dies, and its
 own roster (units below are highlights, not the full list).
@@ -215,8 +215,8 @@ own roster (units below are highlights, not the full list).
 Earth's main standing army and the widest, most flexible roster in the war — textbook
 combined arms with an answer to everything. Workers mine crystal back to the HQ. Build
 Barracks (Marines, the hard-hitting **Rocketeers**, Snipers, Medics), a Factory (fast
-**Outriders**, Siege Tanks, flame **Hellhounds**, heavy **Goliath** walkers and
-long-range **Artillery**), an Airfield (Gunships, splashing **Vulture Bombers**),
+**Outriders**, Siege Tanks, flame **Hellhounds**, heavy **Goliath** walkers,
+long-range **Artillery** and the broadside **Landship**), an Airfield (Gunships, splashing **Vulture Bombers**),
 Turrets and armoured **Pillboxes**. Their one weakness is *limited resource scaling* —
 crystal nodes are finite — so **Supply Depots** mint a steady trickle of crystal, double
 as drop-offs and raise the unit cap, keeping the war machine fed once the nodes run dry.
@@ -239,7 +239,8 @@ the start** (a splashing main beam + a ring of point-defence guns). **Deploy** i
 crystal node to siphon fast; **scale by ranging the map** — park **Collectors or the Ark**
 beside **Wellsprings** to harness them and seize **Obelisks** (the nomads earn extra on
 each). A handful of priceless, **shielded** elites — Seekers, Lancers, Guardians, Phoenixes,
-Templars, the heavy **Aegis**. **Ascend the Ark** through eight tiers — more HP, shields,
+Templars, the heavy **Aegis**, and a second capital ship, the broadside **Solar Frigate**.
+**Ascend the Ark** through eight tiers — more HP, shields,
 guns (4 → 8), splash and reach — into a roaming **superweapon** with a map-scorching **Solar
 Lance** that surpasses the Worldbreaker. Shields regenerate. Lose nothing, or lose everything.
 
@@ -286,7 +287,7 @@ advanced structures are raised from *other* advanced structures, not all from th
 - **Grand Arsenal** → **The Bulwark** and **The Worldbreaker**.
 
 Wall in and bristle with layered defences for a truly impenetrable base. Alone among
-the ten, the Warden is **self-sufficient** — a secretive, walled brotherhood that needn't
+the eleven, the Warden is **self-sufficient** — a secretive, walled brotherhood that needn't
 scrabble for the map's **Wellsprings** (and in fact *cannot* harness them); its standing
 buildings already are its economy. Slow,
 armoured units (Sentinels, Warden Guards, Pikemen, Ironclads, Bombards) grind
@@ -339,8 +340,8 @@ rate and soon **max out**; the acceleration now lives on the map. Raise a Dynamo
 **Wellspring** (a *Storm Font*) to harness it, and the longer you **hold** that font the
 more Power it ramps out — so seize ground early and never let go. Few but devastating, **shielded** machines,
 kept in the fight by **Charge Pylons** that re-energise their shields mid-battle:
-Arclights, the shock-trooper **Galvan**, Voltaics, the mid-weight **Gladius**, and the
-towering Colossus.
+Arclights, the shock-trooper **Galvan**, Voltaics, the mid-weight **Gladius**, the
+towering Colossus, and the broadside **Storm Cruiser**.
 
 ### OBSIDIAN PACT — the Martyrs · *Blood* · core: **Blood Altar**
 Death is your harvest — your *own*. Every unit you lose spills Blood for the next,
@@ -354,16 +355,34 @@ Spires**, and work the Altar's **Crimson Rite** to rupture a field of foes and e
 swarm. Bone Shrines on **Wellsprings** bleed extra Blood. See the
 [full Pact guide](guides/pact.md).
 
+### THE VIRULENT STRAIN — the Adaptation · *Genome* · core: **The Progenitor**
+Mostly dirt-cheap, weak spam — losing a **Spawnling** (26 Genome, the cheapest paid unit
+in the game) is the plan, not a setback. Every Strain unit **ADAPTS**: survive enough
+damage of one TYPE (bullet, beam, glob, shell or melee) and it hardens a strong
+resistance to that type — but earning a new resistance always **burns away the old
+one**, so a foe must keep switching weapons to keep cutting through an adapted swarm.
+Getting hit also **pays you**: every point of damage a Strain unit *endures* earns
+Genome (the masochistic mirror of the Ember's damage-*dealt* Plunder), so throwing
+chaff into the grinder funds the next wave. **Spawning Wells** breed free **Whelps**
+forever; a **Feeding Nest** trains ranged **Stingers** and beam-lashing **Lashers**; a
+**Mutagen Works** raises the tanky **Brute**, siege **Bloater**, flying **Drifter** and
+the healing **Mender**. Trigger the Progenitor's **ADAPTIVE SURGE** to instantly harden
+your whole army against everything at once. Genewells on **Wellsprings** bleed extra
+Genome from the map. Protect the **Progenitor**. See the
+[full Strain guide](guides/strain.md).
+
 ## Controls
 
 | Input | Action |
 |---|---|
 | Left-drag / left-click | Select units / a building |
 | Right-click | Move, attack target, harvest/siphon node, set rally |
+| Right-click **and drag** | **Formation move** — spread the selection along the dragged line instead of piling onto one point, then face the way they were headed (works with Shift too) |
 | Shift+right-click | Attack-move to a point (engage foes on the way) |
 | Ctrl+right-click | Attack that way — auto-targets the nearest foe in the clicked direction |
+| Delete / Backspace | **Self-destruct** the selected unit(s) — instant, no refund, no kill credit to the enemy |
 | Mouse wheel | Zoom in / out (toward the cursor) |
-| 1–0 | Command-card hotkeys (build / produce / sell / deploy) |
+| 1–0 | Command-card hotkeys (build / produce / sell / self-destruct / deploy) |
 | T | Open / close the tech tree |
 | F | Select your whole army |
 | Space | Jump camera to your core |
@@ -372,7 +391,14 @@ swarm. Bone Shrines on **Wellsprings** bleed extra Blood. See the
 
 Selecting any unit or building shows its **weapon range** as a ring, and selected
 units draw a line to wherever they've been ordered. Select one of your buildings to
-**Sell** it (recovers half its cost) — handy for fixing a bad placement.
+**Sell** it (recovers half its cost) — handy for fixing a bad placement; select any
+of your own units to **Self-Destruct** them instead (no refund, but denies the kill).
+
+Every unit turns to face the way it's moving or fighting. A few heavy **broadside**
+units — the Vanguard's **Landship**, the Stormforge's **Storm Cruiser** and
+the Exodus' **Solar Frigate** — mount their guns along the hull instead of the nose:
+they must wheel side-on to a target (slow to turn) before they can fire at all, so
+escort them against anything that can dash past their flanks.
 
 ## Code layout
 

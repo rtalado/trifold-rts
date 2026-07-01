@@ -1,7 +1,7 @@
 {
   "name": "trifold-rts",
-  "version": "1.0.27",
-  "description": "Trifold — an asymmetric RTS. One war, ten ways to wage it.",
+  "version": "1.0.29",
+  "description": "Trifold — an asymmetric RTS. One war, eleven ways to wage it.",
   "author": {
     "name": "rtalado",
     "email": "rtalado@users.noreply.github.com"
@@ -55,10 +55,10 @@
     "linux": {
       "target": ["AppImage", "deb"],
       "category": "Game",
-      "synopsis": "An asymmetric RTS — one war, ten ways to wage it.",
+      "synopsis": "An asymmetric RTS — one war, eleven ways to wage it.",
       "desktop": {
         "Name": "Trifold RTS",
-        "Comment": "An asymmetric RTS — one war, ten ways to wage it.",
+        "Comment": "An asymmetric RTS — one war, eleven ways to wage it.",
         "Categories": "Game;StrategyGame;"
       }
     }

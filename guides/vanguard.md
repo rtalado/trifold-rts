@@ -46,7 +46,8 @@ new ground. Sitting still = slow death.
 
 **Factory:** Outrider (90, fast recon/raider) · Siege Tank (200, splash anti-armour) · Hellhound
 (170, short-range flame, melts clumped infantry) · Goliath (270, durable long-range walker) ·
-Artillery (250, huge range + splash, fragile — needs Tech Lab).
+Artillery (250, huge range + splash, fragile — needs Tech Lab) · **Landship** (380, broadside
+guns — must wheel side-on to a target before it can fire; slow but devastating once lined up).
 
 **Airfield:** Gunship (180, fast rapid-fire raider) · Vulture Bomber (240, heavy splash payload).
 

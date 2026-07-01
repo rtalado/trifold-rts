@@ -36,6 +36,8 @@ function buildSnap() {
     if (e.corruptUntil > game.t) fl |= 1024;  // Myriad corruption (bit 10)
     if (e.burnUntil > game.t) fl |= 2048;     // Ember burning (bit 11)
     if (e.frenzyUntil > game.t) fl |= 4096;   // Pact blood frenzy (bit 12)
+    if (e.resistType) fl |= (SHOT_TYPES.indexOf(e.resistType) + 1) << 13;  // Strain adaptation (bits 13-15)
+    if (e.evoSurgeUntil > game.t) fl |= 65536; // Strain Adaptive Surge (bit 16)
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
     const rq = e.rqueue && e.rqueue.length ? e.rqueue[0] : null;
@@ -45,7 +47,10 @@ function buildSnap() {
       Math.ceil(e.hp), Math.ceil(e.shield), fl, prog,
       q ? Math.round((1 - q.t / q.total) * 100) : 0, ql,
       rq ? Math.round((1 - rq.t / rq.total) * 100) : 0, rl,
-      e.abilityCd ? Math.ceil(e.abilityCd) : 0];
+      e.abilityCd ? Math.ceil(e.abilityCd) : 0,
+      // facing, in whole degrees (0-359) — units only draw rotated, but sync it for
+      // everyone uniformly; cheap (one byte-ish) and keeps guests' bodies oriented right
+      Math.round(((e.facing || 0) * 180 / Math.PI % 360 + 360) % 360)];
   });
   const players = {};
   for (const f in game.players) {
@@ -84,14 +89,14 @@ function applySnap(m) {
   const byIdMap = new Map();
   for (const o of game.entities) byIdMap.set(o.id, o);
   for (const row of m.units) {
-    const [id, ti, x, y, hp, sh, fl, prog, qp, ql, rp, rl, acd] = row;
+    const [id, ti, x, y, hp, sh, fl, prog, qp, ql, rp, rl, acd, facingDeg] = row;
     seen.add(id);
     let e = byIdMap.get(id);
     if (!e) {
       const type = TYPE_LIST[ti], d = DEFS[type];
       e = { id, type, def: d, fac: d.fac, x, y, size: d.size, hpMax: d.hp,
         shieldMax: d.shield || 0, order: { type: 'idle' }, queue: [], rqueue: [], dead: false,
-        deployed: false, lastHurt: -99, cd: 0, tgt: 0 };
+        deployed: false, lastHurt: -99, cd: 0, tgt: 0, facing: 0 };
       game.entities.push(e);
     }
     // reflect researched HP/shield upgrades (and the Ark's upgrade tier) so the
@@ -109,6 +114,9 @@ function applySnap(m) {
     e.corruptUntil = (fl & 1024) ? game.t + 1 : 0;   // Myriad corruption marker (cosmetic on guests)
     e.burnUntil = (fl & 2048) ? game.t + 1 : 0;      // Ember burning marker (cosmetic on guests)
     e.frenzyUntil = (fl & 4096) ? game.t + 1 : 0;    // Pact blood frenzy marker (cosmetic on guests)
+    const rt = (fl >> 13) & 7; e.resistType = rt ? SHOT_TYPES[rt - 1] : null; // Strain adaptation (cosmetic)
+    e.evoSurgeUntil = (fl & 65536) ? game.t + 1 : 0; // Strain Adaptive Surge marker (cosmetic on guests)
+    e.facing = (facingDeg || 0) * Math.PI / 180;
     if (e.mutated && e.def.kind === 'unit') e.size = Math.round(baseSize(e) * VERD.mutSize);
     const ownIdx = (fl >> 4) & 15; e.owner = ownIdx ? Object.keys(FACTIONS)[ownIdx - 1] : null;
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };
@@ -459,7 +467,14 @@ function handleCmd(m) {
   if (m.kind === 'order') {
     if (!Array.isArray(m.ids) || m.ids.length > MAX_ORDER_IDS) return;
     const sel = m.ids.map(byId).filter(e => e && e.fac === fac);
-    if (sel.length) applyOrder(fac, sel, cx, cy, m.mode || (m.amove ? 'amove' : 'move'));
+    // an optional second point (fx,fy) is a formation-line drag — see issueFormationOrder
+    let line = null;
+    if (m.fx != null && m.fy != null && numOk(m.fx) && numOk(m.fy))
+      line = { x2: clamp(m.fx, 0, WORLD_W), y2: clamp(m.fy, 0, WORLD_H) };
+    if (sel.length) applyOrder(fac, sel, cx, cy, m.mode || (m.amove ? 'amove' : 'move'), line);
+  } else if (m.kind === 'selfdestruct') {
+    if (!Array.isArray(m.ids) || m.ids.length > MAX_ORDER_IDS) return;
+    selfDestruct(fac, m.ids);
   } else if (m.kind === 'place') {
     if (DEFS[m.type] && DEFS[m.type].fac === fac) placeBuilding(fac, m.type, cx, cy);
   } else if (m.kind === 'enq') {

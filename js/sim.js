@@ -246,11 +246,16 @@ function setupFaction(fac, base, isAI, diff) {
     spawnEnt('reactor', fac, base.x, base.y);
     for (let i = 0; i < 2; i++) spawnEnt('arclight', fac, base.x - 40 + i * 80, base.y + 70);
     p.waveSize = 7;
-  } else { // pact
+  } else if (fac === 'pact') {
     p.res = 200;
     spawnEnt('altar', fac, base.x, base.y);
     for (let i = 0; i < 5; i++) spawnEnt('thrall', fac, base.x - 80 + i * 36, base.y + 72);
     p.waveSize = 16;
+  } else { // strain
+    p.res = 150;
+    spawnEnt('progenitor', fac, base.x, base.y);
+    for (let i = 0; i < 6; i++) spawnEnt('spawnling', fac, base.x - 80 + i * 30, base.y + 72);
+    p.waveSize = 18;
   }
 }
 
@@ -272,6 +277,10 @@ function spawnEnt(type, fac, x, y, opts = {}) {
     cd: 0, blinkCd: 0, scanT: Math.random() * 0.25, tgt: 0,
     order: { type: 'idle' }, dead: false,
     queue: [], rqueue: [], rally: null, deployed: false,
+    // facing: which way the body is drawn/oriented. Units start facing outward from
+    // their spawn point (toward the map centre) and turn to face wherever they move
+    // or fight (see turnToward) — buildings never rotate, so this is cosmetic on them.
+    facing: Math.atan2(WORLD_H / 2 - y, WORLD_W / 2 - x),
   };
   if (d.creepR) e.creepCur = opts.creepCur != null ? opts.creepCur : 2;
   if (d.spawns) e.spawnTimer = d.spawnEvery;
@@ -290,9 +299,30 @@ function spawnEnt(type, fac, x, y, opts = {}) {
 }
 
 // ---------------- damage / death ----------------
+// Virulent Strain ADAPTATION: `shot` is the attacker's damage type. A brief Adaptive
+// Surge (self-cast, see fireAbility) blunts everything; otherwise, if the unit has
+// already hardened against this exact type, cut the damage. Either way, track the
+// streak of consecutive same-type damage taken — once it crosses a threshold set by
+// the unit's own max HP, harden a (new) resistance to THIS type, discarding any old one.
+function evoAdapt(t, dmg, shot) {
+  if (t.evoSurgeUntil > game.t) dmg *= (1 - EVO.surgeResist);
+  if (t.resistType === shot) dmg *= (1 - EVO.resist);
+  if (t.evoType !== shot) { t.evoType = shot; t.evoAccum = 0; }
+  t.evoAccum += dmg;
+  if (t.resistType !== shot && t.evoAccum >= t.hpMax * EVO.thresholdFrac) {
+    t.resistType = shot; t.evoAccum = 0;
+    addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.3, ttl: 0.4, max: 0.4, color: EVO_COLOR[shot] || '#c8e639' });
+  }
+  return dmg;
+}
 function applyDamage(t, dmg, attacker) {
   if (t.dead || t.def.noTarget) return;  // Obelisks are captured, never destroyed
   if (t.def.invuln && !t.constructing && !t.growing) return;  // the Erdtree: an indestructible living wall
+  // Virulent Strain ADAPTATION: mitigate by whatever damage type this unit has hardened
+  // against (or is momentarily immune to via Adaptive Surge), and track the streak
+  // toward hardening a (new) resistance — see evoAdapt.
+  if (attacker && t.fac === 'strain' && t.def.kind === 'unit' && attacker.def.shot)
+    dmg = evoAdapt(t, dmg, attacker.def.shot);
   const dmg0 = dmg;
   t.lastHurt = game.t;
   const p = game.players[t.fac];
@@ -306,6 +336,12 @@ function applyDamage(t, dmg, attacker) {
   if (attacker && attacker.fac === 'ember' && t.fac !== 'ember' && game.players.ember) {
     const g = dmg0 * ECON.emberLootPerDmg * game.players.ember.incomeMul;
     game.players.ember.res += g; game.players.ember.gainAccum += g;
+  }
+  // strain masochistic economy: every point of damage a Strain unit ENDURES pays
+  // Genome — the mirror of the Ember's damage-DEALT Plunder, but inverted.
+  if (attacker && t.fac === 'strain' && t.def.kind === 'unit' && attacker.fac !== 'strain' && game.players.strain) {
+    const g = dmg0 * EVO.lootPerDmg * game.players.strain.incomeMul;
+    game.players.strain.res += g; game.players.strain.gainAccum += g;
   }
   // myriad corruption: every Myriad attack infects the foe it strikes (units &
   // buildings, never neutrals); corruption units/towers (`corrupt`) inflict a longer
@@ -573,6 +609,21 @@ function fireAbility(fac, e, wx, wy) {
     localMsg(fac, ab.name + ' — the world burns!');
     return true;
   }
+  // surge-type ability (the Virulent Strain's Adaptive Surge): a self-targeted ally
+  // buff — instantly harden every nearby Strain unit against ALL damage for a few
+  // seconds (read live in evoAdapt), no enemies harmed.
+  if (ab.key === 'surge') {
+    e.abilityCd = ab.cd;
+    for (const o of game.entities) {
+      if (o.dead || o.fac !== fac || o.def.kind !== 'unit') continue;
+      if (Math.hypot(o.x - wx, o.y - wy) > ab.radius + o.size) continue;
+      o.evoSurgeUntil = game.t + ab.dur;
+    }
+    addFx({ kind: 'shock', x: wx, y: wy, r: ab.radius, ttl: 0.7, max: 0.7, color: '#c8e639' });
+    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: wx, y2: wy, ttl: 0.4, max: 0.4, color: '#e8ff8a' });
+    localMsg(fac, ab.name + ' — the swarm adapts!');
+    return true;
+  }
   // rite-type ability (the Obsidian Pact's Crimson Rite): rupture every enemy in a radius
   // for a burst of damage, and whip every nearby Pact unit into a frenzy (dmgOf/cdOf).
   if (ab.key === 'rite') {
@@ -656,12 +707,34 @@ function tickStrikes(dt) {
   game.strikes = game.strikes.filter(s => !s.done);
 }
 
-// engage target: shoot if in range else chase (unless stationary)
+// signed angular difference b-a, normalized to (-PI, PI]
+function angleDiff(a, b) { return ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; }
+// rotate e.facing toward targetAngle at its turn rate (def.turnRate, or TURN_RATE)
+function turnToward(e, targetAngle, dt) {
+  const rate = (e.def.turnRate || TURN_RATE) * dt;
+  const diff = angleDiff(e.facing || 0, targetAngle);
+  e.facing = Math.abs(diff) <= rate ? targetAngle : (e.facing || 0) + Math.sign(diff) * rate;
+  e.facing = ((e.facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+}
+
+// engage target: shoot if in range else chase (unless stationary). Broadside units
+// (`def.broadside`) can't just point-and-shoot: their guns run along the hull, so
+// they must wheel side-on (within BROADSIDE_ARC of exactly abeam) before firing —
+// see turnToward. They hold position once in range rather than closing to melee.
 function engage(e, t, dt) {
   const d = e.def;
   const r = rangeOf(e) + e.size + t.size;
   if (dist(e, t) <= r) {
-    if (e.cd <= 0) fireAt(e, t);
+    if (d.broadside) {
+      const toT = Math.atan2(t.y - e.y, t.x - e.x);
+      const rel = angleDiff(e.facing || 0, toT);
+      if (Math.abs(Math.abs(rel) - Math.PI / 2) < BROADSIDE_ARC) { if (e.cd <= 0) fireAt(e, t); }
+      else {
+        const cand1 = toT + Math.PI / 2, cand2 = toT - Math.PI / 2;
+        const goal = Math.abs(angleDiff(e.facing || 0, cand1)) <= Math.abs(angleDiff(e.facing || 0, cand2)) ? cand1 : cand2;
+        turnToward(e, goal, dt);
+      }
+    } else if (e.cd <= 0) fireAt(e, t);
   } else if (!d.stationary && d.speed) {
     // seeker blink: teleport to the target's flank
     if (d.blink && e.blinkCd <= 0 && dist(e, t) < 260) {
@@ -682,7 +755,8 @@ function engage(e, t, dt) {
 // skip this. Target scanning is throttled (scanT) just like the idle/amove scans.
 function moveFire(e, dt) {
   const d = e.def;
-  if (d.shot === 'melee' || !d.dmg || !d.aggro) return;
+  // broadside units can't snipe on the run — they must stop and wheel side-on (see engage)
+  if (d.shot === 'melee' || !d.dmg || !d.aggro || d.broadside) return;
   e.scanT -= dt;
   if (e.scanT <= 0) { e.scanT = 0.3; const t = findTarget(e); e.tgt = t ? t.id : 0; }
   const t = e.tgt ? byId(e.tgt) : null;
@@ -692,6 +766,7 @@ function moveFire(e, dt) {
 function moveToward(e, x, y, dt) {
   const dx = x - e.x, dy = y - e.y, dl = Math.hypot(dx, dy);
   if (dl < 3) return true;
+  if (e.def.kind === 'unit') turnToward(e, Math.atan2(dy, dx), dt);
   const sp = spd(e) * dt;
   if (dl <= sp) { e.x = x; e.y = y; return true; }
   e.x += dx / dl * sp; e.y += dy / dl * sp;
@@ -714,11 +789,18 @@ function updateUnit(e, dt) {
       e.tgt = t ? t.id : 0;
     }
     const t = e.tgt ? byId(e.tgt) : null;
+    if (t) turnToward(e, Math.atan2(t.y - e.y, t.x - e.x), dt);
     if (t && dist(e, t) <= rangeOf(e) + e.size + t.size && e.cd <= 0) fireAt(e, t);
   }
 
   switch (o.type) {
     case 'idle': {
+      // a formation move leaves a desired final facing behind (see applyOrder in
+      // input.js) — settle into it once there's nothing more pressing to do
+      if (e.destFacing != null) {
+        turnToward(e, e.destFacing, dt);
+        if (Math.abs(angleDiff(e.facing, e.destFacing)) < 0.05) e.destFacing = null;
+      }
       if (d.harvester) { autoHarvest(e); break; }
       if (d.dmg > 0 && d.aggro > 0 && !d.stationary) {
         e.scanT -= dt;
@@ -1035,6 +1117,22 @@ function sellBuilding(fac, id) {
   return true;
 }
 
+// self-destruct one or more of your own units instantly — no refund, no bounty to
+// anyone, but routed through applyDamage (attacker: null) so a faction's own
+// death-triggered mechanics still fire (Pact's martyr Blood, the Choir's global
+// reanimation chance, Pact frenzy, Syndicate severance…). Cores can't be scuttled.
+function selfDestruct(fac, ids) {
+  let n = 0;
+  for (const id of ids) {
+    const e = byId(id);
+    if (!e || e.dead || e.fac !== fac || e.def.kind !== 'unit' || e.def.core) continue;
+    applyDamage(e, e.hp + e.shield + 1, null);
+    n++;
+  }
+  if (n) localMsg(fac, 'Self-destructed ' + n + (n === 1 ? ' unit' : ' units'));
+  return n > 0;
+}
+
 // ---------------- creep & economy ----------------
 function recomputeCreep() {
   game.creep.fill(0);
@@ -1163,6 +1261,11 @@ function tickEconomy(dt) {
       gain = ECON.stormBase + Math.min(dynamos, ECON.stormDynamoCap) * ECON.stormPerDynamo;
     } else if (fac === 'pact') {
       gain = ECON.pactBase; // the rest is reaped from your own dying (see applyDamage)
+    } else if (fac === 'strain') {
+      // a small trickle + Gene Vats, PLATEAUING at strainVatCap — the real economy is
+      // masochistic (Genome per point of damage endured, see applyDamage).
+      const vats = ents(e => e.fac === fac && e.type === 'vat' && !e.growing).length;
+      gain = ECON.strainBase + Math.min(vats, ECON.strainVatCap) * ECON.strainPerVat;
     }
     // ---- TERRITORY: the dominant, uncapped income (bar the self-sufficient Warden) ----
     gain += obs * ECON.obeliskIncome;
