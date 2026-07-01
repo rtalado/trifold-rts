@@ -388,6 +388,7 @@ See the [full Strain guide](guides/strain.md).
 | Input | Action |
 |---|---|
 | Left-drag / left-click | Select units / a building |
+| **Double-click** a unit | Select every unit of that type on screen |
 | Right-click | Move, attack target, harvest/siphon node, set rally |
 | Right-click **and drag** | **Formation move** — spread the selection along the dragged line instead of piling onto one point, then face the way they were headed (works with Shift too) |
 | Shift+right-click | Attack-move to a point (engage foes on the way) |
@@ -395,10 +396,15 @@ See the [full Strain guide](guides/strain.md).
 | Delete / Backspace | **Self-destruct** the selected unit(s) — instant, no refund, no kill credit to the enemy |
 | Mouse wheel | Zoom in / out (toward the cursor) |
 | 1–0 | Command-card hotkeys (build / produce / sell / self-destruct / deploy) |
+| **Ctrl/Alt + 1–9** | Assign the selection to a **control group** (Alt always gets past the browser) |
+| **Shift + 1–9** | Add the selection to that control group |
+| **1–9** | Recall a control group (tap twice quickly to also jump the camera there); digits without a group still drive the command card |
+| **Shift + left-click** (while placing) | Place the building and keep placing more of it |
 | T | Open / close the tech tree |
 | F | Select your whole army |
+| **H** | Select the next **idle worker** (the top bar shows an idle count) |
 | Space | Jump camera to your core |
-| WASD / arrows / screen edges / minimap | Pan the camera |
+| WASD / arrows / screen edges / minimap / **middle-drag** | Pan the camera |
 | Esc | Cancel placement / clear selection / close tech tree |
 
 Selecting any unit or building shows its **weapon range** as a ring, and selected

@@ -154,7 +154,7 @@ function buildMatch(roster, localFac, mode, seed) {
     roster, localFac, mode, seed, players: {},
     aiFacs: roster.filter(r => r.ai).map(r => r.fac),
     eliminated: new Set(),
-    sel: [], placing: null,
+    sel: [], placing: null, groups: {},   // control groups: digit -> [entity ids]
     cam: { x: 0, y: 0, z: 1 },
     creepTimer: 0, hudTimer: 0, aiTimer: 0, aiCursor: 0, netTimer: 0, netFx: [],
     aiInterval: 1.0,
@@ -512,6 +512,14 @@ function fireAt(e, t) {
     ox = e.x + Math.cos(side) * e.size * 0.85;
     oy = e.y + Math.sin(side) * e.size * 0.85;
     addFx({ kind: 'boom', x: ox, y: oy, r: e.size * 0.3, ttl: 0.15, max: 0.15, color: '#fff3c4' });
+  } else if (d.kind === 'building' && d.shot !== 'melee') {
+    // turrets/towers fire from the tip of their (target-tracking) barrel, with a quick
+    // muzzle flash — so the gun visibly does the shooting instead of the building's
+    // centre quietly emitting damage.
+    const ba = Math.atan2(t.y - e.y, t.x - e.x);
+    ox = e.x + Math.cos(ba) * (e.size + 7);
+    oy = e.y + Math.sin(ba) * (e.size + 7);
+    addFx({ kind: 'boom', x: ox, y: oy, r: 5, ttl: 0.12, max: 0.12, color: '#fff3c4' });
   }
   if (d.shot === 'melee') {
     applyDamage(t, dmg, e);
@@ -560,7 +568,12 @@ function updateAux(e, dt) {
     }
     if (t && e.auxCd[i] <= 0 && dist(e, t) <= reach + e.size + t.size) {
       e.auxCd[i] = cd;
-      game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed: 380,
+      // fire from (roughly) this gun's mount on the ring, not the hull's centre —
+      // matches where the renderer draws the mounts, so the tracers line up
+      const ga = i * Math.PI * 2 / guns + Math.PI / guns
+        + (e.def.kind === 'unit' ? (e.facing || 0) + Math.PI / 2 : 0);
+      game.proj.push({ x: e.x + Math.cos(ga) * e.size * 0.76, y: e.y + Math.sin(ga) * e.size * 0.76,
+        targetId: t.id, lx: t.x, ly: t.y, speed: 380,
         dmg: auxDmg, splash: 0, fac: e.fac, attackerId: e.id, color: facColor(e.fac), r: 2.5 });
     }
   }

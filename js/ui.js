@@ -311,11 +311,11 @@ function renderSelInfo(si) {
 function buildSelMainHTML() {
   if (!game.sel.length) {
     return '<div class="sel-empty"><div class="sel-empty-t">NOTHING SELECTED</div>'
-      + '<div>Drag or click to select.</div>'
+      + '<div>Drag or click to select · double-click — all of that type</div>'
       + '<div>Right-click — move / attack / harvest</div>'
-      + '<div>Shift+right-click — attack-move</div>'
-      + '<div>Ctrl+right-click — attack that way</div>'
-      + '<div><b>F</b> select army &nbsp;·&nbsp; <b>Space</b> jump to core</div></div>';
+      + '<div>Shift+right-click — attack-move &nbsp;·&nbsp; Ctrl+right-click — attack that way</div>'
+      + '<div><b>Alt+1-9</b> set control group &nbsp;·&nbsp; <b>1-9</b> recall (tap twice to jump)</div>'
+      + '<div><b>F</b> army &nbsp;·&nbsp; <b>H</b> idle worker &nbsp;·&nbsp; <b>Space</b> core &nbsp;·&nbsp; middle-drag pans</div></div>';
   }
   if (game.sel.length === 1) {
     const e = game.sel[0], cat = e.def.kind;
@@ -440,7 +440,19 @@ function updateHUD() {
   } else if (fac === 'ember') {
     armyHtml += ' · Emberlings: <b>' + countFree(fac) + '</b>/' + freeCapOf(fac);
   }
+  // idle-worker nudge (press H to cycle through them)
+  const idle = idleHarvesters().length;
+  if (idle) armyHtml += ' · <b style="color:#e0b84d">' + idle + ' idle</b> <span style="opacity:.7">(H)</span>';
   document.getElementById('hudArmy').innerHTML = armyHtml;
+
+  // under-attack warning: if something of ours is taking hits off-screen, say so
+  // (throttled) — the minimap also pulses a ring at the spot (see drawMinimap)
+  const la = p.lastAttack;
+  if (la && !game.defeated && game.t - la.t < 0.6 && game.t - (game._alertT || -99) > 12 && !onScreen(la.x, la.y)) {
+    game._alertT = game.t;
+    floatMsg('⚠ Under attack! Check the minimap');
+    playSfxThrottled('alert', 4000);
+  }
 
   // match timer (elapsed match time — game.t is shared across host/guest/SP)
   const secs = Math.max(0, Math.floor(game.t));

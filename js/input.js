@@ -5,11 +5,23 @@ const keys = {};
 
 canvas.addEventListener('mousemove', ev => {
   mouse.x = ev.clientX; mouse.y = ev.clientY;
+  // middle-mouse drag pans the camera (RTS standard)
+  if (mouse.mpan && game) {
+    game.cam.x -= ev.movementX / game.cam.z;
+    game.cam.y -= ev.movementY / game.cam.z;
+    clampCam();
+  }
   if (game) { const w = screenToWorld(mouse.x, mouse.y); mouse.wx = w.x; mouse.wy = w.y; }
 });
 
 canvas.addEventListener('mousedown', ev => {
-  if (!game || game.over || game.netPaused) return;   // world frozen while a player reconnects
+  if (!game || game.over) { return; }
+  if (ev.button === 1) {                              // middle mouse: drag-pan (works even net-paused)
+    ev.preventDefault();
+    mouse.mpan = true;
+    return;
+  }
+  if (game.netPaused) return;                         // world frozen while a player reconnects
   if (ev.button === 0) {
     if (game.sandboxPlacing) {   // sandbox: stamp down a free copy — stays armed for more
       const { type, fac } = game.sandboxPlacing;
@@ -22,13 +34,19 @@ canvas.addEventListener('mousedown', ev => {
       return;
     }
     if (game.placing) {
+      // hold Shift to keep placing more of the same building (classic RTS chaining)
+      const keep = ev.shiftKey;
       if (game.mode === 'guest') {
         const d = DEFS[game.placing], fac = game.localFac;
         if (placeValid(game.placing, fac, mouse.wx, mouse.wy) && game.players[fac].res >= d.cost) {
           netSend({ t: 'cmd', fac: game.localFac, kind: 'place', type: game.placing, x: mouse.wx, y: mouse.wy });
-          game.placing = null; playSfx('build');
+          if (!keep) game.placing = null;
+          playSfx('build');
         } else floatMsg(placeErr(fac));
-      } else if (placeBuilding(game.localFac, game.placing, mouse.wx, mouse.wy)) { game.placing = null; playSfx('build'); }
+      } else if (placeBuilding(game.localFac, game.placing, mouse.wx, mouse.wy)) {
+        if (!keep) game.placing = null;
+        playSfx('build');
+      }
       return;
     }
     mouse.dragging = true; mouse.dx0 = mouse.x; mouse.dy0 = mouse.y;
@@ -55,6 +73,7 @@ function fireAbilityAt(wx, wy) {
 }
 
 addEventListener('mouseup', ev => {
+  if (ev.button === 1) { mouse.mpan = false; return; }
   if (ev.button === 2) {
     if (!mouse.rDragging || !game || game.over) { mouse.rDragging = false; return; }
     mouse.rDragging = false;
@@ -81,6 +100,11 @@ addEventListener('mouseup', ev => {
     const e = ents(o => o.fac === game.localFac && dist(o, { x: mouse.wx, y: mouse.wy }) <= o.size + 4)
       .sort((a, b) => dist(a, { x: mouse.wx, y: mouse.wy }) - dist(b, { x: mouse.wx, y: mouse.wy }))[0];
     if (e) picked = [e];
+    // double-click a unit: select every unit of the same type currently on screen
+    const now = performance.now();
+    if (e && e.def.kind === 'unit' && mouse._lastClickId === e.id && now - (mouse._lastClickT || 0) < 400)
+      picked = ents(o => o.fac === game.localFac && o.type === e.type && inView(o.x, o.y, 0));
+    mouse._lastClickT = now; mouse._lastClickId = e ? e.id : 0;
   } else {
     picked = ents(o => o.fac === game.localFac && o.def.kind === 'unit'
       && o.x >= x0 && o.x <= x1 && o.y >= y0 && o.y <= y1);
@@ -279,12 +303,58 @@ addEventListener('keydown', ev => {
     game.sel = armyOf(game.localFac);
     refreshCard();
   }
+  if (k === 'h') { // cycle through idle workers/harvesters
+    const idle = idleHarvesters();
+    if (!idle.length) { floatMsg('No idle workers'); return; }
+    game._idleIx = ((game._idleIx || 0) + 1) % idle.length;
+    const w = idle[game._idleIx];
+    game.sel = [w]; centerCam(w.x, w.y); refreshCard(); playSfx('select');
+    return;
+  }
   if (k === 'delete' || k === 'backspace') { // scuttle the selected unit(s) — no confirmation, matches the command card
     const ids = game.sel.filter(e => e.fac === game.localFac && e.def.kind === 'unit' && !e.def.core).map(e => e.id);
     if (ids.length) {
       if (game.mode === 'guest') netSend({ t: 'cmd', fac: game.localFac, kind: 'selfdestruct', ids });
       else selfDestruct(game.localFac, ids);
       game.sel = []; refreshCard();
+    }
+  }
+  // ---- control groups on the digit keys ----
+  // Ctrl/Alt+digit assigns the current selection to that group (two modifiers because
+  // browsers steal Ctrl+1-8 for tab switching — Alt gets through everywhere), Shift+digit
+  // ADDS the selection to the group, a plain digit recalls it (double-tap to also centre
+  // the camera). A digit with no group defined falls through to the command-card hotkey.
+  const digit = ev.code && ev.code.startsWith('Digit') ? ev.code[5] : null;
+  if (digit) {
+    game.groups = game.groups || {};
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) {
+      ev.preventDefault();
+      const sel = game.sel.filter(e => e.fac === game.localFac && !e.dead);
+      if (sel.length) { game.groups[digit] = sel.map(e => e.id); floatMsg('Control group ' + digit + ' — ' + sel.length + ' assigned'); }
+      return;
+    }
+    if (ev.shiftKey) {
+      const sel = game.sel.filter(e => e.fac === game.localFac && !e.dead);
+      if (sel.length) {
+        const g = new Set(game.groups[digit] || []);
+        for (const e of sel) g.add(e.id);
+        game.groups[digit] = [...g];
+        floatMsg('Control group ' + digit + ' — now ' + g.size);
+      }
+      return;
+    }
+    const live = (game.groups[digit] || []).map(byId).filter(Boolean);
+    if (live.length) {
+      game.groups[digit] = live.map(e => e.id);   // prune the dead
+      game.sel = live; refreshCard(); playSfx('select');
+      const now = performance.now();
+      if (game._grpKey === digit && now - (game._grpT || 0) < 450) { // double-tap: jump there
+        let cx = 0, cy = 0;
+        for (const e of live) { cx += e.x; cy += e.y; }
+        centerCam(cx / live.length, cy / live.length);
+      }
+      game._grpKey = digit; game._grpT = now;
+      return;
     }
   }
   // command card hotkeys (digits — letters are reserved for camera pan)

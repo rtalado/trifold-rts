@@ -71,4 +71,10 @@ function ents(filter) { return game.entities.filter(e => !e.dead && filter(e)); 
 // so they never count against — or get blocked by — the faction's main unit cap.
 function countUnits(fac) { return game.entities.reduce((n, e) => n + (!e.dead && e.fac === fac && e.def.kind === 'unit' && !e.def.freeUnit ? 1 : 0), 0); }
 function armyOf(fac) { return ents(e => e.fac === fac && e.def.kind === 'unit' && (e.def.dmg > 0 || e.def.aura) && !e.def.harvester && !e.def.core); }
+// the local player's idle workers/harvesters. Guests don't simulate orders, so they
+// read the idle bit the host syncs per snapshot (e.isIdle) instead of e.order.
+function idleHarvesters() {
+  return ents(e => e.fac === game.localFac && e.def.harvester
+    && (game.mode === 'guest' ? e.isIdle : e.order.type === 'idle'));
+}
 

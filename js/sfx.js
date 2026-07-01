@@ -58,6 +58,9 @@ const SFX = {
   train:  (c, t) => tone(c, t, { type: 'triangle', f0: 400, f1: 620, dur: 0.09, gain: 0.11 }),
   shoot:  (c, t) => { noise(c, t, { dur: 0.07, gain: 0.09, f: 1800 });
                       tone(c, t, { type: 'square', f0: 220, f1: 70, dur: 0.05, gain: 0.05 }); },
+  // under-attack klaxon: two urgent falling tones
+  alert:  (c, t) => { tone(c, t, { type: 'square', f0: 920, f1: 620, dur: 0.13, gain: 0.13 });
+                      tone(c, t + 0.16, { type: 'square', f0: 920, f1: 620, dur: 0.13, gain: 0.13 }); },
 };
 
 function playSfx(name) {

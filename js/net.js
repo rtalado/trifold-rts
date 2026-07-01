@@ -37,6 +37,8 @@ function buildSnap() {
     if (e.burnUntil > game.t) fl |= 2048;     // Ember burning (bit 11)
     if (e.frenzyUntil > game.t) fl |= 4096;   // Pact blood frenzy (bit 12)
     if (e.evoSurgeUntil > game.t) fl |= 65536; // Strain Adaptive Surge (bit 16)
+    // truly idle unit (bit 13) — lets guests find their own idle workers accurately
+    if (e.def.kind === 'unit' && e.order && e.order.type === 'idle' && !e.constructing && !e.growing) fl |= 8192;
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
     const rq = e.rqueue && e.rqueue.length ? e.rqueue[0] : null;
@@ -49,7 +51,12 @@ function buildSnap() {
       e.abilityCd ? Math.ceil(e.abilityCd) : 0,
       // facing, in whole degrees (0-359) — units only draw rotated, but sync it for
       // everyone uniformly; cheap (one byte-ish) and keeps guests' bodies oriented right
-      Math.round(((e.facing || 0) * 180 / Math.PI % 360 + 360) % 360)];
+      Math.round(((e.facing || 0) * 180 / Math.PI % 360 + 360) % 360),
+      // current weapon target + aux-gun targets: without these, every turret/tower on a
+      // GUEST sat frozen (never aiming, never appearing to shoot) — the sim aims via
+      // e.tgt/e.auxTgt, which only ever existed on the simulating side.
+      e.tgt || 0,
+      (e.def.aux && e.auxTgt && e.auxTgt.some(v => v)) ? e.auxTgt : 0];
   });
   const players = {};
   for (const f in game.players) {
@@ -91,7 +98,7 @@ function applySnap(m) {
   const byIdMap = new Map();
   for (const o of game.entities) byIdMap.set(o.id, o);
   for (const row of m.units) {
-    const [id, ti, x, y, hp, sh, fl, prog, qp, ql, rp, rl, acd, facingDeg] = row;
+    const [id, ti, x, y, hp, sh, fl, prog, qp, ql, rp, rl, acd, facingDeg, tgt, auxT] = row;
     seen.add(id);
     let e = byIdMap.get(id);
     if (!e) {
@@ -110,7 +117,16 @@ function applySnap(m) {
       if (e.type === 'ark') e.size = baseSize(e);
     }
     e.nx = x; e.ny = y;
+    // under-attack alert: one of our things just lost HP — remember where, so the
+    // minimap ping + warning work for guests too (applyDamage only runs on the host)
+    if (e.fac === game.localFac && typeof e.hp === 'number' && hp < e.hp - 0.5) {
+      const lp = game.players[e.fac];
+      if (lp) lp.lastAttack = { t: m.gt, x, y };
+    }
     e.hp = hp; e.shield = sh;
+    e.tgt = tgt || 0;                                // what its weapon is tracking (turret barrels aim with this)
+    e.auxTgt = Array.isArray(auxT) ? auxT : null;    // per-gun targets for aux machine-gun rings
+    e.isIdle = !!(fl & 8192);                        // truly idle on the sim side (idle-worker finder)
     e.deployed = !!(fl & 1); e.constructing = !!(fl & 2); e.growing = !!(fl & 4);
     e.withered = !!(fl & 256); e.mutated = !!(fl & 512);
     e.corruptUntil = (fl & 1024) ? game.t + 1 : 0;   // Myriad corruption marker (cosmetic on guests)
@@ -173,7 +189,9 @@ let rejoining = false;       // true while a reconnect attempt is in flight
 // timer is the escape hatch: if a player never comes back, the host auto-continues without
 // them after PAUSE_GRACE_MS (or the host clicks CONTINUE WITHOUT THEM) so the rest can finish.
 const GUEST_PING_MS   = 2000;    // guest → host heartbeat cadence
-const MEMBER_STALL_MS = 6000;    // no word from a guest for this long ⇒ presumed frozen ⇒ pause
+const MEMBER_STALL_MS = 9000;    // no word from a guest for this long ⇒ presumed frozen ⇒ pause
+                                 // (several missed heartbeats — a single dropped ping or a
+                                 // brief lag spike must NOT pause the whole match)
 const PAUSE_GRACE_MS  = 120000;  // auto-continue without a missing player after this long
 const CMD_RATE_LIMIT  = 120;     // max gameplay commands a guest may have executed per second
 const MAX_ORDER_IDS   = 800;     // cap a single order's selection size (anti-flood / anti-OOM)
@@ -355,9 +373,16 @@ function hostGame() {
     handleNet({ t: 'created', code, slot: 0 });
     hostBroadcast(lobbyMsg());
   });
+  // The socket to the PeerJS broker can silently die mid-match (laptop sleep, wifi blip,
+  // broker restart). Existing WebRTC links keep working — but a dropped guest can then
+  // NEVER rejoin, because rejoining dials the host's peer id THROUGH the broker. So the
+  // host must claw its broker registration back whenever it's lost.
+  peer.on('disconnected', () => { if (net.peer === peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} } });
   peer.on('error', e => {
     if (e.type === 'unavailable-id') { peer.destroy(); hostGame(); return; } // code collision — retry
-    mpStatus('Could not start a room (' + (e.type || e) + '). Check your internet connection.');
+    // transient broker/network errors don't kill the live WebRTC links — don't scare
+    // the host mid-game; only surface errors while still setting the room up
+    if (!net.connected) mpStatus('Could not start a room (' + (e.type || e) + '). Check your internet connection.');
   });
   peer.on('connection', conn => {
     const pid = conn.peer;
@@ -386,6 +411,8 @@ function joinStatus(s) {
 function joinGame(code, rejoin) {
   const peer = new Peer({ debug: 1 });
   net.peer = peer; let opened = false;
+  // keep the broker registration alive (see the matching handler in hostGame)
+  peer.on('disconnected', () => { if (net.peer === peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} } });
   peer.on('open', () => {
     const conn = peer.connect(PEER_PREFIX + code.toUpperCase(), { reliable: true, serialization: 'json' });
     net.hostConn = conn;
@@ -406,24 +433,36 @@ function joinGame(code, rejoin) {
 }
 
 // ---- guest failsafe: rejoin a match we froze out of / dropped from ----
+// Reconnecting used to get exactly ONE automatic attempt — if the player's wifi was
+// still re-associating (the common case right after a drop) it failed and dumped them
+// on a button. Now it keeps trying by itself with a short breather between attempts.
+const REJOIN_MAX_AUTO = 6;      // automatic attempts before falling back to the button
+const REJOIN_RETRY_MS = 3000;   // breather between attempts
+let rejoinAttempts = 0;
 function tryRejoin() {
   if (!rejoinInfo || rejoining) return;
   rejoining = true;
+  rejoinAttempts++;
   if (net.peer) { try { net.peer.destroy(); } catch (e) {} net.peer = null; }
   net.hostConn = null; net.connected = false;
   net.code = rejoinInfo.code; net.slot = rejoinInfo.slot; // restore so `start` maps us to our faction
   document.getElementById('endRejoin').style.display = 'none';
   document.getElementById('endTitle').textContent = 'CONNECTION LOST';
   document.getElementById('endTitle').style.color = '#e0b84d';
-  document.getElementById('endDetail').textContent = 'Reconnecting…';
+  document.getElementById('endDetail').textContent =
+    'Reconnecting' + (rejoinAttempts > 1 ? ' (attempt ' + rejoinAttempts + ' of ' + REJOIN_MAX_AUTO + ')' : '') + '…';
   document.getElementById('endscreen').style.display = 'flex';
   joinGame(rejoinInfo.code, { slot: rejoinInfo.slot, fac: rejoinInfo.fac });
 }
 function rejoinFailed() {
   if (!rejoining) return;
   rejoining = false;
-  const btn = document.getElementById('endRejoin');
-  if (rejoinInfo) btn.style.display = 'inline-block';
+  if (!rejoinInfo) return;
+  if (rejoinAttempts < REJOIN_MAX_AUTO) {   // keep trying on our own for a while
+    setTimeout(tryRejoin, REJOIN_RETRY_MS);
+    return;
+  }
+  document.getElementById('endRejoin').style.display = 'inline-block';
 }
 
 function handleNet(m) {
@@ -433,7 +472,7 @@ function handleNet(m) {
     case 'lobby':   net.players = m.players; updateLobby(); break;
     case 'err':     if (rejoining) { joinStatus(m.msg); rejoining = false; if (rejoinInfo) document.getElementById('endRejoin').style.display = 'inline-block'; } else mpStatus(m.msg); break;
     case 'start': {
-      net.inGame = true; rejoining = false;
+      net.inGame = true; rejoining = false; rejoinAttempts = 0;
       const me = m.roster.find(r => r.slot === net.slot) || m.roster[0];
       buildMatch(m.roster.map(r => ({ fac: r.fac, ai: r.ai, diff: r.diff })), me.fac, net.host ? 'host' : 'guest', m.seed);
       if (!net.host) { rejoinInfo = { code: net.code, slot: net.slot, fac: me.fac }; lastSnapAt = performance.now(); }
@@ -530,7 +569,9 @@ function onDisconnect() {
 // event fires — so the joiner just freezes on a stale frame with no way out. If
 // we're an in-game guest and no snapshot has landed for a while, declare the link
 // dead so the failsafe (auto-reconnect + Rejoin button) takes over.
-const SNAP_TIMEOUT = 8000; // ms without a snapshot before the link is presumed dead
+const SNAP_TIMEOUT = 12000; // ms without a snapshot before the link is presumed dead
+                            // (generous: a long GC pause or wifi renegotiation must not
+                            // boot a player whose channel is actually about to recover)
 setInterval(() => {
   if (rejoining || !net.connected) return;
   if (!game || game.mode !== 'guest' || game.over) return;
@@ -539,9 +580,10 @@ setInterval(() => {
 
 // Guest heartbeat: a steady ping UP to the host so it can tell a live-but-idle player
 // apart from one whose channel has silently stalled (no close/error event ever fires).
+// Runs whenever we're connected (lobby included) — an idle lobby link otherwise sends
+// nothing for minutes and is the first thing a NAT/router garbage-collects.
 setInterval(() => {
-  if (net.connected && !net.host && net.hostConn && net.hostConn.open
-      && game && game.mode === 'guest' && !game.over) {
+  if (net.connected && !net.host && net.hostConn && net.hostConn.open) {
     try { net.hostConn.send({ t: 'ping' }); } catch (e) {}
   }
 }, GUEST_PING_MS);

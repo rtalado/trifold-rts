@@ -894,7 +894,7 @@ function drawEnt(e) {
         }
       } else if (e.type === 'spire') {
         const t = e.tgt ? byId(e.tgt) : null;
-        const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.4;
         ctx.strokeStyle = col; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 9), y + Math.sin(a) * (s + 9)); ctx.stroke();
       } else if (e.type === 'conduit') {
@@ -1170,9 +1170,9 @@ function drawEnt(e) {
         ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ba) * s * 0.34, gy + Math.sin(ba) * s * 0.34); ctx.stroke();
       }
-      // the main artillery cannon
+      // the main artillery cannon (sweeps slowly while it has nothing to kill)
       const t = e.tgt ? byId(e.tgt) : null;
-      const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+      const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.15;
       ctx.strokeStyle = col; ctx.lineWidth = 7; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 14), y + Math.sin(a) * (s + 14)); ctx.stroke();
       ctx.lineCap = 'butt';
@@ -1202,7 +1202,7 @@ function drawEnt(e) {
       ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.fill();
       // the gigantic main cannon (twin-tone for heft) — scales with the body
       const t = e.tgt ? byId(e.tgt) : null;
-      const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+      const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.1;
       const bx = x + Math.cos(a) * (s * 1.38), by = y + Math.sin(a) * (s * 1.38);
       ctx.lineCap = 'round';
       ctx.strokeStyle = col; ctx.lineWidth = Math.max(10, s * 0.13); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.stroke();
@@ -1258,7 +1258,7 @@ function drawEnt(e) {
         ctx.moveTo(x + s * 0.16, y - s * 0.6); ctx.lineTo(x + s * 0.16, y - s * 0.15); ctx.stroke();
       } else if (e.def.dmg) { // any armed Warden structure (keep, bastion, bunker, redoubt, cauldron, ballista)
         const t = e.tgt ? byId(e.tgt) : null;
-        const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.35;
         ctx.lineWidth = e.type === 'redoubt' ? 4 : 3.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
       }
@@ -1315,10 +1315,11 @@ function drawEnt(e) {
       ctx.fillStyle = '#ffd27a';
       const fl = s * (0.28 + 0.12 * Math.sin(game.t * 8 + e.id));
       ctx.beginPath(); ctx.arc(x, y - s * 0.1, fl, 0, Math.PI * 2); ctx.fill();
-      if (e.type === 'totem') {
+      if (e.type === 'totem' || e.type === 'bonfire' || e.type === 'pyre') {
+        // every armed Ember structure aims a fire-spout at what it's shooting
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : game.t;
-        ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = e.type === 'pyre' ? 3.5 : 2.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
       } else if (e.type === 'warcamp') { // banner-topped tent poles
         ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 1.6;
@@ -1445,6 +1446,15 @@ function drawEnt(e) {
         // glowing crown
         ctx.fillStyle = '#ffe27a';
         ctx.beginPath(); ctx.arc(x, y - s * 0.95, s * 0.28 * (0.9 + 0.2 * pul), 0, Math.PI * 2); ctx.fill();
+        { // the world-tree shells intruders — a golden bough swings onto its target
+          const t = e.tgt ? byId(e.tgt) : null;
+          if (t) {
+            const a = Math.atan2(t.y - (y - s * 0.2), t.x - x);
+            ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(x, y - s * 0.2);
+            ctx.lineTo(x + Math.cos(a) * s * 0.95, y - s * 0.2 + Math.sin(a) * s * 0.95); ctx.stroke();
+          }
+        }
       } else if (e.type === 'erdwall') { // chunky golden root-wall block
         ctx.fillStyle = '#4a3a1e'; ctx.strokeStyle = '#d8b24a'; ctx.lineWidth = 2.5;
         roundRect(x - s, y - s, s * 2, s * 2, 4); ctx.fill(); ctx.stroke();
@@ -1496,6 +1506,12 @@ function drawEnt(e) {
           const ph = (game.t * 0.8 + i * 0.7) % 1;
           ctx.beginPath(); ctx.arc(x, y - s * 0.2 - ph * s * 0.9, s * (0.18 + ph * 0.22), 0, Math.PI * 2); ctx.fill();
         }
+        { // it's an armed tower — a spore-spout swings onto whatever it's shelling
+          const t = e.tgt ? byId(e.tgt) : null;
+          const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.5;
+          ctx.strokeStyle = '#9fe06a'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+        }
       } else if (e.type === 'thornwall' || e.type === 'greatroot') { // rooted spiky barricade
         const n = e.type === 'greatroot' ? 9 : 6;
         ctx.fillStyle = '#2f6b2a'; ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = e.type === 'greatroot' ? 2.4 : 1.6;
@@ -1505,6 +1521,15 @@ function drawEnt(e) {
           ctx.lineTo(x + Math.cos(a) * (s + (e.type === 'greatroot' ? 9 : 6)), y + Math.sin(a) * (s + (e.type === 'greatroot' ? 9 : 6))); ctx.stroke();
         }
         if (e.type === 'greatroot') { ctx.strokeStyle = '#3f8a36'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, s * 0.62, 0, Math.PI * 2); ctx.stroke(); }
+        { // both barricades lash back at attackers — show the thorn that's doing it
+          const t = e.tgt ? byId(e.tgt) : null;
+          if (t) {
+            const a = Math.atan2(t.y - y, t.x - x);
+            ctx.strokeStyle = '#d6ff8a'; ctx.lineWidth = 2.4;
+            ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.4, y + Math.sin(a) * s * 0.4);
+            ctx.lineTo(x + Math.cos(a) * (s + 11), y + Math.sin(a) * (s + 11)); ctx.stroke();
+          }
+        }
       } else if (e.type === 'heartsap') { // a young Heartwood — twin rings + saplings
         ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(x, y, s * 0.62, 0, Math.PI * 2); ctx.stroke();
@@ -1589,7 +1614,7 @@ function drawEnt(e) {
         const ph = (game.t * 0.7) % 1;
         ctx.strokeStyle = 'rgba(255,156,203,' + (0.6 * (1 - ph)).toFixed(2) + ')'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(x, y, s * 0.5 + ph * s * 1.3, 0, Math.PI * 2); ctx.stroke();
-      } else if (e.type === 'tesla') { // beam tower — a jagged bolt tracking its target
+      } else if (e.type === 'tesla' || e.type === 'reactor') { // beam tower / armed core — a jagged bolt tracking its target
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.5;
         ctx.strokeStyle = '#ffb3d9'; ctx.lineWidth = 2;
@@ -1672,7 +1697,7 @@ function drawEnt(e) {
       ctx.beginPath(); ctx.arc(x, y, s * 0.55, 0, Math.PI * 2); ctx.stroke();
       if (e.type === 'altar' || e.type === 'spike') {
         const t = e.tgt ? byId(e.tgt) : null;
-        const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.4;
         ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
       } else if (e.type === 'shrine') { // a bleeding rune-bowl
@@ -1680,7 +1705,7 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.arc(x, y, s * 0.24, 0, Math.PI); ctx.fill();
       } else if (e.type === 'bloodtower') { // a clotted blood-cannon
         const t = e.tgt ? byId(e.tgt) : null;
-        const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.4;
         ctx.strokeStyle = '#ff6b73'; ctx.lineWidth = 4;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
       } else if (e.type === 'fleshvats') { // stitched vats bubbling
@@ -2093,6 +2118,14 @@ function drawMinimap() {
     const pulse = 0.4 + 0.6 * Math.abs(Math.sin(game.t * 3));
     mmCtx.fillStyle = 'rgba(255,90,90,' + (0.45 + 0.4 * pulse).toFixed(2) + ')';
     for (const c of radarContacts) mmCtx.fillRect(c.x * sx - 1.6, c.y * sy - 1.6, 3.2, 3.2);
+  }
+  // under-attack alert: a pulsing ring where our forces last took damage
+  const lp = game.players[game.localFac];
+  if (lp && lp.lastAttack && game.t - lp.lastAttack.t < 4) {
+    const ph = (game.t * 1.6) % 1;
+    mmCtx.strokeStyle = 'rgba(255,70,70,' + (0.95 * (1 - ph)).toFixed(2) + ')';
+    mmCtx.lineWidth = 2;
+    mmCtx.beginPath(); mmCtx.arc(lp.lastAttack.x * sx, lp.lastAttack.y * sy, 3 + ph * 10, 0, Math.PI * 2); mmCtx.stroke();
   }
   // camera
   mmCtx.strokeStyle = '#cdd6e4'; mmCtx.lineWidth = 1;
