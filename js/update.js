@@ -11,6 +11,7 @@ function update(dt) {
   tickEconomy(dt);
   tickRegen(dt);
   tickCapture(dt);
+  if (game.sandbox) tickSandbox();
 
   for (const e of game.entities) {
     if (e.dead) continue;
@@ -71,18 +72,21 @@ function update(dt) {
   }
   game.nodes = game.nodes.filter(n => n.amount > 0);
 
-  // elimination + victory (free-for-all: last core standing wins)
-  const hasCore = fac => game.entities.some(e => !e.dead && e.fac === fac && e.def.core);
-  for (const r of game.roster) {
-    if (!game.eliminated.has(r.fac) && !hasCore(r.fac)) {
-      game.eliminated.add(r.fac);
-      for (const e of game.entities) if (e.fac === r.fac) e.dead = true; // the faction collapses
-      if (r.fac === game.localFac) game.defeated = true;
+  // elimination + victory (free-for-all: last core standing wins) — skipped in the
+  // sandbox, which has no opponents and isn't trying to be "won"
+  if (!game.sandbox) {
+    const hasCore = fac => game.entities.some(e => !e.dead && e.fac === fac && e.def.core);
+    for (const r of game.roster) {
+      if (!game.eliminated.has(r.fac) && !hasCore(r.fac)) {
+        game.eliminated.add(r.fac);
+        for (const e of game.entities) if (e.fac === r.fac) e.dead = true; // the faction collapses
+        if (r.fac === game.localFac) game.defeated = true;
+      }
     }
-  }
-  const alive = game.roster.filter(r => !game.eliminated.has(r.fac));
-  if (alive.length <= 1 || (game.mode === 'sp' && game.defeated)) {
-    endGame(alive[0] ? alive[0].fac : null);
+    const alive = game.roster.filter(r => !game.eliminated.has(r.fac));
+    if (alive.length <= 1 || (game.mode === 'sp' && game.defeated)) {
+      endGame(alive[0] ? alive[0].fac : null);
+    }
   }
 }
 
@@ -116,6 +120,8 @@ function backToMenu() {
   rejoinInfo = null; rejoining = false; // gave up on / finished the match — no stale reconnect
   document.getElementById('endscreen').style.display = 'none';
   document.getElementById('hud').style.display = 'none';
+  document.getElementById('hudSandboxBtn').style.display = 'none';
+  closeSandboxPanel();
   document.getElementById('menu').style.display = 'flex';
   if (netConnected()) showLobby(); // still linked — straight back to the rematch lobby
   else showScreen('home');

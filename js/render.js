@@ -463,21 +463,48 @@ function broadsideReady(e) {
 function drawShipHull(e, x, y, s, col, dark, deckCol) {
   const ready = broadsideReady(e);
   ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e));
-  ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 2;
+  // main hull — a long armoured lozenge with a rammed prow
+  ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(s * 1.3, 0); ctx.lineTo(s * 0.6, s * 0.6); ctx.lineTo(-s * 0.9, s * 0.6);
-  ctx.lineTo(-s * 1.2, 0); ctx.lineTo(-s * 0.9, -s * 0.6); ctx.lineTo(s * 0.6, -s * 0.6);
+  ctx.moveTo(s * 1.45, 0); ctx.lineTo(s * 0.75, s * 0.7); ctx.lineTo(-s * 0.95, s * 0.7);
+  ctx.lineTo(-s * 1.3, 0); ctx.lineTo(-s * 0.95, -s * 0.7); ctx.lineTo(s * 0.75, -s * 0.7);
   ctx.closePath(); ctx.fill(); ctx.stroke();
-  // conning tower / superstructure
-  ctx.fillStyle = col; ctx.fillRect(-s * 0.25, -s * 0.28, s * 0.6, s * 0.56);
-  // twin gun ports per side, glowing bright when the current target is abeam
-  ctx.fillStyle = ready === true ? '#fff3c4' : (deckCol || col);
-  ctx.globalAlpha = ready === false ? 0.55 : 1;
-  for (const gx of [s * 0.35, -s * 0.45]) {
-    ctx.beginPath(); ctx.arc(gx, s * 0.62, s * 0.16, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(gx, -s * 0.62, s * 0.16, 0, Math.PI * 2); ctx.fill();
+  // a darker armoured citadel band down the spine
+  ctx.fillStyle = col; ctx.globalAlpha = 0.28;
+  ctx.beginPath();
+  ctx.moveTo(s * 1.0, s * 0.32); ctx.lineTo(-s * 1.0, s * 0.32); ctx.lineTo(-s * 1.0, -s * 0.32); ctx.lineTo(s * 1.0, -s * 0.32);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+  // rib plating lines along the hull
+  ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.5;
+  for (const rx of [-s * 0.7, -s * 0.2, s * 0.3, s * 0.8]) {
+    ctx.beginPath(); ctx.moveTo(rx, s * 0.65); ctx.lineTo(rx, -s * 0.65); ctx.stroke();
   }
   ctx.globalAlpha = 1;
+  // conning tower / bridge superstructure, stepped
+  ctx.fillStyle = col; ctx.fillRect(-s * 0.3, -s * 0.34, s * 0.7, s * 0.68);
+  ctx.fillStyle = dark; ctx.fillRect(-s * 0.12, -s * 0.2, s * 0.34, s * 0.4);
+  // a mast/antenna on the bridge
+  ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, -s * 0.34); ctx.lineTo(0, -s * 0.6); ctx.stroke();
+  // three gun turrets per side, glowing bright when the current target is abeam
+  ctx.fillStyle = ready === true ? '#fff3c4' : (deckCol || col);
+  ctx.globalAlpha = ready === false ? 0.5 : 1;
+  for (const gx of [s * 0.85, s * 0.1, -s * 0.75]) {
+    for (const gy of [s * 0.68, -s * 0.68]) {
+      ctx.beginPath(); ctx.arc(gx, gy, s * 0.17, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.stroke();
+      // a stubby barrel pointing outboard (the direction these guns actually fire)
+      ctx.strokeStyle = ready === true ? '#fff3c4' : (deckCol || col); ctx.lineWidth = s * 0.09;
+      const oy = gy > 0 ? 1 : -1;
+      ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + oy * s * 0.22); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  // engine glow at the stern
+  const flick = 0.5 + 0.4 * Math.sin(game.t * 10 + e.id);
+  ctx.fillStyle = 'rgba(255,180,90,' + (0.4 + 0.3 * flick) + ')';
+  ctx.beginPath(); ctx.arc(-s * 1.25, 0, s * 0.22, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
@@ -577,6 +604,40 @@ function drawEnt(e) {
           ctx.fillRect(x + cx * s, y + cy * s, s * 0.5, s * 0.5);
           ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.strokeRect(x + cx * s, y + cy * s, s * 0.5, s * 0.5);
         }
+      } else if (e.type === 'barracks') { // three helmet silhouettes on the roof
+        ctx.fillStyle = col;
+        for (const cx of [-0.35, 0, 0.35]) {
+          ctx.beginPath(); ctx.arc(x + cx * s, y - s * 0.05, s * 0.22, Math.PI, 0); ctx.fill();
+          ctx.fillRect(x + cx * s - s * 0.22, y - s * 0.05, s * 0.44, s * 0.14);
+        }
+      } else if (e.type === 'factory') { // a gear + rolled-out tank silhouette
+        ctx.strokeStyle = col; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x - s * 0.3, y - s * 0.15, s * 0.26, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 6; i++) {
+          const a = i * Math.PI / 3;
+          ctx.beginPath(); ctx.moveTo(x - s * 0.3 + Math.cos(a) * s * 0.26, y - s * 0.15 + Math.sin(a) * s * 0.26);
+          ctx.lineTo(x - s * 0.3 + Math.cos(a) * s * 0.4, y - s * 0.15 + Math.sin(a) * s * 0.4); ctx.stroke();
+        }
+        ctx.fillStyle = col; roundRect(x + s * 0.02, y, s * 0.55, s * 0.24, 3); ctx.fill();
+      } else if (e.type === 'airfield') { // a runway stripe + swept wing
+        ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]);
+        ctx.beginPath(); ctx.moveTo(x - s * 0.7, y + s * 0.4); ctx.lineTo(x + s * 0.7, y + s * 0.4); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.5); ctx.lineTo(x + s * 0.55, y - s * 0.05); ctx.lineTo(x, y - s * 0.15); ctx.lineTo(x - s * 0.55, y - s * 0.05); ctx.closePath(); ctx.fill();
+      } else if (e.type === 'techlab') { // a flask with bubbling contents
+        ctx.strokeStyle = col; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.14, y - s * 0.45); ctx.lineTo(x - s * 0.14, y - s * 0.05);
+        ctx.lineTo(x - s * 0.4, y + s * 0.4); ctx.lineTo(x + s * 0.4, y + s * 0.4); ctx.lineTo(x + s * 0.14, y - s * 0.05);
+        ctx.lineTo(x + s * 0.14, y - s * 0.45); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.arc(x, y + s * 0.18, 2.6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - s * 0.14, y + s * 0.3, 1.8, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'dominion') { // apex yard: a heavy crane gantry
+        ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.6, y + s * 0.4); ctx.lineTo(x - s * 0.6, y - s * 0.4); ctx.lineTo(x + s * 0.6, y - s * 0.4); ctx.lineTo(x + s * 0.6, y + s * 0.4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.4); ctx.lineTo(x, y - s * 0.05); ctx.stroke();
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y - s * 0.05, 3, 0, Math.PI * 2); ctx.fill();
       } else {
         ctx.fillStyle = col; ctx.fillRect(x - s * 0.45, y - s * 0.3, s * 0.9, s * 0.6);
       }
@@ -644,6 +705,13 @@ function drawEnt(e) {
       if (e.type === 'rocket') { // shoulder launcher tube
         ctx.strokeStyle = col; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(0, -s * 0.2); ctx.lineTo(0, -(s + 5)); ctx.stroke();
+      } else if (e.type === 'sniper') { // long scoped rifle laid along the nose
+        ctx.strokeStyle = '#bcd7f5'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.1); ctx.lineTo(0, -(s + 8)); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -s * 0.7, 2, 0, Math.PI * 2); ctx.stroke();
+      } else { // marine: stubby rifle barrel
+        ctx.strokeStyle = '#dfe6f0'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -(s + 3)); ctx.stroke();
       }
       ctx.restore();
     }
@@ -715,6 +783,45 @@ function drawEnt(e) {
         const a = game.t * 1.5 + i * Math.PI * 2 / dots;
         ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.42, y + Math.sin(a) * s * 0.42, 2.4, 0, Math.PI * 2); ctx.fill();
       }
+    } else if (e.type === 'tumor') { // creeping root tendrils
+      ctx.strokeStyle = '#e3b3ff'; ctx.lineWidth = 1.2;
+      for (let i = 0; i < 5; i++) {
+        const a = i * Math.PI * 2 / 5 + e.id;
+        ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.4, y + Math.sin(a) * s * 0.4);
+        ctx.lineTo(x + Math.cos(a) * (s + 4), y + Math.sin(a) * (s + 4)); ctx.stroke();
+      }
+    } else if (e.type === 'evochamber') { // a churning double-helix of mutation
+      ctx.strokeStyle = '#e3b3ff'; ctx.lineWidth = 1.6;
+      for (let j = 0; j < 2; j++) {
+        ctx.beginPath();
+        for (let i = 0; i <= 10; i++) {
+          const t2 = i / 10, py = y - s * 0.6 + t2 * s * 1.2;
+          const px = x + Math.sin(t2 * Math.PI * 2 + game.t + j * Math.PI) * s * 0.3;
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+    } else if (e.type === 'broodnexus') { // apex pool: a churning brood-core ring
+      ctx.strokeStyle = '#e3b3ff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, s * 0.72 * wob, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const a = game.t * 0.8 + i * Math.PI / 3;
+        ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.5, 3, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (e.type === 'tyrant') { // apex brood-mother: a crown of spikes
+      ctx.strokeStyle = '#e3b3ff'; ctx.lineWidth = 2;
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3 + facingAngle(e);
+        ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.7, y + Math.sin(a) * s * 0.7);
+        ctx.lineTo(x + Math.cos(a) * (s + 7), y + Math.sin(a) * (s + 7)); ctx.stroke();
+      }
+    } else if (e.type === 'drone') { // basic swarm: a pair of twitching mandibles
+      const fa = facingAngle(e);
+      ctx.strokeStyle = '#e3b3ff'; ctx.lineWidth = 1.2;
+      for (const off of [0.5, -0.5]) {
+        ctx.beginPath(); ctx.moveTo(x + Math.cos(fa) * s * 0.8, y + Math.sin(fa) * s * 0.8);
+        ctx.lineTo(x + Math.cos(fa + off) * (s + 4), y + Math.sin(fa + off) * (s + 4)); ctx.stroke();
+      }
     }
   }
 
@@ -736,6 +843,37 @@ function drawEnt(e) {
       } else if (e.type === 'conduit') {
         ctx.fillStyle = '#9ff0e2';
         ctx.beginPath(); ctx.arc(x, y, 2.5 + Math.sin(game.t * 3 + e.id), 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'sepulchre') { // a grave-mound with a leaning headstone
+        ctx.fillStyle = '#183a34';
+        ctx.beginPath(); ctx.ellipse(x, y + s * 0.3, s * 0.55, s * 0.24, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#9ff0e2'; ctx.lineWidth = 1.6;
+        roundRect(x - s * 0.16, y - s * 0.5, s * 0.32, s * 0.55, 3); ctx.stroke();
+      } else if (e.type === 'necropolis') { // a hollow skull sigil
+        ctx.strokeStyle = '#9ff0e2'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(x, y - s * 0.1, s * 0.4, Math.PI, 0); ctx.lineTo(x + s * 0.32, y + s * 0.32); ctx.lineTo(x - s * 0.32, y + s * 0.32); ctx.closePath(); ctx.stroke();
+        ctx.fillStyle = '#9ff0e2';
+        ctx.beginPath(); ctx.arc(x - s * 0.15, y - s * 0.08, s * 0.09, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + s * 0.15, y - s * 0.08, s * 0.09, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'dreadspire') { // radiating cold spikes
+        ctx.strokeStyle = '#9ff0e2'; ctx.lineWidth = 1.3;
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 + game.t * 0.15;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.4, y + Math.sin(a) * s * 0.4);
+          ctx.lineTo(x + Math.cos(a) * (s + 6), y + Math.sin(a) * (s + 6)); ctx.stroke();
+        }
+      } else if (e.type === 'oracle') { // a watching bone-eye
+        ctx.strokeStyle = '#9ff0e2'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.ellipse(x, y, s * 0.5, s * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#9ff0e2';
+        ctx.beginPath(); ctx.arc(x, y, s * 0.16 * (0.7 + 0.3 * Math.sin(game.t * 2)), 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'charnel') { // apex throne: an ornate skeletal crown
+        ctx.strokeStyle = '#9ff0e2'; ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+          const a = -Math.PI / 2 + (i - 2) * 0.5;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.5);
+          ctx.lineTo(x + Math.cos(a) * (s * 0.5 + 10), y + Math.sin(a) * (s * 0.5 + 10)); ctx.stroke();
+        }
+        ctx.beginPath(); ctx.arc(x, y, s * 0.5, 0, Math.PI * 2); ctx.stroke();
       } else { // reliquary
         ctx.strokeStyle = '#9ff0e2'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(x, y - s * 0.5); ctx.lineTo(x + s * 0.5, y); ctx.lineTo(x, y + s * 0.5); ctx.lineTo(x - s * 0.5, y); ctx.closePath(); ctx.stroke();
@@ -756,6 +894,36 @@ function drawEnt(e) {
       } else if (e.type === 'banshee') { // a wailing crescent, open toward its facing
         ctx.strokeStyle = '#bffff2'; ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.arc(x, y, s * 0.65, fa + Math.PI / 2 + 0.3, fa + Math.PI * 1.5 - 0.3); ctx.stroke();
+      } else if (e.type === 'husk') { // risen chaff: a pair of crossed bones
+        ctx.strokeStyle = '#bffff2'; ctx.lineWidth = 1.3;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.55, y - s * 0.4); ctx.lineTo(x + s * 0.55, y + s * 0.4);
+        ctx.moveTo(x + s * 0.55, y - s * 0.4); ctx.lineTo(x - s * 0.55, y + s * 0.4); ctx.stroke();
+      } else if (e.type === 'lich') { // elite caster: a small floating halo
+        ctx.strokeStyle = '#bffff2'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(x, y - s * 0.9, s * 0.3, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'harbinger') { // long-range death-caster: a piercing rune-lance
+        ctx.save(); ctx.translate(x, y); ctx.rotate(fa);
+        ctx.strokeStyle = '#bffff2'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-s * 0.3, 0); ctx.lineTo(s + 6, 0); ctx.stroke();
+        ctx.restore();
+      } else if (e.type === 'gravewight') { // heavy undead: a wreath of grave-cold shards
+        ctx.strokeStyle = '#bffff2'; ctx.lineWidth = 1.5;
+        for (let i = 0; i < 6; i++) {
+          const a = i * Math.PI / 3 + 0.3;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.65, y + Math.sin(a) * s * 0.65);
+          ctx.lineTo(x + Math.cos(a) * (s + 4), y + Math.sin(a) * (s + 4)); ctx.stroke();
+        }
+      } else if (e.type === 'nightgaunt') { // flying wraith: swept wings
+        ctx.save(); ctx.translate(x, y); ctx.rotate(fa);
+        ctx.strokeStyle = '#bffff2'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(-s * 0.2, -s * 0.9); ctx.lineTo(s * 0.5, 0); ctx.lineTo(-s * 0.2, s * 0.9); ctx.stroke();
+        ctx.restore();
+      } else if (e.type === 'devourer') { // apex avatar: a hungering ring of maws
+        ctx.strokeStyle = '#bffff2'; ctx.lineWidth = 1.8;
+        for (let i = 0; i < 5; i++) {
+          const a = game.t * 1.2 + i * Math.PI * 2 / 5;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.55, y + Math.sin(a) * s * 0.55, 3.2, 0, Math.PI * 2); ctx.stroke();
+        }
       }
     }
   }
@@ -783,12 +951,23 @@ function drawEnt(e) {
         ctx.beginPath();
         ctx.moveTo(x - s * 0.4, y - s * 0.4); ctx.lineTo(x + s * 0.4, y + s * 0.4);
         ctx.moveTo(x + s * 0.4, y - s * 0.4); ctx.lineTo(x - s * 0.4, y + s * 0.4); ctx.stroke();
+      } else if (e.type === 'blackmarket') { // a shady ledger + loupe
+        ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 1.6;
+        roundRect(x - s * 0.32, y - s * 0.4, s * 0.5, s * 0.6, 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x + s * 0.22, y + s * 0.18, s * 0.2, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + s * 0.36, y + s * 0.32); ctx.lineTo(x + s * 0.5, y + s * 0.46); ctx.stroke();
       }
-      if (e.def.dmg) { // haven & watchpost barrels
+      if (e.def.dmg) { // haven, watchpost & gun bastion barrels
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.4;
-        ctx.strokeStyle = col; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+        ctx.strokeStyle = col; ctx.lineWidth = e.type === 'gunbastion' ? 4.5 : 3;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + (e.type === 'gunbastion' ? 10 : 8)), y + Math.sin(a) * (s + (e.type === 'gunbastion' ? 10 : 8))); ctx.stroke();
+        if (e.type === 'gunbastion') { // twin barrels — the heavier wall-gun
+          const px = Math.cos(a + Math.PI / 2) * 3, py = Math.sin(a + Math.PI / 2) * 3;
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(x + px, y + py); ctx.lineTo(x + px + Math.cos(a) * (s + 6), y + py + Math.sin(a) * (s + 6));
+          ctx.moveTo(x - px, y - py); ctx.lineTo(x - px + Math.cos(a) * (s + 6), y - py + Math.sin(a) * (s + 6)); ctx.stroke();
+        }
       }
     } else if (e.type === 'dragoon') { // aerial gunner: a chevron with a rotor ring
       ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e));
@@ -818,6 +997,18 @@ function drawEnt(e) {
       } else if (e.type === 'juggernaut' || e.type === 'ironhide') {
         ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 1.5;
         poly(x, y, s * 0.5, 5, fa - Math.PI / 2); ctx.stroke();
+      } else if (e.type === 'marauder') { // stub grenade launcher
+        ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(fa) * (s + 4), y + Math.sin(fa) * (s + 4)); ctx.stroke();
+      } else if (e.type === 'gunhand') { // fast raider: a speed-streak
+        ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(x - Math.cos(fa) * s * 0.9, y - Math.sin(fa) * s * 0.9); ctx.lineTo(x - Math.cos(fa) * (s + 6), y - Math.sin(fa) * (s + 6)); ctx.stroke();
+      } else if (e.type === 'warlord') { // apex merc: a gilded officer's sash
+        ctx.strokeStyle = '#ffd97d'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.6, 0, Math.PI * 2); ctx.stroke();
+      } else { // enforcer: a simple sidearm glint
+        ctx.fillStyle = '#ffd97d';
+        ctx.beginPath(); ctx.arc(x + Math.cos(fa) * s * 0.5, y + Math.sin(fa) * s * 0.5, 2, 0, Math.PI * 2); ctx.fill();
       }
     }
   }
@@ -991,6 +1182,23 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.moveTo(x, y + s * 0.5); ctx.lineTo(x, y - s * 0.6); ctx.stroke();
         ctx.fillStyle = col;
         ctx.beginPath(); ctx.moveTo(x, y - s * 0.6); ctx.lineTo(x + s * 0.55, y - s * 0.42); ctx.lineTo(x, y - s * 0.18); ctx.closePath(); ctx.fill();
+      } else if (e.type === 'powdermill') { // a squat powder keg with cross-bands
+        ctx.fillStyle = '#cfd8e4'; roundRect(x - s * 0.3, y - s * 0.34, s * 0.6, s * 0.6, 4); ctx.fill();
+        ctx.strokeStyle = dark; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.3, y - s * 0.1); ctx.lineTo(x + s * 0.3, y - s * 0.1);
+        ctx.moveTo(x - s * 0.3, y + s * 0.16); ctx.lineTo(x + s * 0.3, y + s * 0.16); ctx.stroke();
+      } else if (e.type === 'college') { // a mortarboard scholar's cap
+        ctx.fillStyle = '#cfd8e4';
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.35); ctx.lineTo(x + s * 0.5, y - s * 0.08); ctx.lineTo(x, y + s * 0.16); ctx.lineTo(x - s * 0.5, y - s * 0.08); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(x + s * 0.3, y); ctx.lineTo(x + s * 0.3, y + s * 0.3); ctx.stroke();
+      } else if (e.type === 'foundry_w') { // a billowing furnace stack
+        const gl = 0.5 + 0.3 * Math.sin(game.t * 3.5 + e.id);
+        ctx.fillStyle = 'rgba(255,150,60,' + gl + ')';
+        ctx.beginPath(); ctx.arc(x, y + s * 0.1, s * 0.32, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#cfd8e4'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.16, y - s * 0.6); ctx.lineTo(x - s * 0.16, y - s * 0.15);
+        ctx.moveTo(x + s * 0.16, y - s * 0.6); ctx.lineTo(x + s * 0.16, y - s * 0.15); ctx.stroke();
       } else if (e.def.dmg) { // any armed Warden structure (keep, bastion, bunker, redoubt, cauldron, ballista)
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
@@ -1034,7 +1242,11 @@ function drawEnt(e) {
           ctx.fillStyle = '#dfe6f0';
           ctx.beginPath(); ctx.moveTo(len, 0); ctx.lineTo(len - s * 0.5, s * 0.55); ctx.lineTo(len - s * 0.7, 0); ctx.closePath(); ctx.fill();
         }
-      } else { ctx.fillStyle = col; ctx.fillRect(-s * 0.4, -s * 0.4, s * 0.8, s * 0.8); }
+      } else { // sentinel: a round shield boss up front
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(s * 0.15, 0, s * 0.42, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = dark; ctx.lineWidth = 1.2; ctx.stroke();
+      }
       ctx.restore();
     }
   }
@@ -1051,15 +1263,82 @@ function drawEnt(e) {
         const a = t ? Math.atan2(t.y - y, t.x - x) : game.t;
         ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      } else if (e.type === 'warcamp') { // banner-topped tent poles
+        ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.3, y - s * 0.55); ctx.lineTo(x - s * 0.3, y + s * 0.2);
+        ctx.moveTo(x + s * 0.3, y - s * 0.55); ctx.lineTo(x + s * 0.3, y + s * 0.2); ctx.stroke();
+        ctx.fillStyle = '#ffd27a';
+        ctx.beginPath(); ctx.moveTo(x - s * 0.3, y - s * 0.55); ctx.lineTo(x, y - s * 0.42); ctx.lineTo(x - s * 0.3, y - s * 0.3); ctx.closePath(); ctx.fill();
+      } else if (e.type === 'cinderpit') { // a swirling ember-pit
+        ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 1.4;
+        for (let i = 0; i < 3; i++) {
+          const a = game.t * 2 + i * Math.PI * 2 / 3;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.4, y + Math.sin(a) * s * 0.4, s * 0.16, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (e.type === 'warlodge') { // crossed war-axes
+        ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.4, y + s * 0.4); ctx.lineTo(x + s * 0.4, y - s * 0.4);
+        ctx.moveTo(x - s * 0.4, y - s * 0.4); ctx.lineTo(x + s * 0.4, y + s * 0.4); ctx.stroke();
+      } else if (e.type === 'emberforge') { // a blazing anvil
+        ctx.fillStyle = '#7a3410'; ctx.fillRect(x - s * 0.32, y - s * 0.1, s * 0.64, s * 0.24);
+        const gl = 0.5 + 0.3 * Math.sin(game.t * 4 + e.id);
+        ctx.fillStyle = 'rgba(255,205,120,' + gl + ')';
+        ctx.beginPath(); ctx.arc(x, y - s * 0.3, s * 0.18, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'greatpyre') { // apex: a soaring twin-tongued flame
+        ctx.fillStyle = '#ffd27a';
+        for (const dx of [-0.18, 0.18]) {
+          const fh = s * (0.7 + 0.15 * Math.sin(game.t * 6 + dx * 10));
+          ctx.beginPath(); ctx.moveTo(x + dx * s, y + s * 0.3); ctx.lineTo(x + dx * s * 1.6, y - fh); ctx.lineTo(x, y - s * 0.1); ctx.closePath(); ctx.fill();
+        }
       }
     } else {
       ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e) + Math.PI / 2);
-      ctx.fillStyle = (e.type === 'warbeast' || e.type === 'cinderguard' || e.type === 'catapult') ? '#7a3410'
-        : e.type === 'shaman' ? '#ffd27a' : col;
+      const heavy = e.type === 'warbeast' || e.type === 'cinderguard' || e.type === 'catapult' || e.type === 'magmaur' || e.type === 'titan';
+      ctx.fillStyle = heavy ? '#7a3410' : e.type === 'shaman' ? '#ffd27a' : col;
       ctx.strokeStyle = col; ctx.lineWidth = (e.type === 'cinderguard' || e.type === 'catapult') ? 2.2 : 1.5;
       ctx.beginPath();
       ctx.moveTo(0, -s); ctx.lineTo(s, s); ctx.lineTo(0, s * 0.4); ctx.lineTo(-s, s);
       ctx.closePath(); ctx.fill(); ctx.stroke();
+      // per-unit weapon/role accent
+      ctx.strokeStyle = '#ffd27a'; ctx.fillStyle = '#ffd27a';
+      if (e.type === 'raider') { // a raking claw-blade
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.8); ctx.lineTo(0, -s * 1.5); ctx.stroke();
+      } else if (e.type === 'slinger') { // a sling-stone orbit
+        ctx.beginPath(); ctx.arc(0, -s * 0.2, s * 0.16, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'firebrand') { // a lit molotov held forward
+        ctx.beginPath(); ctx.arc(0, -s * 0.4, s * 0.2, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -s * 0.6); ctx.lineTo(0, -s * 0.9); ctx.stroke();
+      } else if (e.type === 'warbeast') { // horns
+        ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.moveTo(-s * 0.3, -s * 0.6); ctx.lineTo(-s * 0.6, -s * 1.1);
+        ctx.moveTo(s * 0.3, -s * 0.6); ctx.lineTo(s * 0.6, -s * 1.1); ctx.stroke();
+      } else if (e.type === 'firewagon') { // twin wheels + a flame nozzle
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(-s * 0.3, s * 0.7, s * 0.3, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(s * 0.3, s * 0.7, s * 0.3, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.4); ctx.lineTo(0, -s * 1.1); ctx.stroke();
+      } else if (e.type === 'cinderguard') { // a shield boss
+        ctx.beginPath(); ctx.arc(0, s * 0.1, s * 0.4, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'cinderbow') { // a drawn bow
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(s * 0.1, 0, s * 0.7, -0.9, 0.9); ctx.stroke();
+      } else if (e.type === 'catapult') { // a siege throwing-arm
+        ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.moveTo(0, s * 0.3); ctx.lineTo(-s * 0.3, -s * 0.9); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-s * 0.3, -s * 0.9, s * 0.18, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'shaman') { // a mending staff
+        ctx.strokeStyle = '#bff0ac'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(0, s * 0.3); ctx.lineTo(0, -s * 1.1); ctx.stroke();
+        ctx.fillStyle = '#bff0ac'; ctx.beginPath(); ctx.arc(0, -s * 1.1, s * 0.18, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'cinderdrake') { // swept wings, the nomads' air
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-s * 0.2, -s * 0.4); ctx.lineTo(-s * 1.1, 0); ctx.lineTo(-s * 0.2, s * 0.5); ctx.stroke();
+      } else if (e.type === 'magmaur' || e.type === 'titan') { // molten cracks across the hide
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(-s * 0.4, s * 0.5); ctx.lineTo(0, -s * 0.1); ctx.lineTo(s * 0.4, s * 0.5); ctx.stroke();
+      }
       ctx.restore();
     }
   }
@@ -1129,6 +1408,14 @@ function drawEnt(e) {
         ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(x, y, s * 0.6, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.arc(x, y, s * 0.3, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'heartgrove') { // apex grove: a triple ring of blooming light
+        const pul = 0.5 + 0.5 * Math.sin(game.t * 1.5 + e.id);
+        ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.7, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = '#b8f0a0'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.45, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,226,122,' + (0.3 + 0.2 * pul) + ')';
+        ctx.beginPath(); ctx.arc(x, y, s * 0.22, 0, Math.PI * 2); ctx.fill();
       } else if (e.type === 'bramble') {
         const t = e.tgt ? byId(e.tgt) : null;
         const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.6;
@@ -1190,7 +1477,7 @@ function drawEnt(e) {
       }
     } else {
       const mut = e.mutated;   // Wildgrowth mutated Sapling
-      const heavy = e.type === 'treant' || e.type === 'bramblehorn';
+      const heavy = e.type === 'treant' || e.type === 'bramblehorn' || e.type === 'ancient' || e.type === 'eldertree';
       ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e) + Math.PI / 2);
       ctx.fillStyle = mut ? '#46871f' : (heavy ? '#2f6b2a' : col);
       ctx.strokeStyle = mut ? '#d6ff8a' : '#2f6b2a'; ctx.lineWidth = mut || heavy ? 1.8 : 1.3;
@@ -1208,6 +1495,25 @@ function drawEnt(e) {
       } else if (e.type === 'sporecaller') { // glowing spore sac
         ctx.fillStyle = '#cdb6ff';
         ctx.beginPath(); ctx.arc(0, -s * 0.1, s * 0.34, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'sapling') { // a little leaf-sprig
+        ctx.fillStyle = '#b8f0a0';
+        ctx.beginPath(); ctx.ellipse(0, -s * 0.9, s * 0.22, s * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'thornling') { // a barbed thorn-spike
+        ctx.strokeStyle = '#d6ff8a'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.8); ctx.lineTo(0, -s * 1.4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-s * 0.2, -s * 1.0); ctx.lineTo(s * 0.2, -s * 1.0); ctx.stroke();
+      } else if (e.type === 'treant') { // gnarled bark-arms
+        ctx.strokeStyle = '#1f4a1c'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-s * 0.4, -s * 0.2); ctx.lineTo(-s * 0.9, -s * 0.5);
+        ctx.moveTo(s * 0.4, -s * 0.2); ctx.lineTo(s * 0.9, -s * 0.5); ctx.stroke();
+      } else if (e.type === 'ancient') { // elder growth-rings across the trunk
+        ctx.strokeStyle = '#d6ff8a'; ctx.lineWidth = 1.3;
+        ctx.beginPath(); ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'eldertree') { // apex world-tree: a radiant canopy glow
+        const pul = 0.5 + 0.5 * Math.sin(game.t * 1.5 + e.id);
+        ctx.fillStyle = 'rgba(255,226,122,' + (0.3 + 0.2 * pul) + ')';
+        ctx.beginPath(); ctx.arc(0, -s * 0.2, s * 0.8, 0, Math.PI * 2); ctx.fill();
       }
       ctx.restore();
     }
@@ -1226,6 +1532,30 @@ function drawEnt(e) {
         const ph = (game.t * 0.7) % 1;
         ctx.strokeStyle = 'rgba(255,156,203,' + (0.6 * (1 - ph)).toFixed(2) + ')'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(x, y, s * 0.5 + ph * s * 1.3, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'tesla') { // beam tower — a jagged bolt tracking its target
+        const t = e.tgt ? byId(e.tgt) : null;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : game.t * 0.5;
+        ctx.strokeStyle = '#ffb3d9'; ctx.lineWidth = 2;
+        const ex = x + Math.cos(a) * (s + 9), ey = y + Math.sin(a) * (s + 9);
+        ctx.beginPath(); ctx.moveTo(x, y);
+        ctx.lineTo(x + (ex - x) * 0.5 + Math.cos(a + Math.PI / 2) * 4, y + (ey - y) * 0.5 + Math.sin(a + Math.PI / 2) * 4);
+        ctx.lineTo(ex, ey); ctx.stroke();
+      } else if (e.type === 'foundry_s') { // an assembly frame around a rising piston
+        ctx.strokeStyle = '#ffb3d9'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.4, y - s * 0.4); ctx.lineTo(x - s * 0.4, y + s * 0.4);
+        ctx.moveTo(x + s * 0.4, y - s * 0.4); ctx.lineTo(x + s * 0.4, y + s * 0.4); ctx.stroke();
+        ctx.fillStyle = '#ffb3d9'; ctx.fillRect(x - s * 0.14, y - s * 0.4 - Math.abs(Math.sin(game.t * 2)) * s * 0.2, s * 0.28, s * 0.22);
+      } else if (e.type === 'stormlab') { // a research dish + antenna
+        ctx.strokeStyle = '#ffb3d9'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(x, y + s * 0.1, s * 0.4, Math.PI, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.3); ctx.lineTo(x, y - s * 0.55); ctx.stroke();
+        ctx.fillStyle = '#ffb3d9'; ctx.beginPath(); ctx.arc(x, y - s * 0.55, 2.4, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'arcfoundry') { // apex foundry: a crackling triple arc
+        ctx.strokeStyle = '#ff9ccb'; ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+          const a = game.t * 1.5 + i * Math.PI * 2 / 3;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.5, s * 0.14, 0, Math.PI * 2); ctx.stroke();
+        }
       }
     } else if (e.type === 'stormcruiser') { // broadside battlecruiser
       drawShipHull(e, x, y, s, col, dark, '#ffb3d9');
@@ -1241,6 +1571,33 @@ function drawEnt(e) {
       ctx.beginPath(); ctx.moveTo(0, -s * 1.25 - 2); ctx.lineTo(s * 0.85, 0); ctx.lineTo(0, s * 0.85); ctx.lineTo(-s * 0.85, 0); ctx.closePath();
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#ffb3d9'; ctx.beginPath(); ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2); ctx.fill();
+      // per-unit weapon accent
+      ctx.strokeStyle = '#ffb3d9';
+      if (e.type === 'arclight') { // a jagged spark zigzag up front
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.5); ctx.lineTo(s * 0.2, -s * 0.9); ctx.lineTo(0, -s * 1.3); ctx.stroke();
+      } else if (e.type === 'galvan') { // twin shock-blades
+        ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.moveTo(-s * 0.3, -s * 0.3); ctx.lineTo(-s * 0.7, -s * 0.9);
+        ctx.moveTo(s * 0.3, -s * 0.3); ctx.lineTo(s * 0.7, -s * 0.9); ctx.stroke();
+      } else if (e.type === 'voltaic') { // a long beam antenna
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.6); ctx.lineTo(0, -s * 1.5); ctx.stroke();
+      } else if (e.type === 'gladius') { // a stubby splash-cannon
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.4); ctx.lineTo(0, -s * 1.1); ctx.stroke();
+      } else if (e.type === 'colossus') { // dual heavy cannons
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(-s * 0.25, -s * 0.5); ctx.lineTo(-s * 0.25, -s * 1.3);
+        ctx.moveTo(s * 0.25, -s * 0.5); ctx.lineTo(s * 0.25, -s * 1.3); ctx.stroke();
+      } else if (e.type === 'tempest') { // apex titan: a crackling arc crown
+        ctx.lineWidth = 1.6;
+        for (let i = 0; i < 5; i++) {
+          const a2 = -Math.PI / 2 + (i - 2) * 0.4;
+          ctx.beginPath(); ctx.moveTo(Math.cos(a2) * s * 0.9, Math.sin(a2) * s * 0.9);
+          ctx.lineTo(Math.cos(a2) * (s * 0.9 + 8), Math.sin(a2) * (s * 0.9 + 8)); ctx.stroke();
+        }
+      }
       ctx.restore();
       if (e.shield > 1) {
         const frac = e.shield / e.shieldMax;
@@ -1261,13 +1618,63 @@ function drawEnt(e) {
         const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
         ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      } else if (e.type === 'shrine') { // a bleeding rune-bowl
+        ctx.fillStyle = '#ff6b73';
+        ctx.beginPath(); ctx.arc(x, y, s * 0.24, 0, Math.PI); ctx.fill();
+      } else if (e.type === 'bloodtower') { // a clotted blood-cannon
+        const t = e.tgt ? byId(e.tgt) : null;
+        const a = t ? Math.atan2(t.y - y, t.x - x) : -Math.PI / 2;
+        ctx.strokeStyle = '#ff6b73'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (s + 8), y + Math.sin(a) * (s + 8)); ctx.stroke();
+      } else if (e.type === 'fleshvats') { // stitched vats bubbling
+        ctx.strokeStyle = '#ff6b73'; ctx.lineWidth = 1.4;
+        for (const cx of [-0.28, 0.28]) {
+          ctx.beginPath(); ctx.arc(x + cx * s, y + s * 0.1, s * 0.2, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (e.type === 'sanctum') { // a channelling blood-rune
+        ctx.strokeStyle = '#ff6b73'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.4); ctx.lineTo(x + s * 0.35, y + s * 0.25); ctx.lineTo(x - s * 0.35, y + s * 0.25); ctx.closePath(); ctx.stroke();
+      } else if (e.type === 'grandaltar') { // apex altar: a crown of blood-spikes
+        ctx.strokeStyle = '#ff2a3a'; ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const a = i * Math.PI / 3;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.55, y + Math.sin(a) * s * 0.55);
+          ctx.lineTo(x + Math.cos(a) * (s * 0.55 + 9), y + Math.sin(a) * (s * 0.55 + 9)); ctx.stroke();
+        }
       }
     } else {
       ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e) + Math.PI / 2);
-      ctx.fillStyle = e.type === 'behemoth' ? '#5a0e14' : col;
+      ctx.fillStyle = (e.type === 'behemoth' || e.type === 'abomination' || e.type === 'bloodavatar') ? '#5a0e14' : col;
       ctx.strokeStyle = '#ff6b73'; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.moveTo(0, -s - 1); ctx.lineTo(s, s); ctx.lineTo(-s, s); ctx.closePath();
       ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#ff6b73'; ctx.fillStyle = '#ff6b73';
+      if (e.type === 'zealot') { // a fanatic's brand-mark
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-s * 0.3, -s * 0.1); ctx.lineTo(s * 0.3, -s * 0.1);
+        ctx.moveTo(0, -s * 0.4); ctx.lineTo(0, s * 0.2); ctx.stroke();
+      } else if (e.type === 'behemoth' || e.type === 'abomination') { // stitched scar-lines
+        ctx.lineWidth = 1.3;
+        ctx.beginPath(); ctx.moveTo(-s * 0.5, s * 0.2); ctx.lineTo(0, -s * 0.1); ctx.lineTo(s * 0.5, s * 0.2); ctx.stroke();
+      } else if (e.type === 'cultist') { // a floating hex-orb
+        ctx.beginPath(); ctx.arc(0, -s * 0.5, s * 0.18, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'flayer') { // twin flaying blades
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-s * 0.3, -s * 0.2); ctx.lineTo(-s * 0.7, -s * 0.8);
+        ctx.moveTo(s * 0.3, -s * 0.2); ctx.lineTo(s * 0.7, -s * 0.8); ctx.stroke();
+      } else if (e.type === 'bloodpriest') { // a healing blood-drop
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.9); ctx.lineTo(s * 0.18, -s * 0.55); ctx.arc(0, -s * 0.5, s * 0.18, 0.3, Math.PI * 2 - 0.3); ctx.closePath(); ctx.fill();
+      } else if (e.type === 'gargoyle') { // winged blood-fiend
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-s * 0.2, -s * 0.3); ctx.lineTo(-s * 1.0, 0); ctx.lineTo(-s * 0.2, s * 0.4); ctx.stroke();
+      } else if (e.type === 'bloodavatar') { // apex avatar: a jagged crimson crown
+        ctx.lineWidth = 1.8;
+        for (let i = 0; i < 5; i++) {
+          const a2 = -Math.PI / 2 + (i - 2) * 0.45;
+          ctx.beginPath(); ctx.moveTo(Math.cos(a2) * s * 0.85, Math.sin(a2) * s * 0.85);
+          ctx.lineTo(Math.cos(a2) * (s * 0.85 + 8), Math.sin(a2) * (s * 0.85 + 8)); ctx.stroke();
+        }
+      }
       ctx.restore();
     }
   }
@@ -1298,6 +1705,29 @@ function drawEnt(e) {
       } else if (e.type === 'genewell') {
         ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 1.4;
         ctx.beginPath(); ctx.arc(x, y, s * 0.55, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'cyst') { // budding tendrils
+        ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 1.1;
+        for (let i = 0; i < 4; i++) {
+          const a = i * Math.PI / 2 + e.id;
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.5);
+          ctx.lineTo(x + Math.cos(a) * (s + 3), y + Math.sin(a) * (s + 3)); ctx.stroke();
+        }
+      } else if (e.type === 'vat') { // bubbling gene-vat
+        ctx.fillStyle = '#e8ff8a';
+        for (let i = 0; i < 3; i++) {
+          const ph = (game.t * 0.7 + i * 0.4) % 1;
+          ctx.beginPath(); ctx.arc(x + (i - 1) * s * 0.25, y + s * 0.3 - ph * s * 0.6, 1.8 + ph * 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (e.type === 'mutaworks' || e.type === 'genmaw') { // a knot of raw sinew
+        ctx.strokeStyle = e.type === 'genmaw' ? '#fff3c4' : '#e8ff8a'; ctx.lineWidth = e.type === 'genmaw' ? 2 : 1.4;
+        for (let i = 0; i < 5; i++) {
+          const a = i * Math.PI * 2 / 5 + game.t * 0.2;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.35, y + Math.sin(a) * s * 0.35, s * 0.14, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (e.type === 'genlab') { // a probing sensor-stalk
+        ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(x, y - s * 0.3); ctx.lineTo(x, y - s * 0.6); ctx.stroke();
+        ctx.fillStyle = '#e8ff8a'; ctx.beginPath(); ctx.arc(x, y - s * 0.6, 2.6, 0, Math.PI * 2); ctx.fill();
       }
     } else {
       const heavy = e.type === 'brute' || e.type === 'bloater' || e.type === 'genhorror';
@@ -1317,6 +1747,17 @@ function drawEnt(e) {
       } else if (e.type === 'mender') {
         ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.type === 'spawnling' || e.type === 'whelp' || e.type === 'biter') { // twitching mandibles
+        ctx.strokeStyle = col; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-s * 0.2, -s * wob); ctx.lineTo(-s * 0.5, -s * 1.3);
+        ctx.moveTo(s * 0.2, -s * wob); ctx.lineTo(s * 0.5, -s * 1.3); ctx.stroke();
+      } else if (e.type === 'lurker' || e.type === 'stinger') { // a raised spore-glob
+        ctx.fillStyle = col; ctx.globalAlpha = 0.8;
+        ctx.beginPath(); ctx.arc(0, -s * 0.9, s * 0.22, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (e.type === 'lasher') { // a lashing spore-tongue
+        ctx.strokeStyle = col; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(0, -s * wob); ctx.quadraticCurveTo(s * 0.3, -s * 1.3, 0, -s * 1.6); ctx.stroke();
       }
       ctx.restore();
     }
@@ -1344,6 +1785,15 @@ function drawEnt(e) {
     } else if (e.type === 'phoenix') {
       ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(-s * 0.3, -s * 0.9); ctx.lineTo(s * 0.4, 0); ctx.lineTo(-s * 0.3, s * 0.9); ctx.stroke();
+    } else if (e.type === 'seeker') { // a blink-charge streak
+      ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-s * 0.5, 0); ctx.lineTo(s * 0.7, 0); ctx.stroke();
+    } else if (e.type === 'lancer') { // a long beam-focus spike
+      ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(0, -s * 0.5); ctx.lineTo(0, -s * 1.4); ctx.stroke();
+    } else if (e.type === 'aegis') { // bulky bruiser: a reinforced double band
+      ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.6, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
     if (e.type === 'collector') {

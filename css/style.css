@@ -131,6 +131,9 @@
   #topbar .stat + .stat::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
     height:15px; width:1px; background:#2a3a52; }
   #topbar .stat b { color:#fff; font-weight:700; }
+  #hudSandboxBtn { margin-left:10px; padding:5px 12px; background:#173153; color:#9fd0ff;
+    border:1px solid #2a4a78; border-radius:6px; cursor:pointer; font-size:11.5px; letter-spacing:1px; pointer-events:auto; }
+  #hudSandboxBtn:hover { background:#1f3f6b; }
   #bottombar { position:absolute; left:0; right:0; bottom:0; height:158px; display:flex; align-items:flex-end;
     padding:0 10px 10px 10px; gap:10px; }
   #minimapWrap { background:#0b0f16ee; border:1px solid #243247; border-radius:6px; padding:5px; pointer-events:auto; }
@@ -300,6 +303,36 @@
   .technode.done .tn-cost { color:#8ce69b; }
   .technode.locked { opacity:0.5; }
   .technode.locked .tn-cost { color:#6a7689; }
+
+  /* ---- sandbox panel: spawn any unit/building from any faction, free & instant ----
+     Unlike the tech tree, this must NOT block the map — you're meant to arm an item
+     here and then click the canvas to place it. So the overlay itself ignores clicks
+     (pointer-events:none) and only the opaque panel box (docked near the top, not
+     covering most of the screen) captures them. */
+  #sandboxtree { display:none; position:fixed; inset:0; z-index:50; background:transparent;
+    pointer-events:none; align-items:flex-start; justify-content:center; padding-top:18px; }
+  #sandboxPanel { pointer-events:auto; width:min(1040px,94vw); max-height:60vh; display:flex; flex-direction:column;
+    background:#0e141dee; border:1px solid #2a3954; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.6); }
+  #sandboxBar { display:flex; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid #1d2735;
+    font-size:14px; font-weight:700; letter-spacing:1px; flex-wrap:wrap; }
+  #sandboxGod { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:400; color:#aeb9c9; cursor:pointer; }
+  #sandboxBar button { padding:7px 14px; background:#173153; color:#9fd0ff;
+    border:1px solid #2a4a78; border-radius:6px; cursor:pointer; font-size:12px; letter-spacing:1px; }
+  #sandboxBar button:hover { background:#1f3f6b; }
+  #sandboxCloseBtn { margin-left:auto; }
+  #sandboxFacRow { display:flex; gap:6px; flex-wrap:wrap; padding:10px 18px; border-bottom:1px solid #1d2735; }
+  .sbfac { padding:6px 12px; border-radius:6px; border:1px solid #2a3954; background:#141c28;
+    color:#aab6c9; cursor:pointer; font-size:11.5px; letter-spacing:1px; }
+  .sbfac.sel { border-color:#7dffa8; color:#eafff0; box-shadow:0 0 10px #7dffa833; }
+  #sandboxScroll { overflow:auto; padding:14px 18px; flex:1; }
+  #sandboxGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+  .sbitem { padding:8px 10px; border-radius:6px; border:1px solid #2a3954; border-left-width:4px;
+    background:#141c28; cursor:pointer; text-align:left; }
+  .sbitem:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,0.4); }
+  .sbitem.armed { border-color:#7dffa8; box-shadow:0 0 12px #7dffa84a; }
+  .sbitem .sb-name { display:block; font-size:12px; font-weight:700; color:#e6edf6; }
+  .sbitem .sb-kind { display:block; font-size:10px; color:#8a98ac; margin-top:2px; }
+  #sandboxHint { padding:8px 18px; border-top:1px solid #1d2735; font-size:11.5px; color:#8a98ac; }
 
   /* ---------- settings button on the home screen ---------- */
   .minibtn { margin-top:20px; padding:9px 22px; background:#0e131c; color:#aab6c9;

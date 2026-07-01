@@ -106,7 +106,7 @@ function aiTick(fac) {
     }
     for (const b of fact) if (!b.constructing && !b.queue.length && p.res >= 90) {
       const r = Math.random();
-      enqueue(b, (r < 0.14 && p.res >= 380 && game.t > 180) ? 'dreadnought'
+      enqueue(b, (r < 0.14 && p.res >= 520 && game.t > 200) ? 'dreadnought'
         : (r < 0.3 && p.res >= 250 && techMet(fac, 'artillery')) ? 'artillery'
         : (r < 0.5 && p.res >= 270) ? 'goliath' : (r < 0.7 && p.res >= 170) ? 'flametank'
         : (r < 0.86 && p.res >= 200) ? 'tank' : 'outrider');
@@ -181,7 +181,7 @@ function aiTick(fac) {
       const frigates = ents(e => e.fac === fac && e.type === 'solarfrigate').length;
       if (collectors < aiGrow(5, 2, 15) && p.res >= 60) enqueue(ark, 'collector');
       else if (sovs < 2 && p.res >= 820 && techMet(fac, 'sovereign')) enqueue(ark, 'sovereign');
-      else if (frigates < aiGrow(1, 1, 3) && p.res >= 340 && game.t > 220) enqueue(ark, 'solarfrigate');
+      else if (frigates < aiGrow(1, 1, 3) && p.res >= 480 && game.t > 230) enqueue(ark, 'solarfrigate');
       else if (aegises < 2 && p.res >= 300 && game.t > 200) enqueue(ark, 'aegis');
       else if (guards < 1 && lancers >= 1 && p.res >= 180) enqueue(ark, 'guardian');
       else if (lancers <= seekers / 2 && p.res >= 220) enqueue(ark, 'lancer');
@@ -434,7 +434,7 @@ function aiTick(fac) {
       else enqueue(reactor, 'arclight');
     }
     for (const f of ents(e => e.fac === fac && e.type === 'foundry_s' && !e.growing))
-      if (!f.queue.length && p.res >= 360) enqueue(f, (Math.random() < 0.45 && p.res >= 420) ? 'colossus' : 'stormcruiser');
+      if (!f.queue.length && p.res >= 420) enqueue(f, (Math.random() < 0.45 && p.res >= 500) ? 'colossus' : 'stormcruiser');
   }
 
   else if (fac === 'pact') { // throw cheap bodies into the grinder, reap Blood, raise giants

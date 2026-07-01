@@ -8,6 +8,15 @@ function newGame(playerFac, aiCount = 1, diff = 'normal') {
   buildMatch(roster, playerFac, 'sp', (Math.random() * 1e9) | 0);
 }
 
+// a solo, no-AI match with unlimited resources and a free-spawn panel — for trying
+// out any unit/building/faction without the grind of actually playing a match.
+function newSandbox(playerFac) {
+  buildMatch([{ fac: playerFac, ai: false }], playerFac, 'sp', (Math.random() * 1e9) | 0);
+  game.sandbox = true;
+  sandboxFac = playerFac;
+  document.getElementById('hudSandboxBtn').style.display = '';
+}
+
 // up to four spawn corners; with 2 players they sit diagonally opposite
 function cornerBases(n) {
   const m = 440;
@@ -317,6 +326,7 @@ function evoAdapt(t, dmg, shot) {
 }
 function applyDamage(t, dmg, attacker) {
   if (t.dead || t.def.noTarget) return;  // Obelisks are captured, never destroyed
+  if (game.sandboxGod) return;  // sandbox god mode: nothing takes damage
   if (t.def.invuln && !t.constructing && !t.growing) return;  // the Erdtree: an indestructible living wall
   // Virulent Strain ADAPTATION: mitigate by whatever damage type this unit has hardened
   // against (or is momentarily immune to via Adaptive Surge), and track the streak
@@ -725,16 +735,8 @@ function engage(e, t, dt) {
   const d = e.def;
   const r = rangeOf(e) + e.size + t.size;
   if (dist(e, t) <= r) {
-    if (d.broadside) {
-      const toT = Math.atan2(t.y - e.y, t.x - e.x);
-      const rel = angleDiff(e.facing || 0, toT);
-      if (Math.abs(Math.abs(rel) - Math.PI / 2) < BROADSIDE_ARC) { if (e.cd <= 0) fireAt(e, t); }
-      else {
-        const cand1 = toT + Math.PI / 2, cand2 = toT - Math.PI / 2;
-        const goal = Math.abs(angleDiff(e.facing || 0, cand1)) <= Math.abs(angleDiff(e.facing || 0, cand2)) ? cand1 : cand2;
-        turnToward(e, goal, dt);
-      }
-    } else if (e.cd <= 0) fireAt(e, t);
+    if (d.broadside) broadsideEngage(e, t, dt);
+    else if (e.cd <= 0) fireAt(e, t);
   } else if (!d.stationary && d.speed) {
     // seeker blink: teleport to the target's flank
     if (d.blink && e.blinkCd <= 0 && dist(e, t) < 260) {
@@ -749,24 +751,45 @@ function engage(e, t, dt) {
   }
 }
 
+// broadside units can't point-and-shoot: their guns run the length of the hull, so
+// they need a target roughly abeam (within BROADSIDE_ARC of exactly 90°/270° off
+// the nose) before they can fire. But they needn't stop dead to get there — this
+// only ever steers the HULL (turnToward), never movement, so a ship already under
+// way (chasing, on a move order, kiting) just keeps going while it wheels to bring
+// its broadside to bear, and fires the instant it lines up. Shared by engage() (a
+// standing attack order) and moveFire() (snapping a shot off while relocating).
+function broadsideEngage(e, t, dt) {
+  const toT = Math.atan2(t.y - e.y, t.x - e.x);
+  const cand1 = toT + Math.PI / 2, cand2 = toT - Math.PI / 2;
+  const goal = Math.abs(angleDiff(e.facing || 0, cand1)) <= Math.abs(angleDiff(e.facing || 0, cand2)) ? cand1 : cand2;
+  turnToward(e, goal, dt);
+  const rel = angleDiff(e.facing || 0, toT);
+  if (Math.abs(Math.abs(rel) - Math.PI / 2) < BROADSIDE_ARC && e.cd <= 0) fireAt(e, t);
+}
+
 // ranged units snap off a shot at the nearest foe in range without breaking
 // stride — so a relocating, retreating or kiting squad keeps up its fire while it
 // moves. Melee units (and anything without a gun) need to stop and close, so they
 // skip this. Target scanning is throttled (scanT) just like the idle/amove scans.
 function moveFire(e, dt) {
   const d = e.def;
-  // broadside units can't snipe on the run — they must stop and wheel side-on (see engage)
-  if (d.shot === 'melee' || !d.dmg || !d.aggro || d.broadside) return;
+  if (d.shot === 'melee' || !d.dmg || !d.aggro) return;
   e.scanT -= dt;
   if (e.scanT <= 0) { e.scanT = 0.3; const t = findTarget(e); e.tgt = t ? t.id : 0; }
   const t = e.tgt ? byId(e.tgt) : null;
-  if (t && e.cd <= 0 && dist(e, t) <= rangeOf(e) + e.size + t.size) fireAt(e, t);
+  if (!t || dist(e, t) > rangeOf(e) + e.size + t.size) return;
+  if (d.broadside) broadsideEngage(e, t, dt);
+  else if (e.cd <= 0) fireAt(e, t);
 }
 
 function moveToward(e, x, y, dt) {
   const dx = x - e.x, dy = y - e.y, dl = Math.hypot(dx, dy);
   if (dl < 3) return true;
-  if (e.def.kind === 'unit') turnToward(e, Math.atan2(dy, dx), dt);
+  // broadside ships steer their hull toward a live target's beam instead (see
+  // broadsideEngage) — don't fight that with the ordinary "face where you're
+  // walking" heading. Cruising with nothing to shoot at, they still nose the
+  // way they're headed like anyone else.
+  if (e.def.kind === 'unit' && !(e.def.broadside && e.tgt)) turnToward(e, Math.atan2(dy, dx), dt);
   const sp = spd(e) * dt;
   if (dl <= sp) { e.x = x; e.y = y; return true; }
   e.x += dx / dl * sp; e.y += dy / dl * sp;
@@ -1195,6 +1218,37 @@ function recomputeWellsprings() {
     w.owner = best;
     if (best) game.players[best].wellHarness++;
   }
+}
+
+// ---------------- sandbox mode ----------------
+// Unlimited resources for every faction present (so you can freely produce/research
+// on whichever side you spawned things onto) and every building/unit's active
+// ability sits permanently ready, so there's nothing to grind before you can test
+// the thing you actually came to look at.
+const SANDBOX_RES = 999999;
+function tickSandbox() {
+  for (const f in game.players) {
+    const p = game.players[f];
+    p.res = SANDBOX_RES;
+    if (FACTIONS[f].res2) p.iron = SANDBOX_RES;
+    if (FACTIONS[f].res3) p.powder = SANDBOX_RES;
+  }
+  for (const e of game.entities) if (e.def.ability) e.abilityCd = 0;
+}
+
+// spawn a unit/building for free, instantly built/grown, for the sandbox panel.
+// Ignores the network/tech-gate/placement rules that a real match enforces.
+function sandboxSpawn(type, fac, x, y) {
+  if (!game || !game.sandbox || !DEFS[type]) return null;
+  if (!game.players[fac]) {
+    game.players[fac] = { res: SANDBOX_RES, isAI: false, base: { x, y }, kills: 0,
+      iron: SANDBOX_RES, ironAccum: 0, ironInc: 0, powder: SANDBOX_RES, powderAccum: 0, powderInc: 0,
+      gainAccum: 0, income: 0, swarmRally: { x, y }, lastAttack: null, waveSize: 0,
+      research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1, speedMul: 1, rangeMul: 1,
+      cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0, arkTier: 0, gMoon: false, gNecro: false, gWild: false,
+      diff: null, incomeMul: 1, firstWave: 1e9, waveStep: 0 };
+  }
+  return spawnEnt(type, fac, x, y);
 }
 
 function tickEconomy(dt) {

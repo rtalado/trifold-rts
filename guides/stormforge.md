@@ -43,7 +43,7 @@ Your machines have **shields** (regenerate out of combat) on top of HP. The key 
 | **Voltaic** | 210 | Long-range shielded beam platform (230). Damage core. |
 | **Gladius** | 230 | Shielded mid-weight mech, splashing cannon. |
 | **Colossus** | 420 | Huge shielded walker, splashing siege cannon (from the **Foundry**). |
-| **Storm Cruiser** | 360 | 340 HP / 260 shield **broadside** battlecruiser (from the **Foundry**) — must wheel side-on to a target before its arc-cannons can fire. |
+| **Storm Cruiser** | 500 | 600 HP / 400 shield — a towering broadside battlecruiser (from the **Foundry**). Wheels to bring its arc-cannons to bear and keeps firing on the move once aligned, rather than stopping dead. |
 
 **Defense:** Tesla Coil (beam tower). **Research:** Research Bay.
 

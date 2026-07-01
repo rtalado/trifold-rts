@@ -60,12 +60,23 @@ a firing line facing it. Select any of your own units and hit **Delete** (or the
 command card's Self-Destruct button) to scuttle them instantly — no refund, but the
 enemy gets no kill credit either, handy for denying a doomed unit.
 
-A few factions field heavy **broadside** units — the Vanguard's **Landship**, the
+A few factions field colossal **broadside** units — the Vanguard's **Landship**, the
 Stormforge's **Storm Cruiser** and the Exodus' **Solar Frigate** — whose guns run
-along the hull instead of the nose. They can't just point-and-shoot: they must wheel
-side-on to a target (slow to turn) before firing at all, then hold that heading while
-they fire. Fast flankers that stay off their beam can neutralise one outright, so
-escort them.
+along the hull instead of the nose. They can't just point-and-shoot: they wheel their
+heading to bring a target abeam before firing — but they never have to stop moving to
+do it, so they keep cruising, chasing or retreating and fire the moment they line up.
+Slow to turn and towering over the rest of the roster; fast flankers that stay off
+their beam can neutralise one outright, so escort them.
+
+### Sandbox mode
+A no-AI, unlimited-resource playground for trying things out — pick **SANDBOX** on the
+main menu instead of Single Player. Press **B** to open the spawn panel: pick any
+faction, then click a unit or building to arm it and left-click the map to drop a free,
+instantly-finished copy (right-click or Esc disarms). Every ability sits permanently
+off cooldown. The panel also has **Heal Selection**, **Self-Destruct** (via Delete, as
+normal), **Clear all but mine** (wipes everything not owned by whichever faction you're
+currently spawning as), and a **God mode** toggle that makes nothing take damage. There
+is no win condition — the "match" just runs until you back out to the menu.
 
 ### Research: the shared four-branch tech tree
 Every faction researches at its own lab building. The tree is identical in structure — four

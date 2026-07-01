@@ -231,8 +231,18 @@ function refreshCard() {
         + '<span class="k">' + (hot[i] || '') + '</span></span>'
       + '<span class="cmd-name">' + c.label + '</span>'
       + (sub ? '<span class="c' + (c.poor ? ' poor' : '') + '">' + sub + '</span>' : '');
-    b.onclick = () => { if (game && game.netPaused) return; if (c.enabled) c.onClick(); };
-    b.addEventListener('mouseenter', () => showTip(c));
+    // re-fetch the command fresh at click/hover time instead of closing over `c` —
+    // otherwise a button built while you were short on resources keeps checking
+    // that stale (disabled) snapshot forever, even after updateHUD's cheap
+    // per-tick refresh (below) flips its *visual* disabled state back on. That
+    // mismatch was the "have to click it twice" bug: it LOOKED clickable the
+    // moment you could afford it, but silently did nothing until you reselected.
+    b.onclick = () => {
+      if (game && game.netPaused) return;
+      const fresh = currentCommands()[i];
+      if (fresh && fresh.enabled) fresh.onClick();
+    };
+    b.addEventListener('mouseenter', () => showTip(currentCommands()[i] || c));
     b.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
     card.appendChild(b);
   });
@@ -536,3 +546,95 @@ function refreshTechTree() {
   }
 }
 
+
+// ---------------- sandbox panel: spawn anything, from any faction, for free ----------------
+let sandboxOpen = false;
+let sandboxFac = null;             // which faction's units/buildings you're about to spawn
+let sandboxBuiltFor = null;        // guard: only rebuild the grid once per panel-open
+
+function openSandboxPanel() {
+  if (!game || !game.sandbox) return;
+  sandboxOpen = true;
+  if (!sandboxFac) sandboxFac = game.localFac;
+  document.getElementById('sandboxGodChk').checked = !!game.sandboxGod;
+  document.getElementById('sandboxtree').style.display = 'flex';
+  buildSandboxPanel();
+}
+function closeSandboxPanel() {
+  sandboxOpen = false;
+  document.getElementById('sandboxtree').style.display = 'none';
+}
+function toggleSandboxPanel() { sandboxOpen ? closeSandboxPanel() : openSandboxPanel(); }
+
+function armSandboxItem(type) {
+  if (game.sandboxPlacing && game.sandboxPlacing.type === type && game.sandboxPlacing.fac === sandboxFac) {
+    game.sandboxPlacing = null; // clicking the armed item again disarms it
+  } else {
+    game.sandboxPlacing = { type, fac: sandboxFac };
+    playSfx('select');
+  }
+  refreshSandboxArmedState();
+}
+function refreshSandboxArmedState() {
+  const grid = document.getElementById('sandboxGrid');
+  for (const el of grid.querySelectorAll('.sbitem')) {
+    const armed = !!(game.sandboxPlacing && game.sandboxPlacing.type === el.dataset.type && game.sandboxPlacing.fac === sandboxFac);
+    el.classList.toggle('armed', armed);
+  }
+}
+
+function buildSandboxPanel() {
+  if (!game) return;
+  // faction picker row (rebuilt every open — cheap, and reflects the current roster)
+  const facRow = document.getElementById('sandboxFacRow');
+  facRow.innerHTML = '';
+  for (const f in FACTIONS) {
+    const b = document.createElement('button');
+    b.className = 'sbfac' + (f === sandboxFac ? ' sel' : '');
+    b.style.color = facColor(f);
+    b.textContent = FACTIONS[f].name;
+    b.onclick = () => { sandboxFac = f; buildSandboxPanel(); };
+    facRow.appendChild(b);
+  }
+  // spawnable grid — every non-neutral unit/building in the game, grouped loosely
+  // by kind so buildings and units aren't interleaved
+  const grid = document.getElementById('sandboxGrid');
+  grid.innerHTML = '';
+  const types = Object.keys(DEFS).filter(t => DEFS[t].fac === sandboxFac)
+    .sort((a, b) => (DEFS[a].kind === DEFS[b].kind ? 0 : DEFS[a].kind === 'building' ? -1 : 1));
+  for (const type of types) {
+    const d = DEFS[type];
+    const b = document.createElement('button');
+    b.className = 'sbitem'; b.dataset.type = type;
+    b.style.borderLeftColor = facColor(sandboxFac);
+    b.innerHTML = '<span class="sb-name">' + d.name + '</span><span class="sb-kind">'
+      + (d.kind === 'building' ? 'Building' : 'Unit') + (d.core ? ' · core' : d.apex ? ' · apex' : '') + '</span>';
+    b.onclick = () => armSandboxItem(type);
+    grid.appendChild(b);
+  }
+  refreshSandboxArmedState();
+}
+
+// heal every currently-selected entity to full HP/shield
+function sandboxHealSelection() {
+  if (!game) return;
+  for (const e of game.sel) { e.hp = e.hpMax; if (e.shieldMax) e.shield = e.shieldMax; }
+}
+// instantly kill every currently-selected entity (bypasses god mode on purpose)
+function sandboxKillSelection() {
+  if (!game) return;
+  for (const e of game.sel) e.dead = true;
+  game.sel = []; refreshCard();
+}
+// wipe every entity that isn't owned by the faction you're currently spawning as
+function sandboxClearOthers() {
+  if (!game) return;
+  for (const e of game.entities) if (e.fac !== sandboxFac) e.dead = true;
+  game.sel = game.sel.filter(e => e.fac === sandboxFac);
+  refreshCard();
+}
+
+document.getElementById('sandboxHealBtn').addEventListener('click', sandboxHealSelection);
+document.getElementById('sandboxKillBtn').addEventListener('click', sandboxKillSelection);
+document.getElementById('sandboxClearBtn').addEventListener('click', sandboxClearOthers);
+document.getElementById('sandboxGodChk').addEventListener('change', ev => { if (game) game.sandboxGod = ev.target.checked; });

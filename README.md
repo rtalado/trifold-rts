@@ -37,12 +37,19 @@ each OS builds its own installer. You normally don't run these by hand: see belo
 
 ## The menu
 
-The main menu has two screens:
+The main menu has three entry points:
 
 - **Single Player** — pick your faction, choose **1–3 AI opponents** (each a
   distinct random faction, so up to a four-way free-for-all), pick a **difficulty**,
   and start.
 - **Multiplayer** — host or join a game by 5-letter code (see below).
+- **Sandbox** — pick a faction and drop straight into a solo, no-AI match with
+  unlimited resources. Press **B** to open the spawn panel: pick any faction, click a
+  unit or building to arm it, and left-click the map to place a free, instantly-built
+  copy — every ability is always off cooldown. Handy for trying out anything (a new
+  unit, an ability, a matchup) without grinding through a real match. There's a **God
+  mode** toggle (nothing takes damage), and Heal/Kill-selection and "clear all but
+  mine" buttons for quick cleanup. No win condition — it just runs until you back out.
 
 ### AI difficulty
 
@@ -394,11 +401,13 @@ units draw a line to wherever they've been ordered. Select one of your buildings
 **Sell** it (recovers half its cost) — handy for fixing a bad placement; select any
 of your own units to **Self-Destruct** them instead (no refund, but denies the kill).
 
-Every unit turns to face the way it's moving or fighting. A few heavy **broadside**
+Every unit turns to face the way it's moving or fighting. A few colossal **broadside**
 units — the Vanguard's **Landship**, the Stormforge's **Storm Cruiser** and
 the Exodus' **Solar Frigate** — mount their guns along the hull instead of the nose:
-they must wheel side-on to a target (slow to turn) before they can fire at all, so
-escort them against anything that can dash past their flanks.
+they wheel their heading to bring a target abeam before their batteries can fire, but
+never have to stop dead to do it — they keep cruising (or chasing, or retreating) and
+fire the instant they line up. Slow to turn and towering in size; escort them against
+anything that can dash past their flanks.
 
 ## Code layout
 

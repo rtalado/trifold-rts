@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.29';
+const APP_VERSION = '1.0.30';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -105,7 +105,7 @@ const DEFS = {
   // Landship: a broadside landship. Its guns run the length of the hull, so
   // it can't just point-and-shoot — it must wheel side-on to a target (turnRate is
   // slow, so you visibly see it come about) before its heavy shells can fire at all.
-  dreadnought:{ fac:'vanguard', kind:'unit', name:'Landship', hp:520, size:19, speed:38, cost:380, time:22, dmg:70, range:210, cd:2.6, aggro:230, shot:'shell', splash:36, broadside:true, turnRate:0.9 },
+  dreadnought:{ fac:'vanguard', kind:'unit', name:'Landship', hp:900, size:30, speed:32, cost:520, time:30, dmg:100, range:225, cd:2.8, aggro:240, shot:'shell', splash:50, broadside:true, turnRate:0.7 },
 
   // ----- MYRIAD SWARM -----
   hive:        { fac:'myriad', kind:'building', name:'Hive', hp:2100, size:44, core:true, creepR:11,
@@ -161,7 +161,7 @@ const DEFS = {
   aegis:    { fac:'exodus', kind:'unit', name:'Aegis', hp:240, shield:180, size:14, speed:50, cost:300, time:16, dmg:26, range:60, cd:0.9, aggro:190, shot:'melee', splash:30 },
   // Solar Frigate: a second capital ship built straight from the Ark. Its batteries
   // run broadside — it must wheel side-on (slow turnRate) before it can fire.
-  solarfrigate:{ fac:'exodus', kind:'unit', name:'Solar Frigate', hp:260, shield:220, size:17, speed:40, cost:340, time:19, dmg:52, range:205, cd:2.0, aggro:225, shot:'beam', splash:24, broadside:true, turnRate:0.9 },
+  solarfrigate:{ fac:'exodus', kind:'unit', name:'Solar Frigate', hp:540, shield:360, size:28, speed:34, cost:480, time:26, dmg:82, range:225, cd:2.3, aggro:235, shot:'beam', splash:38, broadside:true, turnRate:0.75 },
 
   // ----- ASHEN CHOIR (death economy: Essence from every death; spirits decay off the
   //   lattice but lifesteal. NEW — REANIMATION: a share of every unit that falls anywhere
@@ -355,7 +355,7 @@ const DEFS = {
   gladius:   { fac:'stormforge', kind:'unit', name:'Gladius', hp:220, shield:110, size:13, speed:72, cost:230, time:14, dmg:25, range:135, cd:1.0, aggro:200, shot:'shell', splash:26 },
   // Storm Cruiser: a shielded broadside battlecruiser — its arc-cannons run along
   // the hull, so it must wheel side-on (slow turnRate) before it can fire at all.
-  stormcruiser:{ fac:'stormforge', kind:'unit', name:'Storm Cruiser', hp:340, shield:260, size:18, speed:34, cost:360, time:20, dmg:58, range:200, cd:2.2, aggro:225, shot:'beam', splash:26, broadside:true, turnRate:0.9 },
+  stormcruiser:{ fac:'stormforge', kind:'unit', name:'Storm Cruiser', hp:600, shield:400, size:29, speed:28, cost:500, time:28, dmg:88, range:220, cd:2.5, aggro:235, shot:'beam', splash:42, broadside:true, turnRate:0.7 },
 
   // ----- OBSIDIAN PACT (martyrdom: Blood from your OWN units dying. NEW — BLOOD FRENZY:
   //   every Pact unit that falls whips the horde around it into a frenzy (harder, faster
@@ -538,7 +538,7 @@ const META = {
   gunship:   { desc: 'Fast flyer with rapid fire. Excellent for raids and mop-up.' },
   bomber:    { desc: 'Fast bombing aircraft that drops a heavy splashing payload — devastating against clumped troops and buildings. Slow to reload.' },
   artillery: { desc: 'Long-range mobile gun with a huge splash. Out-ranges almost everything, but fragile and helpless up close — screen it with armour.', req: 'techlab' },
-  dreadnought:{ desc: 'A broadside landship: heavy shells run the length of the hull, so it must wheel side-on to a target before it can fire at all — slow to turn, devastating once lined up. Screen its flanks; it can’t answer a foe that stays off its beam.' },
+  dreadnought:{ desc: 'A colossal armoured landship: broadside shells run the length of the hull, so it wheels toward a target’s beam before it can fire — but it never has to stop to do it, cruising and firing in the same breath once lined up. Massive HP, huge splash. Screen its flanks; it can’t answer a foe that stays off its beam.' },
   // MYRIAD SWARM
   hive:      { desc: 'Your core. Spreads creep, spawns free Drones, grows every structure — and casts CORRUPTION BLOOM: a wide spore-burst that heavily corrupts enemies (and bursts the corrupted dead into free Larva). Every Myriad attack already inflicts a base dose of corruption.' },
   tumor:     { desc: 'Cheap creep spreader; extends your economy and where you can build.' },
@@ -714,7 +714,7 @@ const META = {
   evochamber:{ desc: 'Research building grown on creep. Evolves the swarm’s upgrades.' },
   ravager:   { desc: 'Bred ranged elite that lobs corrosive splash. Needs a Hunter Den.', req: 'hunterden' },
   aegis:     { desc: 'Heavily shielded Solari bruiser. Soaks fire and crushes what it reaches.' },
-  solarfrigate:{ desc: 'A second capital ship, built straight from the Ark. Its batteries run broadside — it must wheel side-on to a target before it can fire, so escort it against anything that can dash past its flanks.' },
+  solarfrigate:{ desc: 'A towering second capital ship, built straight from the Ark. Its batteries run broadside — it wheels its heading to bring them to bear, firing on the move once lined up rather than stopping dead. Heavily shielded and imposing; escort it against anything that can dash past its flanks.' },
   oracle:    { desc: 'Lattice research shrine. Unlocks the Choir’s upgrades.' },
   lich:      { desc: 'Ranged caster spirit with a piercing death-beam. Fragile but hits hard.' },
   blackmarket:{ desc: 'Air-dropped research den. Brokers the Syndicate’s upgrades.' },
@@ -725,7 +725,7 @@ const META = {
   ancient:   { desc: 'Towering elder treant — enormous HP and splashing blows. Needs a Grove.', req: 'grove' },
   stormlab:  { desc: 'Research building. Designs the Dynasty’s upgrades.' },
   gladius:   { desc: 'Shielded mid-weight mech with a splashing cannon. Needs a Dynamo.', req: 'dynamo' },
-  stormcruiser:{ desc: 'A shielded battlecruiser whose arc-cannons run broadside — it must wheel side-on to a target before it can fire, slow but devastating once aligned.' },
+  stormcruiser:{ desc: 'A towering shielded battlecruiser whose arc-cannons run broadside — it wheels to bring them to bear and keeps firing on the move once aligned, rather than stopping dead. Slow and massive, but devastating.' },
   sanctum:   { desc: 'Research building. Channels the Pact’s rites & upgrades.' },
   cultist:   { desc: 'Cheap ranged zealot — the Pact’s only ranged body. Spits hexes from afar.' },
   // APEX TECH — late-game super-structures + titans (each gated on Siege Ordnance)

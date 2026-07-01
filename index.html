@@ -16,14 +16,15 @@
     <div class="homebtns">
       <button class="bigbtn" id="btnSP"><span class="bb-t">SINGLE PLAYER</span><span class="bb-s">Battle 1–3 AI opponents · choose difficulty</span></button>
       <button class="bigbtn" id="btnMP"><span class="bb-t">MULTIPLAYER</span><span class="bb-s">Play with up to 3 friends across any network</span></button>
+      <button class="bigbtn" id="btnSandbox"><span class="bb-t">SANDBOX</span><span class="bb-s">No AI, unlimited resources — spawn any unit/building from any faction to test it</span></button>
     </div>
     <button class="minibtn" id="btnSettings">⚙ SETTINGS</button>
   </div>
 
   <div id="screenSP" class="screen" style="display:none">
-    <div class="screenhd">Choose your faction</div>
+    <div class="screenhd" id="spHead">Choose your faction</div>
     <div id="cardsHolderSP"></div>
-    <div class="spopts">
+    <div class="spopts" id="spOpts">
       <div class="optrow"><span class="optlbl">AI OPPONENTS</span>
         <button class="stepbtn" id="spAiMinus">–</button><span class="stepval" id="spAiCount">1</span><button class="stepbtn" id="spAiPlus">+</button></div>
       <div class="optrow"><span class="optlbl">DIFFICULTY</span><div id="spDiff" class="diffrow"></div></div>
@@ -211,6 +212,7 @@
     <span class="stat" id="hudArmy"></span>
     <span class="stat" style="margin-left:auto" id="hudTime"></span>
     <span class="stat" id="hudEnemy"></span>
+    <button id="hudSandboxBtn" style="display:none" onclick="toggleSandboxPanel()">⚙ SPAWN (B)</button>
   </div>
   <div id="hint"></div>
   <div id="fps"></div>
@@ -293,6 +295,22 @@
         <div id="techNodes"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="sandboxtree">
+  <div id="sandboxPanel">
+    <div id="sandboxBar">
+      <span>SANDBOX — spawn anything</span>
+      <label id="sandboxGod"><input type="checkbox" id="sandboxGodChk"> God mode (no damage)</label>
+      <button id="sandboxHealBtn">✚ Heal selection</button>
+      <button id="sandboxKillBtn">☠ Kill selection</button>
+      <button id="sandboxClearBtn">🗑 Clear all but mine</button>
+      <button id="sandboxCloseBtn" onclick="closeSandboxPanel()">✕ CLOSE&nbsp;(B)</button>
+    </div>
+    <div id="sandboxFacRow"></div>
+    <div id="sandboxScroll"><div id="sandboxGrid"></div></div>
+    <div id="sandboxHint">Pick a faction above, then click a unit/building below to arm it — left-click on the map to place it, instantly and for free. Right-click / Esc to disarm.</div>
   </div>
 </div>
 

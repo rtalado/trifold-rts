@@ -1,5 +1,5 @@
 // ---------------- menu wiring ----------------
-const SP = { fac: null, ai: 1, diff: 'normal' }; // single-player setup state
+const SP = { fac: null, ai: 1, diff: 'normal', sandbox: false }; // single-player setup state
 net.diff = 'normal';                              // host's AI difficulty for multiplayer
 const cardsEl = document.getElementById('cards');
 const $ = id => document.getElementById(id);
@@ -25,6 +25,9 @@ function renderDiff(containerId, current, onPick) {
 }
 
 function refreshSP() {
+  $('spHead').textContent = SP.sandbox ? 'Choose your faction — sandbox (no AI, unlimited resources)' : 'Choose your faction';
+  $('spOpts').style.display = SP.sandbox ? 'none' : '';
+  $('spStart').textContent = SP.sandbox ? 'ENTER SANDBOX ▶' : 'START BATTLE ▶';
   $('spAiCount').textContent = SP.ai;
   $('spStart').disabled = !SP.fac;
   renderDiff('spDiff', SP.diff, k => { SP.diff = k; refreshSP(); });
@@ -45,13 +48,17 @@ for (const card of cardsEl.querySelectorAll('.card')) {
   });
 }
 
-$('btnSP').addEventListener('click', () => { showScreen('sp'); refreshSP(); });
+$('btnSP').addEventListener('click', () => { SP.sandbox = false; showScreen('sp'); refreshSP(); });
+$('btnSandbox').addEventListener('click', () => { SP.sandbox = true; showScreen('sp'); refreshSP(); });
 $('btnMP').addEventListener('click', () => { showScreen('mp'); resetMP(); });
 $('spBack').addEventListener('click', () => showScreen('home'));
 $('mpBack').addEventListener('click', () => { if (net.peer) onDisconnect(); showScreen('home'); });
 $('spAiMinus').addEventListener('click', () => { SP.ai = Math.max(1, SP.ai - 1); refreshSP(); });
 $('spAiPlus').addEventListener('click', () => { SP.ai = Math.min(3, SP.ai + 1); refreshSP(); });
-$('spStart').addEventListener('click', () => { if (SP.fac) newGame(SP.fac, SP.ai, SP.diff); });
+$('spStart').addEventListener('click', () => {
+  if (!SP.fac) return;
+  if (SP.sandbox) newSandbox(SP.fac); else newGame(SP.fac, SP.ai, SP.diff);
+});
 
 $('mpHostBtn').addEventListener('click', () => {
   if (net.peer) return;

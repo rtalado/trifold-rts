@@ -11,6 +11,11 @@ canvas.addEventListener('mousemove', ev => {
 canvas.addEventListener('mousedown', ev => {
   if (!game || game.over || game.netPaused) return;   // world frozen while a player reconnects
   if (ev.button === 0) {
+    if (game.sandboxPlacing) {   // sandbox: stamp down a free copy — stays armed for more
+      const { type, fac } = game.sandboxPlacing;
+      if (sandboxSpawn(type, fac, mouse.wx, mouse.wy)) playSfx('build');
+      return;
+    }
     if (game.targeting) {        // designating an active-ability strike point
       fireAbilityAt(mouse.wx, mouse.wy);
       game.targeting = null;
@@ -28,6 +33,7 @@ canvas.addEventListener('mousedown', ev => {
     }
     mouse.dragging = true; mouse.dx0 = mouse.x; mouse.dy0 = mouse.y;
   } else if (ev.button === 2) {
+    if (game.sandboxPlacing) { game.sandboxPlacing = null; refreshSandboxArmedState(); return; }
     if (game.targeting) { game.targeting = null; return; }
     if (game.placing) { game.placing = null; return; }
     // don't fire yet — mouseup decides click (single point) vs. drag (formation line)
@@ -246,7 +252,12 @@ addEventListener('keydown', ev => {
   }
   if (!game || game.over) return;
   if (k === 'escape') {
-    // Esc cancels whatever you're doing; if there's nothing to cancel, it pauses
+    // Esc cancels whatever you're doing; if there's nothing to cancel, it pauses.
+    // The sandbox panel doesn't block the map (you're meant to leave it open while
+    // placing several things), so disarming the current item takes priority over
+    // closing it — closing is what the B key (or the panel's own button) is for.
+    if (game.sandboxPlacing) { game.sandboxPlacing = null; refreshSandboxArmedState(); return; }
+    if (sandboxOpen) { closeSandboxPanel(); return; }
     if (techOpen) { closeTechTree(); return; }
     if (game.placing) { game.placing = null; return; }
     if (game.targeting) { game.targeting = null; return; }
@@ -258,6 +269,7 @@ addEventListener('keydown', ev => {
   // — no production, building, tech or abilities, so the frozen world stays untouched
   if (game.netPaused && ![' ', 'f', 'w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return;
   if (k === 't') { ev.preventDefault(); toggleTechTree(); return; }
+  if (k === 'b' && game.sandbox) { ev.preventDefault(); toggleSandboxPanel(); return; }
   if (k === ' ') {
     ev.preventDefault();
     const core = ents(e => e.fac === game.localFac && e.def.core)[0];
