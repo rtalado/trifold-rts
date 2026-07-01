@@ -3,6 +3,13 @@ function update(dt) {
   game.t += dt;
   game.pathCalls = 0;   // per-frame A* search budget (see nav.js)
 
+  // rebuild the id→entity index for O(1) byId() this tick (see core.js). Reused
+  // across frames to avoid per-frame allocation; spawnEnt keeps it live for units
+  // created mid-tick, and dead entities are ignored by byId until the sweep below.
+  if (!game._idx) game._idx = new Map();
+  game._idx.clear();
+  for (const e of game.entities) game._idx.set(e.id, e);
+
   refreshGrafts();   // Verdant: which Heartwood Grafts are standing this tick
 
   game.creepTimer -= dt;

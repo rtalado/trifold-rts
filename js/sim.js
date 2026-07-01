@@ -305,6 +305,7 @@ function spawnEnt(type, fac, x, y, opts = {}) {
   if (opts.growing) { e.growing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.25); }
   if (d.kind === 'building') game.navDirty = true;   // new blocker → re-plan paths
   game.entities.push(e);
+  if (game._idx) game._idx.set(e.id, e);             // keep the byId() index live mid-tick
   return e;
 }
 
@@ -1517,21 +1518,30 @@ function separation() {
         else { a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push; }
       }
     }
-    // push out of buildings & nodes
+    // Push out of buildings, nodes and terrain. Each is a scan over ALL of them
+    // (neutral loot counts as buildings, so this is ~200 static objects), and the
+    // vast majority are nowhere near this unit — so reject with a cheap
+    // axis-aligned bounding-box test BEFORE the (expensive) Math.hypot. This is
+    // exact (a circle can only overlap when |dx| and |dy| are both < rr), and cut
+    // separation's cost ~20× in a big fight — a big part of what stalled the host
+    // (and so froze the multiplayer guest) during combat.
     for (const s of buildings) {
-      const dx = a.x - s.x, dy = a.y - s.y, rr = a.size + s.size;
+      const rr = a.size + s.size, dx = a.x - s.x, dy = a.y - s.y;
+      if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue;
       const d = Math.hypot(dx, dy);
       if (d < rr && d > 0.01) { a.x = s.x + dx / d * rr; a.y = s.y + dy / d * rr; }
     }
     for (const n of game.nodes) {
       if (n.amount <= 0) continue;
-      const dx = a.x - n.x, dy = a.y - n.y, rr = a.size + n.r - 4;
+      const rr = a.size + n.r - 4, dx = a.x - n.x, dy = a.y - n.y;
+      if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue;
       const d = Math.hypot(dx, dy);
       if (d < rr && d > 0.01) { a.x = n.x + dx / d * rr; a.y = n.y + dy / d * rr; }
     }
     // shove units out of impassable terrain (radial push, like buildings/nodes)
     for (const ob of game.obstacles) {
-      const dx = a.x - ob.x, dy = a.y - ob.y, rr = a.size + ob.r;
+      const rr = a.size + ob.r, dx = a.x - ob.x, dy = a.y - ob.y;
+      if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue;
       const d = Math.hypot(dx, dy);
       if (d < rr && d > 0.01) { a.x = ob.x + dx / d * rr; a.y = ob.y + dy / d * rr; }
     }
@@ -1549,7 +1559,10 @@ function tickProjectiles(dt) {
     const sp = pr.speed * dt;
     if (dl <= sp) {
       pr.done = true;
-      const attacker = game.entities.find(e => e.id === pr.attackerId);
+      // resolve the attacker via the id index for O(1), but WITHOUT byId's
+      // dead-filter: a shot still lands (and credits its firer) even if the firer
+      // died this same tick, exactly as the old linear .find() did here.
+      const attacker = game._idx ? game._idx.get(pr.attackerId) : game.entities.find(e => e.id === pr.attackerId);
       if (t) applyDamage(t, pr.dmg, attacker);
       if (pr.splash) {
         for (const o of game.entities) {

@@ -46,7 +46,17 @@ function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
 addEventListener('resize', resize); resize();
 
 // ---------------- helpers ----------------
-const byId = id => game.entities.find(e => e.id === id && !e.dead);
+// Looking a unit up by id is done constantly — every projectile and every
+// engaged unit resolves its target by id EVERY frame. A linear .find() made
+// that O(n) per call ⇒ O(n²) per frame in a big fight. The simulating side
+// (SP/host) keeps a live id→entity index (rebuilt each tick in update(), and
+// kept fresh by spawnEnt), so this is O(1) there; guests have no index and fall
+// back to the scan (they don't simulate, so they barely call this).
+const byId = id => {
+  const idx = game._idx;
+  if (idx) { const e = idx.get(id); return (e && !e.dead) ? e : undefined; }
+  return game.entities.find(e => e.id === id && !e.dead);
+};
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const tileIdx = (x, y) => {

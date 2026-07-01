@@ -11,6 +11,12 @@ const NAV_MARGIN = 6;           // extra clearance baked around every blocker (p
 const PATH_BUDGET = 80;         // max A* searches per simulation frame
 const PATH_MAX_ITER = 5000;     // node-expansions before A* gives up (unreachable)
 const SQRT2 = Math.SQRT2;
+// 8-neighbour offsets as flat arrays (was an array-of-arrays walked with
+// `for (const [dx,dy,cost] of NB)` — the per-node destructuring is a real cost in
+// the A* inner loop, which runs millions of times a frame in a big fight).
+const NB_DX = [1, -1, 0, 0, 1, 1, -1, -1];
+const NB_DY = [0, 0, 1, -1, 1, -1, 1, -1];
+const NB_COST = [1, 1, 1, 1, SQRT2, SQRT2, SQRT2, SQRT2];
 
 // (re)build the occupancy grid when the world has changed
 function navGrid() {
@@ -86,6 +92,21 @@ function smoothPath(pts) {
   return out;
 }
 
+// Reusable A* scratch buffers. Allocating three N-sized typed arrays on EVERY
+// findPath call (dozens of times a frame in a big fight) churned tens of MB/s of
+// garbage — the GC pauses that produced were the host's worst mid-battle frame
+// spikes (and so the multiplayer guest's freezes). Instead we keep the buffers
+// and stamp each cell with the id of the search that last wrote it: a stale stamp
+// reads as "untouched", so nothing has to be cleared between searches.
+let navScratch = null;
+function navScratchFor(N) {
+  if (!navScratch || navScratch.N !== N) {
+    navScratch = { N, gScore: new Float32Array(N), came: new Int32Array(N),
+      gStamp: new Int32Array(N), cStamp: new Int32Array(N), gen: 0 };
+  }
+  return navScratch;
+}
+
 // A* on the occupancy grid → array of world-space waypoints, or null if there
 // is no route (or the search blew its budget). 8-directional, no corner-cutting.
 function findPath(sx, sy, gx, gy) {
@@ -97,9 +118,10 @@ function findPath(sx, sy, gx, gy) {
   if (scx === gcx && scy === gcy) return null;     // already in the goal cell
   const w = g.w, h = g.h, N = w * h, blk = g.blocked;
   const startI = scy * w + scx, goalI = gcy * w + gcx;
-  const gScore = new Float32Array(N).fill(Infinity);
-  const came = new Int32Array(N).fill(-1);
-  const closed = new Uint8Array(N);
+  const sc = navScratchFor(N), gen = ++sc.gen;
+  const gScore = sc.gScore, came = sc.came, gStamp = sc.gStamp, cStamp = sc.cStamp;
+  // gScore[i] counts only when stamped with THIS search's gen; else it's Infinity
+  const gAt = i => gStamp[i] === gen ? gScore[i] : Infinity;
   const hC = (cx, cy) => { const dx = Math.abs(cx - gcx), dy = Math.abs(cy - gcy); return (dx + dy) + (SQRT2 - 2) * Math.min(dx, dy); };
   // binary min-heap keyed on fScore
   const hi = [], hf = [];
@@ -121,28 +143,30 @@ function findPath(sx, sy, gx, gy) {
     }
     return top;
   };
-  gScore[startI] = 0; push(startI, hC(scx, scy));
+  gScore[startI] = 0; gStamp[startI] = gen; push(startI, hC(scx, scy));
   let iter = 0;
-  const NB = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, SQRT2], [1, -1, SQRT2], [-1, 1, SQRT2], [-1, -1, SQRT2]];
   while (hi.length) {
     if (++iter > PATH_MAX_ITER) return null;
     const cur = pop();
     if (cur === goalI) break;
-    if (closed[cur]) continue;
-    closed[cur] = 1;
+    if (cStamp[cur] === gen) continue;
+    cStamp[cur] = gen;
     const cx = cur % w, cy = (cur / w) | 0, cg = gScore[cur];
-    for (const [dx, dy, cost] of NB) {
+    for (let k = 0; k < 8; k++) {
+      const dx = NB_DX[k], dy = NB_DY[k];
       const nx = cx + dx, ny = cy + dy;
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const ni = ny * w + nx;
-      if (blk[ni] || closed[ni]) continue;
+      if (blk[ni] || cStamp[ni] === gen) continue;
       // no diagonal squeeze between two blocked orthogonal cells
       if (dx && dy && (blk[cy * w + nx] || blk[ny * w + cx])) continue;
-      const ng = cg + cost;
-      if (ng < gScore[ni]) { gScore[ni] = ng; came[ni] = cur; push(ni, ng + hC(nx, ny)); }
+      const ng = cg + NB_COST[k];
+      if (ng < gAt(ni)) { gScore[ni] = ng; gStamp[ni] = gen; came[ni] = cur; push(ni, ng + hC(nx, ny)); }
     }
   }
-  if (came[goalI] === -1 && goalI !== startI) return null;
+  // goalI was reached only if it got stamped this search (came[] is reused, so a
+  // stale value there is meaningless without the matching stamp)
+  if (gStamp[goalI] !== gen && goalI !== startI) return null;
   // reconstruct (cell centres), dropping the start cell — we use the real start
   const cells = [];
   for (let c = goalI; c !== startI && c !== -1; c = came[c]) cells.push(c);
