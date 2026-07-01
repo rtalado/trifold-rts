@@ -462,6 +462,15 @@ function broadsideReady(e) {
 // locally — caller rotates by facingAngle(e) directly, no offset.
 function drawShipHull(e, x, y, s, col, dark, deckCol) {
   const ready = broadsideReady(e);
+  // which side (local +y or -y) is actually facing the target right now — only
+  // THOSE guns light up as ready, so the glow reads as "these are the guns doing
+  // it" instead of the whole hull just lighting up uniformly.
+  let hotSide = 0;
+  const tgt = e.tgt ? byId(e.tgt) : null;
+  if (tgt && !tgt.dead) {
+    const rel = angleDiff(e.facing || 0, Math.atan2(tgt.y - e.y, tgt.x - e.x));
+    hotSide = rel > 0 ? 1 : -1;
+  }
   ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e));
   // main hull — a long armoured lozenge with a rammed prow
   ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 2.5;
@@ -487,15 +496,17 @@ function drawShipHull(e, x, y, s, col, dark, deckCol) {
   // a mast/antenna on the bridge
   ctx.strokeStyle = col; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(0, -s * 0.34); ctx.lineTo(0, -s * 0.6); ctx.stroke();
-  // three gun turrets per side, glowing bright when the current target is abeam
-  ctx.fillStyle = ready === true ? '#fff3c4' : (deckCol || col);
-  ctx.globalAlpha = ready === false ? 0.5 : 1;
+  // three gun turrets per side — only the side actually bearing on the target
+  // lights up; the far side (and both, with no target) stay dim/inert
   for (const gx of [s * 0.85, s * 0.1, -s * 0.75]) {
     for (const gy of [s * 0.68, -s * 0.68]) {
+      const hot = ready === true && ((gy > 0) === (hotSide === 1));
+      ctx.fillStyle = hot ? '#fff3c4' : (deckCol || col);
+      ctx.globalAlpha = hot ? 1 : 0.5;
       ctx.beginPath(); ctx.arc(gx, gy, s * 0.17, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.stroke();
       // a stubby barrel pointing outboard (the direction these guns actually fire)
-      ctx.strokeStyle = ready === true ? '#fff3c4' : (deckCol || col); ctx.lineWidth = s * 0.09;
+      ctx.strokeStyle = hot ? '#fff3c4' : (deckCol || col); ctx.lineWidth = s * 0.09;
       const oy = gy > 0 ? 1 : -1;
       ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + oy * s * 0.22); ctx.stroke();
     }
@@ -1848,10 +1859,12 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.arc(x, y, s + 10, 0, Math.PI * 2); ctx.stroke();
       }
       // point-defence gun ring — grows from 4 to 8 barrels as the Ark ascends, each
-      // tracking its own target (mirrors the apex machine-gun ring)
+      // tracking its own target (mirrors the apex machine-gun ring). The mounts are
+      // fixed to the hull (bolted on, not turrets), so their slots turn with the
+      // ship's facing — only the barrel within each mount independently tracks.
       const guns = auxGunsOf(e), auxT = e.auxTgt || [];
       for (let i = 0; i < guns; i++) {
-        const ga = i * Math.PI * 2 / guns + Math.PI / guns;
+        const ga = i * Math.PI * 2 / guns + Math.PI / guns + fa + Math.PI / 2;
         const gx = x + Math.cos(ga) * s * 0.82, gy = y + Math.sin(ga) * s * 0.82;
         ctx.fillStyle = '#4a3a14'; ctx.strokeStyle = '#ffe3a3'; ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.arc(gx, gy, Math.max(2.4, s * 0.13), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -1883,9 +1896,13 @@ function drawEnt(e) {
     ctx.beginPath(); ctx.arc(x, y, s + 6, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
     if (e.def.aux) {
+      // the gun ring is bolted to the hull, so its mounting slots must turn with
+      // whatever rotation that faction's hull is actually drawn with (each per-
+      // faction branch above rotates its body by one of these two conventions).
+      const bodyRot = facingAngle(e) + (e.fac === 'syndicate' ? -Math.PI / 2 : Math.PI / 2);
       const guns = e.def.aux.guns || 1, auxT = e.auxTgt || [];
       for (let i = 0; i < guns; i++) {
-        const ga = i * Math.PI * 2 / guns + Math.PI / guns;
+        const ga = i * Math.PI * 2 / guns + Math.PI / guns + bodyRot;
         const gx = x + Math.cos(ga) * s * 0.78, gy = y + Math.sin(ga) * s * 0.78;
         ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.arc(gx, gy, s * 0.17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();

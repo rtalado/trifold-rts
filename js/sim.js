@@ -493,6 +493,17 @@ function fireAt(e, t) {
   if (e.fac === game.localFac && onScreen(e.x, e.y)) playSfxThrottled('shoot', 55);
   e.cd = cdOf(e);
   e.tgt = t.id;
+  // broadside ships fire from whichever beam is actually facing the target, not
+  // dead-centre — a quick muzzle flash there reads as the guns doing the work,
+  // instead of the hull just quietly damaging things.
+  let ox = e.x, oy = e.y;
+  if (d.broadside) {
+    const rel = angleDiff(e.facing || 0, Math.atan2(t.y - e.y, t.x - e.x));
+    const side = (e.facing || 0) + (rel > 0 ? Math.PI / 2 : -Math.PI / 2);
+    ox = e.x + Math.cos(side) * e.size * 0.85;
+    oy = e.y + Math.sin(side) * e.size * 0.85;
+    addFx({ kind: 'boom', x: ox, y: oy, r: e.size * 0.3, ttl: 0.15, max: 0.15, color: '#fff3c4' });
+  }
   if (d.shot === 'melee') {
     applyDamage(t, dmg, e);
     if (d.splash) splash(e, t);
@@ -500,10 +511,10 @@ function fireAt(e, t) {
   } else if (d.shot === 'beam') {
     applyDamage(t, dmg, e);
     if (d.splash) splash(e, t); // chaining/arcing beams (e.g. the Galvan) splash on hit
-    addFx({ kind: 'beam', x1: e.x, y1: e.y, x2: t.x, y2: t.y, ttl: 0.18, max: 0.18, color: facColor(e.fac) });
+    addFx({ kind: 'beam', x1: ox, y1: oy, x2: t.x, y2: t.y, ttl: 0.18, max: 0.18, color: facColor(e.fac) });
   } else {
     const speed = d.shot === 'shell' ? 240 : 380;
-    game.proj.push({ x: e.x, y: e.y, targetId: t.id, lx: t.x, ly: t.y, speed,
+    game.proj.push({ x: ox, y: oy, targetId: t.id, lx: t.x, ly: t.y, speed,
       dmg, splash: splashOf(e), fac: e.fac, attackerId: e.id,
       color: d.shot === 'glob' ? '#9fe06a' : facColor(e.fac), r: d.shot === 'shell' ? 4 : 2.5 });
   }
@@ -751,26 +762,36 @@ function engage(e, t, dt) {
   }
 }
 
+// is this broadside unit's hull currently abeam of t (within BROADSIDE_ARC of
+// exactly 90°/270° off the nose)? A pure read — never turns anything.
+function broadsideAligned(e, t) {
+  const toT = Math.atan2(t.y - e.y, t.x - e.x);
+  const rel = angleDiff(e.facing || 0, toT);
+  return Math.abs(Math.abs(rel) - Math.PI / 2) < BROADSIDE_ARC;
+}
+
 // broadside units can't point-and-shoot: their guns run the length of the hull, so
-// they need a target roughly abeam (within BROADSIDE_ARC of exactly 90°/270° off
-// the nose) before they can fire. But they needn't stop dead to get there — this
-// only ever steers the HULL (turnToward), never movement, so a ship already under
-// way (chasing, on a move order, kiting) just keeps going while it wheels to bring
-// its broadside to bear, and fires the instant it lines up. Shared by engage() (a
-// standing attack order) and moveFire() (snapping a shot off while relocating).
+// they need a target roughly abeam before they can fire. This is only ever called
+// once a unit has actually COMMITTED to fighting t (a standing attack/attack-move
+// order, via engage()) — it holds the hull still and wheels it to bring the
+// broadside to bear, firing the instant it lines up. A ship just cruising past on a
+// plain move order doesn't divert to do this (see moveFire) — only a real attack
+// order makes it stop and fight.
 function broadsideEngage(e, t, dt) {
   const toT = Math.atan2(t.y - e.y, t.x - e.x);
   const cand1 = toT + Math.PI / 2, cand2 = toT - Math.PI / 2;
   const goal = Math.abs(angleDiff(e.facing || 0, cand1)) <= Math.abs(angleDiff(e.facing || 0, cand2)) ? cand1 : cand2;
   turnToward(e, goal, dt);
-  const rel = angleDiff(e.facing || 0, toT);
-  if (Math.abs(Math.abs(rel) - Math.PI / 2) < BROADSIDE_ARC && e.cd <= 0) fireAt(e, t);
+  if (broadsideAligned(e, t) && e.cd <= 0) fireAt(e, t);
 }
 
 // ranged units snap off a shot at the nearest foe in range without breaking
 // stride — so a relocating, retreating or kiting squad keeps up its fire while it
 // moves. Melee units (and anything without a gun) need to stop and close, so they
 // skip this. Target scanning is throttled (scanT) just like the idle/amove scans.
+// Broadside units never turn for this — turning them off their own course to
+// snipe at whatever wanders past is exactly the "drifts around doing whatever"
+// feel a real capital ship shouldn't have — they just fire if already lined up.
 function moveFire(e, dt) {
   const d = e.def;
   if (d.shot === 'melee' || !d.dmg || !d.aggro) return;
@@ -778,18 +799,17 @@ function moveFire(e, dt) {
   if (e.scanT <= 0) { e.scanT = 0.3; const t = findTarget(e); e.tgt = t ? t.id : 0; }
   const t = e.tgt ? byId(e.tgt) : null;
   if (!t || dist(e, t) > rangeOf(e) + e.size + t.size) return;
-  if (d.broadside) broadsideEngage(e, t, dt);
+  if (d.broadside) { if (broadsideAligned(e, t) && e.cd <= 0) fireAt(e, t); }
   else if (e.cd <= 0) fireAt(e, t);
 }
 
 function moveToward(e, x, y, dt) {
   const dx = x - e.x, dy = y - e.y, dl = Math.hypot(dx, dy);
   if (dl < 3) return true;
-  // broadside ships steer their hull toward a live target's beam instead (see
-  // broadsideEngage) — don't fight that with the ordinary "face where you're
-  // walking" heading. Cruising with nothing to shoot at, they still nose the
-  // way they're headed like anyone else.
-  if (e.def.kind === 'unit' && !(e.def.broadside && e.tgt)) turnToward(e, Math.atan2(dy, dx), dt);
+  // face the way you're actually walking — including broadside ships while they're
+  // still under way (only a committed attack, via broadsideEngage, takes the hull
+  // off its course to wheel onto a target's beam; see engage()).
+  if (e.def.kind === 'unit') turnToward(e, Math.atan2(dy, dx), dt);
   const sp = spd(e) * dt;
   if (dl <= sp) { e.x = x; e.y = y; return true; }
   e.x += dx / dl * sp; e.y += dy / dl * sp;
@@ -1478,6 +1498,13 @@ function separation() {
         // a deployed Ark is anchored — shove the other party instead
         if (a.deployed) { b.x += nx * push * 2; b.y += ny * push * 2; }
         else if (b.deployed) { a.x -= nx * push * 2; a.y -= ny * push * 2; }
+        // broadside capital ships are far too heavy to be jostled by ordinary
+        // units bumping into them — they don't feel like real warships if a
+        // squad of infantry can shove them off their firing line. The smaller
+        // party absorbs the whole separation; a ship only gives ground to
+        // another ship (split normally between the two).
+        else if (a.def.broadside && !b.def.broadside) { b.x += nx * push * 2; b.y += ny * push * 2; }
+        else if (b.def.broadside && !a.def.broadside) { a.x -= nx * push * 2; a.y -= ny * push * 2; }
         else { a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push; }
       }
     }
