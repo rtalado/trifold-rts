@@ -1,34 +1,39 @@
 # The Virulent Strain — Faction Guide
 
-> Mostly weak, dirt-cheap spam — losing it is the plan. Every unit **ADAPTS**: survive
-> enough of one damage TYPE and it hardens a strong resistance to it, always burning
-> away whatever resistance it had before. Getting hit **pays you**. Embrace the pain.
+> Mostly weak, dirt-cheap spam — losing it is the plan. The whole swarm **ADAPTS
+> TOGETHER**: once it's survived enough of one damage TYPE, EVERY Strain unit — anywhere
+> on the map — hardens a strong resistance to it, always burning away whatever
+> resistance it had before. Getting hit **pays you**. Embrace the pain.
 
 - **Core:** The Progenitor (1750 HP) — musters Spawnlings, Biters, Lurkers
 - **Resource:** Genome (a small trickle + Gene Vats, but mostly earned from damage your units *endure*)
 - **Base unit cap:** 90 (very high — this is a spam faction)
-- **Identity:** Evolution under fire. Cheap chaff soaks hits, earns Genome, and — if it
-  survives long enough — hardens into something much harder to kill with the same weapon.
+- **Identity:** Evolution under fire. Cheap chaff soaks hits, earns Genome, and once the
+  swarm as a whole has taken enough punishment, the WHOLE ARMY hardens against it at once.
 
 ---
 
-## 1. Adaptation — the core mechanic
+## 1. Adaptation — the core mechanic (hivemind, faction-wide)
 
-Every Strain unit tracks a running "streak" of the last damage **type** it has taken
-(melee, bullet, beam, glob or shell — whatever its attacker's weapon is). Getting hit by
-a *different* type resets the streak. Once the streak's cumulative damage crosses **55%
-of the unit's own max HP**, it **adapts**: it hardens a **45% resistance** to that exact
-type — replacing whatever resistance it had before. Only one resistance is ever active.
+This isn't a per-unit trait — it's shared across your whole army. The faction tracks one
+running "streak" of the last damage **type** landing on ANY of your units (melee, bullet,
+beam, glob or shell — whatever the attacker's weapon is); a hit of a *different* type
+resets the streak. Once the combined damage in that streak crosses the threshold, the
+**entire swarm adapts at once** — every unit you have, anywhere on the map, immediately
+hardens a resistance to that exact type, replacing whatever it had before. Click any
+Strain unit (or select a group) and the info panel shows exactly what the swarm is
+currently hardened against.
 
 Practically:
-- Mass your chaff and let it tank. A Spawnling that's about to die to bullets anyway
-  might adapt bullet-resistance *just* in time to survive the next volley.
+- You don't need one unit to personally survive a beating — spreading damage across many
+  cheap bodies gets you to the shared threshold just as well as one tough body soaking it
+  all, and the payoff covers your whole army the instant it lands.
 - **Mixing your own damage types** matters just as much in reverse: an enemy who focuses
-  one weapon on your line will eventually find it half as effective, and switching to a
-  new *own* attack type resets nothing on your side except forcing your chaff to spend a
-  new streak building resistance to the *new* threat.
-- Against this faction, the lesson is symmetrical: don't lean on one damage type for
-  long against a mob of Strain units, or you'll watch your DPS quietly evaporate.
+  one weapon into your line all fight will eventually find your ENTIRE army half as
+  vulnerable to it, everywhere, all at once.
+- Against this faction, the lesson is blunt: don't lean on one damage type for a whole
+  engagement against the Strain, or the whole swarm will harden against it mid-fight —
+  bring a mixed composition so no single adaptation blunts your whole attack.
 
 The Progenitor's active, **Adaptive Surge**, sidesteps the whole grind: it instantly
 grants every Strain unit in range a strong, temporary resistance to **everything** for a
@@ -77,6 +82,11 @@ Barb Node (110, static defence) · Mutagen Vault (150, research lab).
 
 **Apex:** **Genesis Horror** (620) from **The Genesis Maw** — a splashing melee titan that
 adapts just like the rest of the Strain. Needs Mutagen Works + Mutagen Vault + Siege Ordnance.
+
+**Super unit:** **The Genesis Abomination** (2200) — also from The Genesis Maw. A fused,
+city-block mountain of over-adapted biomass: 4500 HP and a splash bite that levels whole
+squads. It benefits from the hivemind resistance just like everything else — a colossal,
+late-game-only investment.
 
 ---
 

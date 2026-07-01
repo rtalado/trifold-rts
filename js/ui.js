@@ -293,6 +293,13 @@ function ensureSelStructure(si) {
   si.__main = m; si.__queues = q; si.__qsig = null;
 }
 
+// the Virulent Strain's current hivemind resistance — every unit shares one, so this
+// reads straight off the player record rather than the selected entity
+function evoResistNote(fac) {
+  const p = game.players[fac];
+  return (p && p.evoResist) ? 'Swarm-wide: hardened against ' + p.evoResist + ' damage' : 'Swarm-wide: not yet adapted to anything';
+}
+
 function renderSelInfo(si) {
   ensureSelStructure(si);
   si.__main.innerHTML = buildSelMainHTML();
@@ -331,6 +338,7 @@ function buildSelMainHTML() {
     if (e.type === 'vault') notes.push('Bullion stored — raises your interest cap & pays rent');
     if (e.def.ability) notes.push(e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — target via the command card'));
     if (e.fac === 'choir' && e.def.kind === 'unit') notes.push('Fades away from the lattice — heals by dealing damage');
+    if (e.fac === 'strain' && e.def.kind === 'unit') notes.push(evoResistNote('strain'));
     if (notes.length) h += '<div class="sel-status">' + notes.map(n => '<div>' + n + '</div>').join('') + '</div>';
     // description only when there's no editable queue taking the space
     const ownsQueues = e.fac === game.localFac && ((e.queue && e.queue.length) || (e.rqueue && e.rqueue.length));
@@ -340,7 +348,10 @@ function buildSelMainHTML() {
   // multi-select: count, then a colour-dotted tally by type
   const counts = {};
   for (const e of game.sel) counts[e.type] = (counts[e.type] || 0) + 1;
-  let h = '<div class="sel-head"><span class="sel-name">' + game.sel.length + ' SELECTED</span></div><div class="sel-list">';
+  let h = '<div class="sel-head"><span class="sel-name">' + game.sel.length + ' SELECTED</span></div>';
+  if (game.sel.some(e => e.fac === 'strain' && e.def.kind === 'unit'))
+    h += '<div class="sel-status"><div>' + evoResistNote('strain') + '</div></div>';
+  h += '<div class="sel-list">';
   for (const t in counts) {
     const d = DEFS[t];
     h += '<div class="sel-li"><span class="dot dot-' + catClass(d.kind) + '"></span>'

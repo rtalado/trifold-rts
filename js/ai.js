@@ -537,8 +537,19 @@ function aiTick(fac) {
       if (!b.constructing && !b.growing && !b.queue.length
         && ents(e => e.fac === fac && e.type === ax.u).length < 2
         && affordable(p, DEFS[ax.u]) && techMet(fac, ax.u)) enqueue(b, ax.u);
+    // super units (The Ratte, The Genesis Abomination): a colossal, one-off spend the
+    // bot only reaches for once it's swimming in banked resources late-game — never at
+    // the expense of its normal army, just an occasional extra flex from the same yard.
+    const su = SUPER_UNIT[fac];
+    if (su && p.res > DEFS[su].cost * 1.4) {
+      for (const b of yards)
+        if (!b.constructing && !b.growing && !b.queue.length
+          && ents(e => e.fac === fac && e.type === su).length < 1
+          && affordable(p, DEFS[su]) && techMet(fac, su)) enqueue(b, su);
+    }
   }
 }
+const SUPER_UNIT = { vanguard: 'ratte', strain: 'genabomination' };
 
 // pick the juiciest impact point for a Worldbreaker's Gustav Strike and fire it:
 // the enemy entity whose blast neighbourhood holds the most hostile mass (prefers a

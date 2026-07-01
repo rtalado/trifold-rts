@@ -55,6 +55,10 @@ target abeam, but never has to stop moving to do it; massive splash once lined u
 **Apex:** **Leviathan** (700) — walking dreadnought, siege cannon + four autocannons. Built at
 the **Dominion Yard** (needs Airfield + Tech Lab + Siege Ordnance).
 
+**Super unit:** **The Ratte** (2400) — a fortress-sized landcruiser, also from the Dominion Yard.
+5000 HP, twin siege main guns plus an eight-barrel autocannon battery; barely moves, but
+nothing this side of an apex answers it alone. A colossal, late-game-only investment.
+
 **Composition is everything.** Marines + Rocketeers + Medics is a fine all-purpose ball; add
 Tanks/Goliaths for armour, Artillery to break turtles, Gunships to snipe siege and raid. No
 single unit wins — the *mix* does.

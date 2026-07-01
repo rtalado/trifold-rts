@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.31';
+const APP_VERSION = '1.0.32';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -426,10 +426,16 @@ const DEFS = {
   // (The Warden already has its own apex pair: the Castellan + the Bulwark.)
 
   // THE VANGUARD — a walking dreadnought: siege cannon + four autocannon turrets
-  dominion:  { fac:'vanguard', kind:'building', name:'Dominion Yard', hp:1100, size:32, cost:600, time:30, apex:true, produces:['leviathan'] },
+  dominion:  { fac:'vanguard', kind:'building', name:'Dominion Yard', hp:1100, size:32, cost:600, time:30, apex:true, produces:['leviathan','ratte'] },
   leviathan: { fac:'vanguard', kind:'unit', name:'Leviathan', hp:1500, size:22, speed:40, cost:700, time:36, apex:true,
                dmg:60, range:235, cd:3.0, aggro:245, shot:'shell', splash:80,
                aux:{ dmg:11, range:150, cd:0.3, shot:'bullet', guns:4 } },
+  // THE RATTE — a super-heavy landcruiser in the spirit of the Landkreuzer P. 1000: an
+  // entire mobile fortress on treads, dwarfing every other unit in the game. A colossal
+  // investment even by apex standards, but it hits like a siege battery that walks.
+  ratte:     { fac:'vanguard', kind:'unit', name:'The Ratte', hp:5000, size:42, speed:20, cost:2400, time:85, apex:true,
+               dmg:180, range:280, cd:4.0, aggro:300, shot:'shell', splash:130,
+               aux:{ dmg:22, range:210, cd:0.5, shot:'bullet', guns:8 } },
 
   // MYRIAD SWARM — a colossal brood-mother that crushes and heals the swarm around it
   broodnexus:{ fac:'myriad', kind:'building', name:'Brood Nexus', hp:1200, size:30, cost:520, time:26, apex:true, creepR:7, produces:['tyrant'] },
@@ -475,9 +481,14 @@ const DEFS = {
                dmg:48, range:26, cd:1.4, aggro:190, shot:'melee', splash:55, aura:150, heal:6 },
 
   // THE VIRULENT STRAIN — the perfected organism: already adapted to everything
-  genmaw:    { fac:'strain', kind:'building', name:'The Genesis Maw', hp:1000, size:28, cost:520, time:16, apex:true, produces:['genhorror'] },
+  genmaw:    { fac:'strain', kind:'building', name:'The Genesis Maw', hp:1000, size:28, cost:520, time:16, apex:true, produces:['genhorror','genabomination'] },
   genhorror: { fac:'strain', kind:'unit', name:'Genesis Horror', hp:1550, size:22, speed:54, cost:620, time:32, apex:true,
                dmg:44, range:28, cd:1.3, aggro:195, shot:'melee', splash:58 },
+  // THE GENESIS ABOMINATION — a colossal fusion of over-adapted biomass, the Strain's
+  // ultimate endgame answer: everything the Genesis Horror is, grown to a scale that
+  // should not be able to move and somehow still does.
+  genabomination: { fac:'strain', kind:'unit', name:'The Genesis Abomination', hp:4500, size:40, speed:28, cost:2200, time:80, apex:true,
+               dmg:150, range:36, cd:1.7, aggro:210, shot:'melee', splash:130 },
 
   // ===== RADAR / SENSORS =====
   // Every faction can raise a cheap sensor building that DETECTS enemy movement at long
@@ -729,8 +740,9 @@ const META = {
   sanctum:   { desc: 'Research building. Channels the Pact’s rites & upgrades.' },
   cultist:   { desc: 'Cheap ranged zealot — the Pact’s only ranged body. Spits hexes from afar.' },
   // APEX TECH — late-game super-structures + titans (each gated on Siege Ordnance)
-  dominion:  { desc: 'Vanguard apex yard. Builds the Leviathan. Needs an Airfield and Tech Lab.', reqs:['airfield','techlab'] },
+  dominion:  { desc: 'Vanguard apex yard. Builds the Leviathan and The Ratte. Needs an Airfield and Tech Lab.', reqs:['airfield','techlab'] },
   leviathan: { desc: 'Walking dreadnought — siege cannon + four autocannons on heavy armour. Needs Siege Ordnance.', reqResearch:'vanguard_ord' },
+  ratte:     { desc: 'A super-heavy landcruiser the size of a fortress — twin main guns plus an eight-barrel autocannon battery. Absurdly expensive, absurdly strong. Needs Siege Ordnance.', reqResearch:'vanguard_ord' },
   broodnexus:{ desc: 'Myriad apex pool. Births the Brood Tyrant. Needs a Hunter Den and Evolution Chamber.', reqs:['hunterden','evochamber'] },
   tyrant:    { desc: 'Colossal brood-mother: splashing blows that heal the swarm. Needs Siege Ordnance.', reqResearch:'myriad_ord' },
   sovereign: { desc: 'Shielded capital ship — splashing beam + four point-defence guns. Built from the Ark. Needs Siege Ordnance.', reqResearch:'exodus_ord' },
@@ -746,8 +758,9 @@ const META = {
   tempest:   { desc: 'Storm titan — long arc-beam + four arc turrets behind heavy shields. Needs Siege Ordnance.', reqResearch:'stormforge_ord' },
   grandaltar:{ desc: 'Pact apex altar. Summons the Blood Avatar + free Thralls. Needs a Blood Sanctum and Bone Shrine.', reqs:['sanctum','shrine'] },
   bloodavatar:{ desc: 'Avatar of slaughter — splashing strikes, a horde-healing aura, an endless Thrall tide. Needs Siege Ordnance.', reqResearch:'pact_ord' },
-  genmaw:    { desc: 'Strain apex maw. Births the Genesis Horror. Needs a Mutagen Works and Mutagen Vault.', reqs:['mutaworks','genlab'] },
+  genmaw:    { desc: 'Strain apex maw. Births the Genesis Horror and The Genesis Abomination. Needs a Mutagen Works and Mutagen Vault.', reqs:['mutaworks','genlab'] },
   genhorror: { desc: 'The perfected organism — a splashing melee horror, already adapting like the rest of the Strain. Needs Siege Ordnance.', reqResearch:'strain_ord' },
+  genabomination: { desc: 'A city-block of fused, over-adapted biomass — the Strain\'s ultimate endgame horror. Colossal HP and a splash bite that levels squads. Needs Siege Ordnance.', reqResearch:'strain_ord' },
   // RADAR / SENSORS — long-range early warning, but only imprecise "contacts" (fuzzy
   // blips), never the clear picture line-of-sight gives. Build them forward to watch the
   // approaches; a contact tells you something hostile is out there, roughly where — not what.
@@ -879,15 +892,20 @@ const TURN_RATE = 5.0;          // rad/s — most units snap to a new heading br
 // before they can shoot, the whole point of a "ship" unit on a battlefield.
 const BROADSIDE_ARC = 0.32;     // radians of tolerance either side of exactly abeam
 
-// The Virulent Strain's ADAPTATION. Every Strain unit tracks a "streak" of the last
-// damage TYPE (its attacker's `shot`) it has taken; a different type resets the streak.
-// Once the streak's cumulative damage crosses `thresholdFrac` of the unit's own max HP,
-// it ADAPTS: a `resist` reduction to that type kicks in, replacing whatever resistance
-// it had before (only one active at a time — see evoAdapt in sim.js). Adaptive Surge
-// (the Progenitor's active) instead grants a brief, no-strings resistance to everything.
-// Getting hit also pays Genome (`lootPerDmg` of damage endured) — the masochistic mirror
-// of the Ember's damage-DEALT Plunder.
-const EVO = { thresholdFrac: 0.55, resist: 0.45, lootPerDmg: 0.35, surgeResist: 0.6 };
+// The Virulent Strain's ADAPTATION. This is a HIVEMIND trait, tracked once per
+// player (not per unit): the whole faction shares one running "streak" of the last
+// damage TYPE (the attacker's `shot`) landing on ANY of its units; a different type
+// resets the streak. Once the streak's cumulative damage (summed across every unit
+// that's been hit) crosses `threshold`, the WHOLE SWARM adapts at once — every
+// Strain unit, everywhere, hardens a `resist` reduction to that type, replacing
+// whatever resistance it had before (only one active at a time — see evoAdapt in
+// sim.js). Because the whole army benefits from one unit's punishment, the enemy
+// has to keep mixing up its damage types across the whole fight, not just avoid
+// overusing one weapon on a single target. Adaptive Surge (the Progenitor's active)
+// instead grants a brief, no-strings resistance to everything. Getting hit also
+// pays Genome (`lootPerDmg` of damage endured) — the masochistic mirror of the
+// Ember's damage-DEALT Plunder.
+const EVO = { threshold: 650, resist: 0.45, lootPerDmg: 0.35, surgeResist: 0.6 };
 const SHOT_TYPES = ['melee', 'bullet', 'beam', 'glob', 'shell'];
 const EVO_COLOR = { melee: '#e0574d', bullet: '#e0c94d', beam: '#4dc7e0', glob: '#7de04d', shell: '#b06de0' };
 

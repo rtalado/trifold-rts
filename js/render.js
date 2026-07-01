@@ -575,14 +575,17 @@ function drawEnt(e) {
     ctx.beginPath(); ctx.arc(x, y, s + 2.5, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
-  // Virulent Strain ADAPTATION: a ring coloured to the damage type this unit has
-  // hardened against; Adaptive Surge briefly flares a bright ring over the top.
-  if (e.resistType) {
-    ctx.save();
-    ctx.globalAlpha = 0.5 + 0.25 * Math.sin(game.t * 4 + e.id);
-    ctx.strokeStyle = EVO_COLOR[e.resistType] || '#c8e639'; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.arc(x, y, s + 4, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore();
+  // Virulent Strain ADAPTATION (hivemind): a ring coloured to the damage type the
+  // WHOLE faction has hardened against — every one of its units shows it at once.
+  // Adaptive Surge briefly flares a bright ring over the top on just this unit.
+  { const evoP = game.players[e.fac];
+    if (evoP && evoP.evoResist) {
+      ctx.save();
+      ctx.globalAlpha = 0.5 + 0.25 * Math.sin(game.t * 4 + e.id);
+      ctx.strokeStyle = EVO_COLOR[evoP.evoResist] || '#c8e639'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(x, y, s + 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
   }
   if (e.evoSurgeUntil > game.t) {
     ctx.save();
@@ -669,6 +672,49 @@ function drawEnt(e) {
       ctx.restore();
     } else if (e.type === 'dreadnought') { // broadside landship
       drawShipHull(e, x, y, s, col, dark, '#9fd0ff');
+    } else if (e.type === 'ratte') { // THE RATTE — a fortress-sized landcruiser dwarfing everything else on treads
+      ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e));
+      // tank treads running the full length, both sides, with visible road wheels
+      ctx.fillStyle = '#0a1420';
+      ctx.fillRect(-s * 1.3, s * 0.75, s * 2.7, s * 0.35);
+      ctx.fillRect(-s * 1.3, -s * 1.1, s * 2.7, s * 0.35);
+      ctx.strokeStyle = col; ctx.lineWidth = 1;
+      for (let i = -5; i <= 5; i++) {
+        const wx = i * s * 0.24;
+        ctx.beginPath(); ctx.arc(wx, s * 0.92, s * 0.15, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(wx, -s * 0.92, s * 0.15, 0, Math.PI * 2); ctx.stroke();
+      }
+      // main hull — a colossal armoured slab
+      ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 3;
+      roundRect(-s * 1.35, -s * 0.7, s * 2.7, s * 1.4, 6); ctx.fill(); ctx.stroke();
+      // sloped glacis armour at the nose
+      ctx.beginPath(); ctx.moveTo(s * 1.35, -s * 0.7); ctx.lineTo(s * 1.7, 0); ctx.lineTo(s * 1.35, s * 0.7); ctx.closePath();
+      ctx.fillStyle = col; ctx.globalAlpha = 0.3; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+      // plating rivet lines down the hull
+      ctx.strokeStyle = col; ctx.globalAlpha = 0.4; ctx.lineWidth = 1;
+      for (const rx of [-s * 0.9, -s * 0.4, s * 0.1, s * 0.6, s * 1.1]) {
+        ctx.beginPath(); ctx.moveTo(rx, -s * 0.65); ctx.lineTo(rx, s * 0.65); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      // twin main turrets side by side, each an overhanging siege-length barrel
+      for (const ty of [-s * 0.32, s * 0.32]) {
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(-s * 0.1, ty, s * 0.32, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = col; ctx.lineWidth = s * 0.14;
+        ctx.beginPath(); ctx.moveTo(-s * 0.1, ty); ctx.lineTo(s * 1.15, ty); ctx.stroke();
+        ctx.strokeStyle = dark; ctx.lineWidth = s * 0.08;
+        ctx.beginPath(); ctx.moveTo(s * 0.85, ty); ctx.lineTo(s * 1.15, ty); ctx.stroke();
+      }
+      // stepped command tower toward the rear, plus an antenna array
+      ctx.fillStyle = col; ctx.fillRect(-s * 1.15, -s * 0.22, s * 0.4, s * 0.44);
+      ctx.fillStyle = dark; ctx.fillRect(-s * 1.0, -s * 0.12, s * 0.2, s * 0.24);
+      ctx.strokeStyle = col; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-s * 0.95, -s * 0.22); ctx.lineTo(-s * 0.95, -s * 0.5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-s * 0.8, -s * 0.22); ctx.lineTo(-s * 0.8, -s * 0.42); ctx.stroke();
+      // flickering rear exhaust glow
+      ctx.fillStyle = 'rgba(255,140,60,' + (0.4 + 0.3 * Math.sin(game.t * 6)) + ')';
+      ctx.beginPath(); ctx.arc(-s * 1.3, 0, s * 0.18, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     } else if (e.type === 'outrider') { // fast light recon buggy: small angular hull + thin gun
       ctx.fillStyle = dark; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
       ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e));
@@ -1740,6 +1786,42 @@ function drawEnt(e) {
         ctx.beginPath(); ctx.moveTo(x, y - s * 0.3); ctx.lineTo(x, y - s * 0.6); ctx.stroke();
         ctx.fillStyle = '#e8ff8a'; ctx.beginPath(); ctx.arc(x, y - s * 0.6, 2.6, 0, Math.PI * 2); ctx.fill();
       }
+    } else if (e.type === 'genabomination') { // THE GENESIS ABOMINATION — a fused mountain of over-adapted flesh
+      ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e) + Math.PI / 2);
+      // several overlapping lobes instead of one smooth blob — an asymmetric fused mass
+      const lobes = [[0, -0.15, 1.05], [0.55, 0.35, 0.72], [-0.6, 0.3, 0.68], [0.15, 0.75, 0.6], [-0.3, -0.55, 0.55]];
+      ctx.fillStyle = '#3a5a12'; ctx.strokeStyle = col; ctx.lineWidth = 2.4;
+      for (const [lx, ly, lr] of lobes) {
+        ctx.beginPath(); ctx.arc(lx * s, ly * s, lr * s * wob, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+      // glowing pustules scattered across the mass, each pulsing out of phase
+      for (let i = 0; i < 6; i++) {
+        const a = i * 1.7 + e.id, r = s * (0.3 + 0.55 * ((i * 37) % 10) / 10);
+        const px = Math.cos(a) * r * 0.8, py = Math.sin(a) * r * 0.6 - s * 0.1;
+        ctx.globalAlpha = 0.4 + 0.35 * Math.sin(game.t * 3 + i * 1.3 + e.id);
+        ctx.fillStyle = '#e8ff8a';
+        ctx.beginPath(); ctx.arc(px, py, s * 0.09, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      // a gaping fanged maw at the front
+      ctx.fillStyle = '#1a0f08';
+      ctx.beginPath(); ctx.ellipse(0, -s * 0.95, s * 0.42, s * 0.24, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#f2f2e8'; ctx.lineWidth = 1.3;
+      for (const tx of [-0.28, -0.1, 0.1, 0.28]) {
+        ctx.beginPath(); ctx.moveTo(tx * s, -s * 1.05); ctx.lineTo(tx * s, -s * 0.8); ctx.stroke();
+      }
+      // spiked ridge along the spine
+      ctx.fillStyle = col;
+      for (const [sx, sy] of [[-0.15, -0.3], [0.1, -0.5], [-0.35, -0.05], [0.3, 0.05]]) {
+        ctx.beginPath(); ctx.moveTo(sx * s, sy * s); ctx.lineTo(sx * s - 3, sy * s - s * 0.28); ctx.lineTo(sx * s + 3, sy * s - s * 0.28); ctx.closePath(); ctx.fill();
+      }
+      // trailing tendrils, writhing as it moves
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const bx = (i - 1) * s * 0.5, fl = Math.sin(game.t * 4 + i * 2 + e.id) * s * 0.25;
+        ctx.beginPath(); ctx.moveTo(bx, s * 0.9); ctx.quadraticCurveTo(bx + fl, s * 1.3, bx + fl * 0.6, s * 1.7); ctx.stroke();
+      }
+      ctx.restore();
     } else {
       const heavy = e.type === 'brute' || e.type === 'bloater' || e.type === 'genhorror';
       ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e) + Math.PI / 2);
@@ -1899,7 +1981,7 @@ function drawEnt(e) {
       // the gun ring is bolted to the hull, so its mounting slots must turn with
       // whatever rotation that faction's hull is actually drawn with (each per-
       // faction branch above rotates its body by one of these two conventions).
-      const bodyRot = facingAngle(e) + (e.fac === 'syndicate' ? -Math.PI / 2 : Math.PI / 2);
+      const bodyRot = facingAngle(e) + (e.type === 'ratte' ? 0 : e.fac === 'syndicate' ? -Math.PI / 2 : Math.PI / 2);
       const guns = e.def.aux.guns || 1, auxT = e.auxTgt || [];
       for (let i = 0; i < guns; i++) {
         const ga = i * Math.PI * 2 / guns + Math.PI / guns + bodyRot;

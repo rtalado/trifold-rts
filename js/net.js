@@ -36,7 +36,6 @@ function buildSnap() {
     if (e.corruptUntil > game.t) fl |= 1024;  // Myriad corruption (bit 10)
     if (e.burnUntil > game.t) fl |= 2048;     // Ember burning (bit 11)
     if (e.frenzyUntil > game.t) fl |= 4096;   // Pact blood frenzy (bit 12)
-    if (e.resistType) fl |= (SHOT_TYPES.indexOf(e.resistType) + 1) << 13;  // Strain adaptation (bits 13-15)
     if (e.evoSurgeUntil > game.t) fl |= 65536; // Strain Adaptive Surge (bit 16)
     const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
     const q = e.queue && e.queue.length ? e.queue[0] : null;
@@ -55,7 +54,9 @@ function buildSnap() {
   const players = {};
   for (const f in game.players) {
     const p = game.players[f];
-    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1), p.arkTier || 0, Math.round(p.powder || 0), +(p.powderInc || 0).toFixed(1)];
+    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1), p.arkTier || 0, Math.round(p.powder || 0), +(p.powderInc || 0).toFixed(1),
+      // Virulent Strain: the whole faction's current hivemind resistance (see evoAdapt)
+      p.evoResist ? SHOT_TYPES.indexOf(p.evoResist) + 1 : 0];
   }
   return {
     t: 'snap', gt: +game.t.toFixed(2), players, units,
@@ -73,6 +74,7 @@ function applySnap(m) {
     if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3];
       p.research = new Set(a[4] || []); p.iron = a[5] || 0; p.ironInc = a[6] || 0;
       p.arkTier = a[7] || 0; p.powder = a[8] || 0; p.powderInc = a[9] || 0;
+      p.evoResist = a[10] ? SHOT_TYPES[a[10] - 1] : null;
       // research only ever grows, so its upgrade multipliers only need recomputing when the
       // set actually changes — skip the per-snapshot recalc (×players ×10/s) otherwise.
       const rc = (a[4] || []).length;
@@ -114,7 +116,6 @@ function applySnap(m) {
     e.corruptUntil = (fl & 1024) ? game.t + 1 : 0;   // Myriad corruption marker (cosmetic on guests)
     e.burnUntil = (fl & 2048) ? game.t + 1 : 0;      // Ember burning marker (cosmetic on guests)
     e.frenzyUntil = (fl & 4096) ? game.t + 1 : 0;    // Pact blood frenzy marker (cosmetic on guests)
-    const rt = (fl >> 13) & 7; e.resistType = rt ? SHOT_TYPES[rt - 1] : null; // Strain adaptation (cosmetic)
     e.evoSurgeUntil = (fl & 65536) ? game.t + 1 : 0; // Strain Adaptive Surge marker (cosmetic on guests)
     e.facing = (facingDeg || 0) * Math.PI / 180;
     if (e.mutated && e.def.kind === 'unit') e.size = Math.round(baseSize(e) * VERD.mutSize);

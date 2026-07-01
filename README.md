@@ -224,10 +224,12 @@ combined arms with an answer to everything. Workers mine crystal back to the HQ.
 Barracks (Marines, the hard-hitting **Rocketeers**, Snipers, Medics), a Factory (fast
 **Outriders**, Siege Tanks, flame **Hellhounds**, heavy **Goliath** walkers,
 long-range **Artillery** and the broadside **Landship**), an Airfield (Gunships, splashing **Vulture Bombers**),
-Turrets and armoured **Pillboxes**. Their one weakness is *limited resource scaling* —
-crystal nodes are finite — so **Supply Depots** mint a steady trickle of crystal, double
-as drop-offs and raise the unit cap, keeping the war machine fed once the nodes run dry.
-Economy → production → army → push.
+Turrets and armoured **Pillboxes**. The Dominion Yard builds the apex **Leviathan** and —
+a colossal, late-game investment — **The Ratte**, a fortress-sized landcruiser with twin
+siege guns and an eight-barrel autocannon battery. Their one weakness is *limited
+resource scaling* — crystal nodes are finite — so **Supply Depots** mint a steady trickle
+of crystal, double as drop-offs and raise the unit cap, keeping the war machine fed once
+the nodes run dry. Economy → production → army → push.
 
 ### MYRIAD SWARM — the Flood · *Biomass* · core: **Hive**
 No workers, no mining — every tile of **creep** pays biomass. But a home creep-blob's
@@ -364,19 +366,22 @@ swarm. Bone Shrines on **Wellsprings** bleed extra Blood. See the
 
 ### THE VIRULENT STRAIN — the Adaptation · *Genome* · core: **The Progenitor**
 Mostly dirt-cheap, weak spam — losing a **Spawnling** (26 Genome, the cheapest paid unit
-in the game) is the plan, not a setback. Every Strain unit **ADAPTS**: survive enough
-damage of one TYPE (bullet, beam, glob, shell or melee) and it hardens a strong
-resistance to that type — but earning a new resistance always **burns away the old
-one**, so a foe must keep switching weapons to keep cutting through an adapted swarm.
-Getting hit also **pays you**: every point of damage a Strain unit *endures* earns
-Genome (the masochistic mirror of the Ember's damage-*dealt* Plunder), so throwing
-chaff into the grinder funds the next wave. **Spawning Wells** breed free **Whelps**
-forever; a **Feeding Nest** trains ranged **Stingers** and beam-lashing **Lashers**; a
-**Mutagen Works** raises the tanky **Brute**, siege **Bloater**, flying **Drifter** and
-the healing **Mender**. Trigger the Progenitor's **ADAPTIVE SURGE** to instantly harden
-your whole army against everything at once. Genewells on **Wellsprings** bleed extra
-Genome from the map. Protect the **Progenitor**. See the
-[full Strain guide](guides/strain.md).
+in the game) is the plan, not a setback. The whole swarm **ADAPTS TOGETHER**: once it's
+collectively survived enough damage of one TYPE (bullet, beam, glob, shell or melee),
+EVERY Strain unit anywhere hardens a strong resistance to that type at once — but
+earning a new resistance always **burns away the old one**, so a foe must keep switching
+weapons to keep cutting through an adapted swarm. Click any Strain unit to see exactly
+what the hivemind is currently hardened against. Getting hit also **pays you**: every
+point of damage a Strain unit *endures* earns Genome (the masochistic mirror of the
+Ember's damage-*dealt* Plunder), so throwing chaff into the grinder funds the next wave.
+**Spawning Wells** breed free **Whelps** forever; a **Feeding Nest** trains ranged
+**Stingers** and beam-lashing **Lashers**; a **Mutagen Works** raises the tanky **Brute**,
+siege **Bloater**, flying **Drifter** and the healing **Mender**. Trigger the
+Progenitor's **ADAPTIVE SURGE** to instantly harden your whole army against everything
+at once. The Genesis Maw builds the apex **Genesis Horror** and — a colossal, late-game
+investment — **The Genesis Abomination**, a fused mountain of over-adapted biomass.
+Genewells on **Wellsprings** bleed extra Genome from the map. Protect the **Progenitor**.
+See the [full Strain guide](guides/strain.md).
 
 ## Controls
 

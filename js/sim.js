@@ -201,6 +201,7 @@ function setupFaction(fac, base, isAI, diff) {
     speedMul: 1, rangeMul: 1, cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0,
     arkTier: 0,   // Solari Exodus: how far the Ark has been upgraded
     gMoon: false, gNecro: false, gWild: false,   // Verdant: standing Heartwood Grafts
+    evoResist: null, evoType: null, evoAccum: 0,   // Virulent Strain: hivemind adaptation (see evoAdapt)
 
     // difficulty handicaps (1 / neutral for humans)
     diff: isAI ? (diff || 'normal') : null,
@@ -308,19 +309,26 @@ function spawnEnt(type, fac, x, y, opts = {}) {
 }
 
 // ---------------- damage / death ----------------
-// Virulent Strain ADAPTATION: `shot` is the attacker's damage type. A brief Adaptive
-// Surge (self-cast, see fireAbility) blunts everything; otherwise, if the unit has
-// already hardened against this exact type, cut the damage. Either way, track the
-// streak of consecutive same-type damage taken — once it crosses a threshold set by
-// the unit's own max HP, harden a (new) resistance to THIS type, discarding any old one.
+// Virulent Strain ADAPTATION (hivemind): `shot` is the attacker's damage type. A
+// brief Adaptive Surge (self-cast, see fireAbility) blunts everything on THIS unit;
+// otherwise, if the whole faction has already hardened against this exact type, cut
+// the damage. Either way, feed the FACTION-WIDE streak of consecutive same-type
+// damage landing on any of its units — once it crosses EVO.threshold, the entire
+// swarm adapts at once (every unit, everywhere), discarding whatever resistance it
+// had before.
 function evoAdapt(t, dmg, shot) {
+  const p = game.players[t.fac];
   if (t.evoSurgeUntil > game.t) dmg *= (1 - EVO.surgeResist);
-  if (t.resistType === shot) dmg *= (1 - EVO.resist);
-  if (t.evoType !== shot) { t.evoType = shot; t.evoAccum = 0; }
-  t.evoAccum += dmg;
-  if (t.resistType !== shot && t.evoAccum >= t.hpMax * EVO.thresholdFrac) {
-    t.resistType = shot; t.evoAccum = 0;
-    addFx({ kind: 'boom', x: t.x, y: t.y, r: t.size * 1.3, ttl: 0.4, max: 0.4, color: EVO_COLOR[shot] || '#c8e639' });
+  else if (p.evoResist === shot) dmg *= (1 - EVO.resist);
+  if (p.evoType !== shot) { p.evoType = shot; p.evoAccum = 0; }
+  p.evoAccum += dmg;
+  if (p.evoResist !== shot && p.evoAccum >= EVO.threshold) {
+    p.evoResist = shot; p.evoAccum = 0;
+    for (const e of game.entities) {
+      if (e.dead || e.fac !== t.fac || e.def.kind !== 'unit') continue;
+      addFx({ kind: 'boom', x: e.x, y: e.y, r: e.size * 1.3, ttl: 0.4, max: 0.4, color: EVO_COLOR[shot] || '#c8e639' });
+    }
+    localMsg(t.fac, 'The swarm adapts — hardened against ' + shot + ' damage!');
   }
   return dmg;
 }
@@ -1266,6 +1274,7 @@ function sandboxSpawn(type, fac, x, y) {
       gainAccum: 0, income: 0, swarmRally: { x, y }, lastAttack: null, waveSize: 0,
       research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1, speedMul: 1, rangeMul: 1,
       cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0, arkTier: 0, gMoon: false, gNecro: false, gWild: false,
+      evoResist: null, evoType: null, evoAccum: 0,
       diff: null, incomeMul: 1, firstWave: 1e9, waveStep: 0 };
   }
   return spawnEnt(type, fac, x, y);
