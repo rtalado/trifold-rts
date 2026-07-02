@@ -2174,3 +2174,71 @@ function drawMinimap() {
   mmCtx.strokeRect(game.cam.x * sx, game.cam.y * sy, viewW() * sx, viewH() * sy);
 }
 
+
+// ---------------- entity icons for the UI ----------------
+// Every button that trains/builds something shows a little portrait of it, so you
+// can tell units and buildings apart at a glance. Rather than hand-drawing (and
+// hand-maintaining) a second set of art, we render the REAL in-game model: build a
+// tiny inert stand-in entity, point the shared ctx at an offscreen canvas, and run
+// it through the same drawEnt the map uses. Rendered once per type, then cached as
+// a data URL for the lifetime of the page.
+const ICON_CACHE = new Map();
+const ICON_PX = 96; // rendered oversized (~2.5× display size) so icons stay crisp
+
+function entIconURL(type) {
+  if (ICON_CACHE.has(type)) return ICON_CACHE.get(type);
+  const d = DEFS[type];
+  if (!d || !game) return null; // needs a live game (drawEnt reads game.t etc.)
+  // an inert stand-in: full HP (no bar), no orders, no target, no status effects
+  const s = d.size || 10;
+  const fake = {
+    id: 0, type, def: d, fac: d.fac || 'neutral', x: 0, y: 0, size: s,
+    hp: 1, hpMax: 1, shield: 0, shieldMax: 0,
+    facing: -Math.PI / 2, order: { type: 'idle' }, auxTgt: [],
+  };
+  const mapCtx = ctx;
+  let url = null;
+  try {
+    // pass 1 — probe: draw at a scale guaranteed to contain the whole model, then
+    // measure the painted pixels' bounding box. Models vary wildly in how far they
+    // draw beyond `size` (masts, barrels, wings), so measuring beats guessing.
+    const PROBE = 160;
+    const probe = document.createElement('canvas');
+    probe.width = probe.height = PROBE;
+    ctx = probe.getContext('2d');
+    const psc = (PROBE / 2) / (s * 2.4 + 16);
+    ctx.save(); ctx.translate(PROBE / 2, PROBE / 2); ctx.scale(psc, psc);
+    drawEnt(fake);
+    ctx.restore();
+    const px = ctx.getImageData(0, 0, PROBE, PROBE).data;
+    let minx = PROBE, miny = PROBE, maxx = -1, maxy = -1;
+    for (let y = 0; y < PROBE; y++) for (let x = 0; x < PROBE; x++) {
+      if (px[(y * PROBE + x) * 4 + 3] > 12) {
+        if (x < minx) minx = x; if (x > maxx) maxx = x;
+        if (y < miny) miny = y; if (y > maxy) maxy = y;
+      }
+    }
+    if (maxx < 0) throw new Error('blank'); // nothing painted — no icon
+    // pass 2 — final: recentre on the painted bbox and zoom it to fill the frame
+    const cx = ((minx + maxx) / 2 - PROBE / 2) / psc, cy = ((miny + maxy) / 2 - PROBE / 2) / psc;
+    const half = Math.max((maxx - minx) / 2 / psc, (maxy - miny) / 2 / psc, 4);
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = ICON_PX;
+    ctx = cv.getContext('2d');
+    ctx.save(); ctx.translate(ICON_PX / 2, ICON_PX / 2);
+    const sc = (ICON_PX / 2 - 4) / half;
+    ctx.scale(sc, sc); ctx.translate(-cx, -cy);
+    drawEnt(fake);
+    ctx.restore();
+    url = cv.toDataURL();
+  } catch (err) { /* a draw quirk must never break the UI — worst case: no icon */ }
+  ctx = mapCtx;
+  ICON_CACHE.set(type, url);
+  return url;
+}
+
+// shared markup helper — an <img> portrait, or '' when unavailable
+function entIconImg(type, cls) {
+  const url = type ? entIconURL(type) : null;
+  return url ? '<img class="' + cls + '" src="' + url + '" alt="" draggable="false">' : '';
+}

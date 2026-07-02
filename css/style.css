@@ -138,13 +138,19 @@
     padding:0 10px 10px 10px; gap:10px; }
   #minimapWrap { background:#0b0f16ee; border:1px solid #243247; border-radius:6px; padding:5px; pointer-events:auto; }
   #minimap { display:block; cursor:pointer; }
-  #selinfo { flex:0 0 282px; height:142px; background:#0b0f16ee; border:1px solid #243247; border-radius:6px;
-    padding:9px 11px; font-size:12px; line-height:1.5; overflow:hidden; display:flex; flex-direction:column; }
+  /* pointer-events:auto is load-bearing: #hud ignores clicks, and without this the
+     queue chips inside were unclickable and their list unscrollable */
+  #selinfo { flex:0 0 300px; height:142px; background:#0b0f16ee; border:1px solid #243247; border-radius:6px;
+    padding:9px 11px; font-size:12px; line-height:1.5; overflow:hidden; display:flex; flex-direction:column;
+    pointer-events:auto; }
   #selinfo .si-main { flex:none; }
   #selinfo .si-queues { flex:1 1 auto; min-height:0; overflow-y:auto; margin-top:3px; }
   #selinfo .si-queues::-webkit-scrollbar { width:6px; }
   #selinfo .si-queues::-webkit-scrollbar-thumb { background:#2a3954; border-radius:3px; }
   #selinfo .sel-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  #selinfo .sel-ico { width:30px; height:30px; flex:none; border-radius:5px;
+    background:#0c1119; border:1px solid #223048; }
+  #selinfo .li-ico { width:18px; height:18px; flex:none; }
   #selinfo .sel-name { font-size:14.5px; font-weight:700; color:#eef2f8; letter-spacing:.3px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .catpill { font-size:8.5px; font-weight:800; letter-spacing:1px; padding:2px 6px; border-radius:3px; flex:none; }
@@ -180,16 +186,20 @@
   /* editable production queue (in the selection panel) */
   #selinfo .sel-qhead { font-size:9px; font-weight:800; letter-spacing:1.5px; color:#7b8aa3; margin:2px 0 4px; }
   #selinfo .sel-qhead .qcap { color:#5d6b82; font-weight:600; }
-  #selinfo .sel-queue { display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start; margin-bottom:4px; }
-  #selinfo .qchip { position:relative; display:flex; align-items:center; gap:5px; max-width:128px;
-    padding:3px 6px; background:#141c2a; border:1px solid #2a3954; border-radius:4px; cursor:pointer;
-    font-size:11px; color:#cdd6e4; overflow:hidden; }
+  #selinfo .sel-qhead .qhint { color:#5d6b82; font-weight:400; letter-spacing:.5px; text-transform:none; }
+  #selinfo .sel-queue { display:flex; flex-wrap:wrap; gap:5px; align-content:flex-start; margin-bottom:5px; }
+  #selinfo .qchip { position:relative; display:flex; align-items:center; gap:6px; max-width:142px;
+    padding:4px 7px; background:#141c2a; border:1px solid #2a3954; border-radius:5px; cursor:pointer;
+    font-size:11.5px; color:#cdd6e4; overflow:hidden; min-height:28px; }
   #selinfo .qchip:hover { border-color:#e0653d; background:#241620; }
   #selinfo .qchip.q-research { border-left:3px solid #b07cff; }
   #selinfo .qchip .qprog { position:absolute; left:0; top:0; bottom:0; width:0;
     background:rgba(84,194,124,0.20); pointer-events:none; }
+  #selinfo .qchip .qic { position:relative; width:20px; height:20px; flex:none; pointer-events:none; }
+  #selinfo .qchip .qic-g { display:inline-flex; align-items:center; justify-content:center;
+    color:#b07cff; font-size:13px; }
   #selinfo .qchip .qn { position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #selinfo .qchip .qx { position:relative; color:#7b8aa3; font-size:10px; font-weight:700; }
+  #selinfo .qchip .qx { position:relative; color:#7b8aa3; font-size:11px; font-weight:700; padding:2px 3px; }
   #selinfo .qchip:hover .qx { color:#ff9a7a; }
   #cmdcard { flex:1; height:142px; background:#0b0f16ee; border:1px solid #243247; border-radius:6px;
     padding:8px; pointer-events:auto; display:flex; flex-wrap:wrap; gap:7px; align-content:flex-start; overflow-y:auto;
@@ -197,12 +207,18 @@
   #cmdcard::-webkit-scrollbar { width:6px; }
   #cmdcard::-webkit-scrollbar-thumb { background:#2a3954; border-radius:3px; }
   #cmdcard::-webkit-scrollbar-track { background:transparent; }
-  #cmdcard button { position:relative; flex:1 1 132px; min-width:132px; max-width:188px; height:58px;
+  #cmdcard button { position:relative; flex:1 1 150px; min-width:150px; max-width:210px; height:58px;
     background:#141c2a; color:#cdd6e4; border:1px solid #2a3954; border-left-width:4px; border-radius:6px;
-    cursor:pointer; padding:5px 9px; text-align:left; display:flex; flex-direction:column; gap:2px;
-    transition:background .1s, border-color .1s; }
+    cursor:pointer; padding:5px 8px 5px 6px; text-align:left; display:flex; flex-direction:row;
+    align-items:center; gap:7px; transition:background .1s, border-color .1s; }
   #cmdcard button:hover:not(:disabled) { background:#1f2c42; border-color:#5a7099; }
   #cmdcard button:disabled { opacity:.4; cursor:default; }
+  /* portrait of what the button trains/builds (rendered from the in-game model) */
+  #cmdcard .cmd-ico { width:40px; height:40px; flex:none; border-radius:5px;
+    background:#0c1119; border:1px solid #223048; pointer-events:none; }
+  #cmdcard .cmd-glyph { display:inline-flex; align-items:center; justify-content:center;
+    font-size:19px; color:#8fa3c4; }
+  #cmdcard .cmd-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
   #cmdcard .cmd-top { display:flex; align-items:center; justify-content:space-between; height:13px; }
   #cmdcard .cmd-tag { font-size:8px; font-weight:800; letter-spacing:.8px; padding:1px 5px; border-radius:3px; }
   #cmdcard .cmd-name { font-size:13px; font-weight:600; color:#eef2f8; line-height:1.15;
@@ -228,7 +244,9 @@
     color:#ffd97d; text-shadow:0 1px 3px #000; transition:opacity .4s; opacity:0; }
   #tooltip { position:absolute; bottom:178px; left:534px; max-width:440px; display:none;
     background:#0b0f16f5; border:1px solid #2a3954; border-radius:7px; padding:10px 13px;
-    pointer-events:none; box-shadow:0 6px 24px #000a; }
+    pointer-events:none; box-shadow:0 6px 24px #000a; overflow:hidden; }
+  #tooltip .tipico { float:left; width:46px; height:46px; margin:1px 11px 4px 0;
+    border-radius:6px; background:#0c1119; border:1px solid #223048; }
   #tooltip .tipname { font-size:14px; font-weight:600; color:#e7edf5; margin-bottom:5px; }
   #tooltip .tipcat { font-size:9px; font-weight:800; letter-spacing:1px; padding:1px 6px;
     border-radius:3px; margin-right:8px; vertical-align:middle; }
@@ -326,11 +344,15 @@
   .sbfac.sel { border-color:#7dffa8; color:#eafff0; box-shadow:0 0 10px #7dffa833; }
   #sandboxScroll { overflow:auto; padding:14px 18px; flex:1; }
   #sandboxGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
-  .sbitem { padding:8px 10px; border-radius:6px; border:1px solid #2a3954; border-left-width:4px;
-    background:#141c28; cursor:pointer; text-align:left; }
+  .sbitem { padding:6px 10px 6px 6px; border-radius:6px; border:1px solid #2a3954; border-left-width:4px;
+    background:#141c28; cursor:pointer; text-align:left; display:flex; align-items:center; gap:8px; }
   .sbitem:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,0.4); }
   .sbitem.armed { border-color:#7dffa8; box-shadow:0 0 12px #7dffa84a; }
-  .sbitem .sb-name { display:block; font-size:12px; font-weight:700; color:#e6edf6; }
+  .sbitem .sb-ico { width:34px; height:34px; flex:none; border-radius:5px;
+    background:#0c1119; border:1px solid #223048; pointer-events:none; }
+  .sbitem .sb-body { flex:1; min-width:0; }
+  .sbitem .sb-name { display:block; font-size:12px; font-weight:700; color:#e6edf6;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sbitem .sb-kind { display:block; font-size:10px; color:#8a98ac; margin-top:2px; }
   #sandboxHint { padding:8px 18px; border-top:1px solid #1d2735; font-size:11.5px; color:#8a98ac; }
 

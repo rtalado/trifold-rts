@@ -38,7 +38,9 @@ addEventListener('pointerdown', startMusic);
 addEventListener('keydown', startMusic);
 
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+// `let`, not `const`: entIconURL (render.js) briefly retargets the shared ctx at an
+// offscreen canvas to render UI icons with the same drawEnt painter the map uses
+let ctx = canvas.getContext('2d');
 const mmCanvas = document.getElementById('minimap');
 const mmCtx = mmCanvas.getContext('2d');
 

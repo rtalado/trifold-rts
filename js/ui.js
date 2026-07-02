@@ -195,7 +195,8 @@ function showTip(c) {
   const catLbl = cat === 'building' ? 'BUILDING' : cat === 'unit' ? 'UNIT'
     : cat === 'research' ? 'RESEARCH' : cat === 'sell' ? 'SELL' : cat === 'upgrade' ? 'UPGRADE'
     : cat === 'ability' ? 'ABILITY' : '';
-  let html = '<div class="tipname">'
+  let html = entIconImg(c.type, 'tipico')
+    + '<div class="tipname">'
     + (catLbl ? '<span class="tipcat tipcat-' + catClass(cat) + '">' + catLbl + '</span>' : '')
     + (d ? d.name : c.label)
     + (cs ? '<span class="tipcost">' + cs + '</span>' : '') + '</div>';
@@ -226,11 +227,16 @@ function refreshCard() {
     const cs = costStr(game.localFac, c.cost, c.cost2, c.cost3);
     const tag = c.tag || CAT_TAG[cat] || 'USE';
     const sub = cs || c.sub || '';
-    b.innerHTML =
-      '<span class="cmd-top"><span class="cmd-tag">' + tag + '</span>'
+    // portrait of the unit/building this trains/builds; other commands get a glyph
+    const ico = entIconImg(c.type, 'cmd-ico')
+      || '<span class="cmd-ico cmd-glyph">' + (CAT_GLYPH[cat] || '✦') + '</span>';
+    b.innerHTML = ico
+      + '<span class="cmd-body">'
+      + '<span class="cmd-top"><span class="cmd-tag">' + tag + '</span>'
         + '<span class="k">' + (hot[i] || '') + '</span></span>'
       + '<span class="cmd-name">' + c.label + '</span>'
-      + (sub ? '<span class="c' + (c.poor ? ' poor' : '') + '">' + sub + '</span>' : '');
+      + (sub ? '<span class="c' + (c.poor ? ' poor' : '') + '">' + sub + '</span>' : '')
+      + '</span>';
     // re-fetch the command fresh at click/hover time instead of closing over `c` —
     // otherwise a button built while you were short on resources keeps checking
     // that stale (disabled) snapshot forever, even after updateHUD's cheap
@@ -250,6 +256,8 @@ function refreshCard() {
 
 // command categories → CSS suffix + default corner tag
 const CAT_TAG = { building: 'BUILD', unit: 'TRAIN', research: 'TECH', ability: 'USE', sell: 'SELL', upgrade: 'UPGRADE' };
+// fallback glyphs for commands that aren't a concrete unit/building (no portrait)
+const CAT_GLYPH = { research: '⚙', ability: '☢', sell: '✕', upgrade: '▲' };
 function catClass(cat) {
   return cat === 'building' ? 'build' : cat === 'unit' ? 'unit'
     : cat === 'research' ? 'tech' : cat === 'sell' ? 'sell'
@@ -325,7 +333,8 @@ function buildSelMainHTML() {
   }
   if (game.sel.length === 1) {
     const e = game.sel[0], cat = e.def.kind;
-    let h = '<div class="sel-head">' + catPill(cat) + '<span class="sel-name">' + e.def.name + '</span></div>';
+    let h = '<div class="sel-head">' + entIconImg(e.type, 'sel-ico') + catPill(cat)
+      + '<span class="sel-name">' + e.def.name + '</span></div>';
     h += '<div class="sel-bars">' + statBar('HP', e.hp, e.hpMax, 'hp');
     if (e.shieldMax) h += statBar('Shield', e.shield, e.shieldMax, 'shield');
     h += '</div>';
@@ -370,7 +379,8 @@ function buildSelMainHTML() {
   h += '<div class="sel-list">';
   for (const t in counts) {
     const d = DEFS[t];
-    h += '<div class="sel-li"><span class="dot dot-' + catClass(d.kind) + '"></span>'
+    h += '<div class="sel-li">'
+      + (entIconImg(t, 'li-ico') || '<span class="dot dot-' + catClass(d.kind) + '"></span>')
       + '<span class="n">' + d.name + '</span><span class="x">×' + counts[t] + '</span></div>';
   }
   return h + '</div>';
@@ -386,10 +396,11 @@ function queueSig() {
     + '|R:' + (e.rqueue || []).map(it => it.rid).join(',');
 }
 
-function qchip(eid, idx, name, research) {
+function qchip(eid, idx, name, research, type) {
   return '<button class="qchip' + (research ? ' q-research' : '') + '" title="Cancel (refunds cost)"'
     + ' data-eid="' + eid + '" data-idx="' + idx + '" data-r="' + (research ? 1 : 0) + '">'
     + '<i class="qprog" data-front="' + (idx === 0 ? 1 : 0) + '"></i>'
+    + (entIconImg(type, 'qic') || '<span class="qic qic-g">⚙</span>')
     + '<span class="qn">' + name + '</span><span class="qx">✕</span></button>';
 }
 
@@ -399,12 +410,12 @@ function buildQueuesHTML() {
   if (e.fac !== game.localFac) return '';
   let h = '';
   if (e.queue && e.queue.length) {
-    h += '<div class="sel-qhead">PRODUCTION <span class="qcap">' + e.queue.length + '/' + MAX_QUEUE + '</span></div>'
-      + '<div class="sel-queue">' + e.queue.map((it, i) => qchip(e.id, i, DEFS[it.type].name, false)).join('') + '</div>';
+    h += '<div class="sel-qhead">PRODUCTION <span class="qcap">' + e.queue.length + '/' + MAX_QUEUE + '</span> <span class="qhint">click to cancel</span></div>'
+      + '<div class="sel-queue">' + e.queue.map((it, i) => qchip(e.id, i, DEFS[it.type].name, false, it.type)).join('') + '</div>';
   }
   if (e.rqueue && e.rqueue.length) {
-    h += '<div class="sel-qhead">RESEARCH <span class="qcap">' + e.rqueue.length + '/6</span></div>'
-      + '<div class="sel-queue">' + e.rqueue.map((it, i) => qchip(e.id, i, (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'), true)).join('') + '</div>';
+    h += '<div class="sel-qhead">RESEARCH <span class="qcap">' + e.rqueue.length + '/6</span> <span class="qhint">click to cancel</span></div>'
+      + '<div class="sel-queue">' + e.rqueue.map((it, i) => qchip(e.id, i, (RESEARCH[it.rid] ? RESEARCH[it.rid].name : '…'), true, null)).join('') + '</div>';
   }
   return h;
 }
@@ -649,8 +660,9 @@ function buildSandboxPanel() {
     const b = document.createElement('button');
     b.className = 'sbitem'; b.dataset.type = type;
     b.style.borderLeftColor = facColor(sandboxFac);
-    b.innerHTML = '<span class="sb-name">' + d.name + '</span><span class="sb-kind">'
-      + (d.kind === 'building' ? 'Building' : 'Unit') + (d.core ? ' · core' : d.apex ? ' · apex' : '') + '</span>';
+    b.innerHTML = entIconImg(type, 'sb-ico')
+      + '<span class="sb-body"><span class="sb-name">' + d.name + '</span><span class="sb-kind">'
+      + (d.kind === 'building' ? 'Building' : 'Unit') + (d.core ? ' · core' : d.apex ? ' · apex' : '') + '</span></span>';
     b.onclick = () => armSandboxItem(type);
     grid.appendChild(b);
   }
