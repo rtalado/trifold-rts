@@ -1487,7 +1487,7 @@ function tickRegen(dt) {
     if (e.fac === 'myriad' && e.hp < e.hpMax && onCreep(e.fac, e.x, e.y) && !e.constructing && !e.growing)
       e.hp = Math.min(e.hpMax, e.hp + 4 * dt);
     if (e.fac === 'exodus' && e.shieldMax > 0 && game.t - e.lastHurt > 2.5)
-      e.shield = Math.min(e.shieldMax, e.shield + 8 * dt);
+      e.shield = Math.min(e.shieldMax, e.shield + 6 * dt);
     if (e.fac === 'choir' && e.def.kind === 'unit') {
       // the lattice sustains spirits; in the field they fade (never below a remnant)
       const home = game.entities.some(b => !b.dead && b.fac === 'choir'

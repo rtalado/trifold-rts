@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.36';
+const APP_VERSION = '1.0.37';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -82,16 +82,16 @@ const DEFS = {
   // Earth's main standing army: a textbook combined-arms force. Cheap, finite crystal
   // is its weakness, so its Supply Depots mint a steady trickle (and double as drop-offs)
   // to keep the war machine fed once the nodes run dry — its answer to limited scaling.
-  hq:       { fac:'vanguard', kind:'building', name:'Headquarters', hp:1600, size:42, core:true, produces:['worker'], dropoff:true },
+  hq:       { fac:'vanguard', kind:'building', name:'Headquarters', hp:1800, size:42, core:true, produces:['worker'], dropoff:true },
   worker:   { fac:'vanguard', kind:'unit', name:'Worker', hp:45, size:8, speed:75, cost:50, time:6, dmg:3, range:12, cd:1, aggro:0, shot:'melee', harvester:true, builder:true },
   depot:    { fac:'vanguard', kind:'building', name:'Supply Depot', hp:560, size:22, cost:175, time:14, dropoff:true, capBonus:6 },
   barracks: { fac:'vanguard', kind:'building', name:'Barracks', hp:650, size:28, cost:150, time:18, produces:['marine','rocket','sniper','medic'] },
   factory:  { fac:'vanguard', kind:'building', name:'Factory', hp:850, size:32, cost:250, time:24, produces:['outrider','tank','flametank','goliath','artillery','dreadnought'] },
   airfield: { fac:'vanguard', kind:'building', name:'Airfield', hp:700, size:28, cost:300, time:22, produces:['gunship','bomber'] },
-  turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:420, size:14, cost:100, time:12, dmg:9, range:195, cd:0.65, aggro:215, shot:'bullet' },
+  turret:   { fac:'vanguard', kind:'building', name:'Turret', hp:420, size:14, cost:100, time:12, dmg:11, range:195, cd:0.65, aggro:215, shot:'bullet' },
   pillbox:  { fac:'vanguard', kind:'building', name:'Pillbox', hp:820, size:18, cost:200, time:16, dmg:20, range:215, cd:1.2, aggro:230, shot:'shell', splash:30 },
   techlab:  { fac:'vanguard', kind:'building', name:'Tech Lab', hp:600, size:24, cost:150, time:14, researchLab:true },
-  marine:   { fac:'vanguard', kind:'unit', name:'Marine', hp:75, size:8, speed:82, cost:60, time:5, dmg:8, range:95, cd:0.8, aggro:170, shot:'bullet' },
+  marine:   { fac:'vanguard', kind:'unit', name:'Marine', hp:85, size:8, speed:82, cost:60, time:5, dmg:9, range:95, cd:0.8, aggro:170, shot:'bullet' },
   rocket:   { fac:'vanguard', kind:'unit', name:'Rocketeer', hp:65, size:8, speed:74, cost:85, time:7, dmg:24, range:140, cd:1.7, aggro:205, shot:'shell' },
   sniper:   { fac:'vanguard', kind:'unit', name:'Sniper', hp:50, size:8, speed:65, cost:110, time:8, dmg:30, range:215, cd:2.2, aggro:235, shot:'beam' },
   medic:    { fac:'vanguard', kind:'unit', name:'Medic', hp:60, size:8, speed:80, cost:75, time:6, aggro:0, aura:110, heal:6 },
@@ -175,7 +175,7 @@ const DEFS = {
   conduit:   { fac:'choir', kind:'building', name:'Soul Conduit', hp:160, size:11, cost:60, time:7 },
   reliquary: { fac:'choir', kind:'building', name:'Reliquary', hp:600, size:26, cost:180, time:16, produces:['revenant'] },
   spire:     { fac:'choir', kind:'building', name:'Mourning Spire', hp:450, size:14, cost:130, time:12, dmg:12, range:185, cd:1.0, aggro:205, shot:'beam' },
-  wraith:    { fac:'choir', kind:'unit', name:'Wraith', hp:95, size:8, speed:105, cost:50, time:4, dmg:9, range:16, cd:0.55, aggro:185, shot:'melee' },
+  wraith:    { fac:'choir', kind:'unit', name:'Wraith', hp:95, size:8, speed:105, cost:58, time:4, dmg:9, range:16, cd:0.55, aggro:185, shot:'melee' },
   banshee:   { fac:'choir', kind:'unit', name:'Banshee', hp:75, size:8, speed:70, cost:130, time:9, dmg:15, range:150, cd:1.3, aggro:195, shot:'beam' },
   revenant:  { fac:'choir', kind:'unit', name:'Revenant', hp:380, size:14, speed:58, cost:300, time:18, dmg:30, range:30, cd:1.6, aggro:190, shot:'melee', splash:40 },
   oracle:    { fac:'choir', kind:'building', name:'Bone Oracle', hp:480, size:22, cost:150, time:13, researchLab:true },
@@ -281,7 +281,7 @@ const DEFS = {
                          desc:'Call down a roaring firestorm at a point in great range: every enemy caught is set ablaze (a lasting burn) and takes a burst of fire. Burning foes keep bleeding Plunder as they cook.' } },
   warcamp:   { fac:'ember', kind:'building', name:'War Camp', hp:560, size:24, cost:120, time:9, produces:['raider','slinger'] },
   totem:     { fac:'ember', kind:'building', name:'Blaze Totem', hp:380, size:13, cost:110, time:7, dmg:14, range:170, cd:0.75, aggro:195, shot:'glob' },
-  raider:    { fac:'ember', kind:'unit', name:'Raider', hp:90, size:8, speed:130, cost:45, time:4, dmg:11, range:16, cd:0.55, aggro:190, shot:'melee' },
+  raider:    { fac:'ember', kind:'unit', name:'Raider', hp:80, size:8, speed:130, cost:52, time:4, dmg:11, range:16, cd:0.55, aggro:190, shot:'melee' },
   slinger:   { fac:'ember', kind:'unit', name:'Slinger', hp:68, size:8, speed:104, cost:80, time:5, dmg:13, range:145, cd:0.85, aggro:200, shot:'glob' },
   firebrand: { fac:'ember', kind:'unit', name:'Firebrand', hp:125, size:9, speed:94, cost:150, time:8, dmg:22, range:125, cd:1.2, aggro:205, shot:'shell', splash:40 },
   warbeast:  { fac:'ember', kind:'unit', name:'War Beast', hp:360, size:15, speed:100, cost:280, time:13, dmg:30, range:20, cd:0.85, aggro:190, shot:'melee', splash:30 },
@@ -332,7 +332,7 @@ const DEFS = {
   graft_moon: { fac:'verdant', kind:'building', name:'Moonsign Graft', hp:760, size:20, cost:240, cost2:60, cost3:20, time:18, graft:'moon' },
   graft_wild: { fac:'verdant', kind:'building', name:'Wildgrowth Graft', hp:760, size:20, cost:240, cost2:20, cost3:60, time:18, graft:'wild' },
   sapling:   { fac:'verdant', kind:'unit', name:'Sapling', hp:55, size:7, speed:80, dmg:6, range:14, cd:0.7, aggro:170, shot:'melee', freeUnit:true },
-  thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:70, size:8, speed:74, cost:90, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
+  thornling: { fac:'verdant', kind:'unit', name:'Thornling', hp:78, size:8, speed:74, cost:80, time:6, dmg:12, range:130, cd:1.1, aggro:185, shot:'glob' },
   treant:    { fac:'verdant', kind:'unit', name:'Treant', hp:460, size:17, speed:46, cost:270, cost2:25, time:18, dmg:28, range:26, cd:1.5, aggro:185, shot:'melee', splash:38 },
   arboretum: { fac:'verdant', kind:'building', name:'Arboretum', hp:480, size:22, cost:150, time:14, researchLab:true, grows:['graft_necro','graft_moon','graft_wild','erdtree','heartgrove'] },
   ancient:   { fac:'verdant', kind:'unit', name:'Ancient', hp:720, size:20, speed:40, cost:360, cost2:45, cost3:25, time:24, dmg:36, range:30, cd:1.6, aggro:185, shot:'melee', splash:46 },
@@ -347,7 +347,7 @@ const DEFS = {
   pylon:     { fac:'stormforge', kind:'building', name:'Charge Pylon', hp:460, size:16, cost:170, time:12, aura:155, shieldHeal:24, heal:3 },
   tesla:     { fac:'stormforge', kind:'building', name:'Tesla Coil', hp:420, size:14, cost:160, time:10, dmg:18, range:200, cd:1.1, aggro:210, shot:'beam' },
   foundry_s: { fac:'stormforge', kind:'building', name:'Foundry', hp:820, size:30, cost:260, time:20, produces:['colossus','stormcruiser'] },
-  arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:100, shield:50, size:9, speed:118, cost:110, time:8, dmg:11, range:118, cd:0.4, aggro:205, shot:'bullet' },
+  arclight:  { fac:'stormforge', kind:'unit', name:'Arclight', hp:100, shield:50, size:9, speed:118, cost:95, time:8, dmg:11, range:118, cd:0.4, aggro:205, shot:'bullet' },
   galvan:    { fac:'stormforge', kind:'unit', name:'Galvan', hp:190, shield:150, size:12, speed:92, cost:180, time:11, dmg:20, range:66, cd:0.7, aggro:185, shot:'beam', splash:24 },
   voltaic:   { fac:'stormforge', kind:'unit', name:'Voltaic', hp:90, shield:75, size:9, speed:62, cost:210, time:13, dmg:36, range:235, cd:2.0, aggro:250, shot:'beam' },
   colossus:  { fac:'stormforge', kind:'unit', name:'Colossus', hp:560, shield:210, size:18, speed:48, cost:420, time:24, dmg:46, range:180, cd:2.3, aggro:205, shot:'shell', splash:58 },
@@ -421,7 +421,7 @@ const DEFS = {
   genlab:    { fac:'strain', kind:'building', name:'Mutagen Vault', hp:500, size:22, cost:150, time:13, researchLab:true },
   mutaworks: { fac:'strain', kind:'building', name:'Mutagen Works', hp:680, size:24, cost:200, time:14, produces:['brute','bloater','drifter','mender'] },
   spawnling: { fac:'strain', kind:'unit', name:'Spawnling', hp:40, size:6, speed:105, cost:26, time:3, dmg:6, range:13, cd:0.55, aggro:170, shot:'melee' },
-  biter:     { fac:'strain', kind:'unit', name:'Biter', hp:75, size:8, speed:92, cost:58, time:5, dmg:12, range:15, cd:0.7, aggro:182, shot:'melee' },
+  biter:     { fac:'strain', kind:'unit', name:'Biter', hp:85, size:8, speed:92, cost:58, time:5, dmg:12, range:15, cd:0.7, aggro:182, shot:'melee' },
   lurker:    { fac:'strain', kind:'unit', name:'Lurker', hp:56, size:8, speed:80, cost:65, time:5, dmg:10, range:135, cd:1.0, aggro:190, shot:'glob' },
   whelp:     { fac:'strain', kind:'unit', name:'Whelp', hp:30, size:6, speed:108, dmg:5, range:12, cd:0.6, aggro:165, shot:'melee', freeUnit:true },
   stinger:   { fac:'strain', kind:'unit', name:'Stinger', hp:72, size:8, speed:112, cost:85, time:6, dmg:9, range:110, cd:0.5, aggro:185, shot:'bullet' },
@@ -882,7 +882,7 @@ const CORRUPT = {
 // ANYWHERE on the map rises again as a free Husk under the Choir's command — bounded
 // by the free-Husk cap (the same separate cap Sepulchres breed into). Death literally
 // swells the deathless host, on top of paying Essence.
-const REANIM = { chance: 0.33 };
+const REANIM = { chance: 0.26 };
 
 // Ember Nomads BURNING. Every Ember attack ignites the foe it strikes for `baseDur`
 // seconds; units/towers with a `burn` stat set a longer blaze. A burning enemy takes a
@@ -922,7 +922,7 @@ const BROADSIDE_ARC = 0.32;     // radians of tolerance either side of exactly a
 // Adaptive Surge (the Progenitor's active) still grants a brief, no-strings
 // resistance to everything. Getting hit also pays Genome (`lootPerDmg` of damage
 // endured) — the masochistic mirror of the Ember's damage-DEALT Plunder.
-const EVO = { sampleNeed: 400, resist: 0.45, lootPerDmg: 0.35, surgeResist: 0.6 };
+const EVO = { sampleNeed: 400, resist: 0.45, lootPerDmg: 0.45, surgeResist: 0.6 };
 const SHOT_TYPES = ['melee', 'bullet', 'beam', 'glob', 'shell'];
 const EVO_COLOR = { melee: '#e0574d', bullet: '#e0c94d', beam: '#4dc7e0', glob: '#7de04d', shell: '#b06de0' };
 
@@ -1126,18 +1126,18 @@ function enqueueResearch(e, rid) {
 // the game is a fight over ground, not a race to turtle then all-in. Each faction reaches
 // for territory in its own way (see tickEconomy + WELL).
 const ECON = {
-  workerCarry: 10, workerMine: 2.0,
+  workerCarry: 10, workerMine: 2.3,
   // myriad: biomass per creep tile, but the tile income PLATEAUS at myriadCapTiles — a
   // home creep-blob maxes out fast, so to grow you must creep OUT over Wellsprings/ground.
   myriadBase: 2.0, myriadPerTile: 0.012, myriadCapTiles: 480,
   // exodus: a small base trickle + a strong Ark siphon on a crystal node. The nomads now
   // also HARNESS Wellsprings (park Collectors/the Ark beside a font — see WELL.income.exodus)
   // and earn a bonus on every Obelisk, so the pilgrimage scales by ranging and holding the map.
-  exodusBase: 2.0, exodusSiphon: 6.0, exodusObeliskBonus: 1.6,
+  exodusBase: 2.0, exodusSiphon: 6.0, exodusObeliskBonus: 1.35,
   // choir: a small lattice trickle that PLATEAUS at choirConduitCap conduits, plus a cut
   // of every death on the map — so the Choir scales by fighting, not by stacking conduits.
   choirBase: 1.8, choirConduit: 0.8, choirConduitCap: 5, choirDeathFlat: 5, choirDeathPct: 0.06,
-  choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.7, choirLattice: 270,
+  choirDecay: 1.5, choirFloor: 0.35, choirSustain: 3, choirLeech: 0.55, choirLattice: 270,
   // syndicate: compound interest on the treasury — but the interest CAP is now driven by
   // TERRITORY (each held Obelisk/Wellspring raises it a lot; Countinghouses only a little),
   // so a bank in a corner stalls at synCapBase. Kills still pay bounties.
@@ -1159,23 +1159,23 @@ const ECON = {
   wardenObeliskPowder: 0.3,
   // ember: Plunder earned per point of damage dealt to enemies, plus a small trickle —
   // a warband that isn't out fighting over the map simply starves.
-  emberBase: 1.6, emberLootPerDmg: 0.45,
+  emberBase: 1.6, emberLootPerDmg: 0.36,
   // verdant: Sap per mature Bloom, PLATEAUING at verdantBloomCap — a home garden caps out.
   // The scarce Pollen & Loam (and bonus Sap, plus an ecosystem buff) come from harnessed
   // Wellsprings, so the diverse late-game garden DEMANDS holding fertile ground.
-  verdantBase: 1.2, verdantPerBloom: 1.6, verdantBloomCap: 6,
+  verdantBase: 1.2, verdantPerBloom: 1.9, verdantBloomCap: 6,
   verdantFontPollen: 0.8, verdantFontLoam: 0.6,
   // stormforge: the engine that accelerates — but no longer just by waiting. Home Dynamo
   // output is flat and PLATEAUS at stormDynamoCap; the acceleration now lives on the map:
   // each harnessed Storm Font (Wellspring) ramps its payout the longer you hold it.
-  stormBase: 2.4, stormPerDynamo: 1.4, stormDynamoCap: 7, stormFontRamp: 0.0032,
+  stormBase: 3.0, stormPerDynamo: 1.6, stormDynamoCap: 7, stormFontRamp: 0.0032,
   // pact: Blood gained when your OWN units die (flat + a share of their max HP) — there is
   // no passive home income to speak of, so the Pact must throw itself into the fight.
   pactBase: 1.0, pactMartyrFlat: 6, pactMartyrPct: 0.10,
   // strain: a small flat trickle + a Gene Vat flat rate, PLATEAUING at strainVatCap — the
   // real economy is masochistic (see EVO.lootPerDmg in applyDamage): every point of damage
   // a Strain unit endures pays Genome, so the swarm profits from being attacked.
-  strainBase: 1.6, strainPerVat: 1.2, strainVatCap: 6,
+  strainBase: 2.0, strainPerVat: 1.2, strainVatCap: 6,
   // neutral capture points pay their holder a steady income. With home economies now
   // capped, captured Obelisks (and harnessed Wellsprings) ARE the economy — the dominant,
   // uncapped way to scale, so the whole match is a fight over the map's ground.
@@ -1202,7 +1202,7 @@ const WELL = {
   // also pour Pollen + Loam and grow an ecosystem buff — see tickEconomy)
   income: {
     vanguard: 5.5, myriad: 5.2, choir: 5.0, syndicate: 5.5,
-    ember: 4.6, verdant: 4.2, stormforge: 5.0, pact: 5.0, exodus: 6.0, strain: 4.8,
+    ember: 4.6, verdant: 4.6, stormforge: 5.0, pact: 5.0, exodus: 5.4, strain: 4.8,
   },
   defaultIncome: 5.0,
 };
