@@ -366,12 +366,13 @@ swarm. Bone Shrines on **Wellsprings** bleed extra Blood. See the
 
 ### THE VIRULENT STRAIN — the Adaptation · *Genome* · core: **The Progenitor**
 Mostly dirt-cheap, weak spam — losing a **Spawnling** (26 Genome, the cheapest paid unit
-in the game) is the plan, not a setback. The whole swarm **ADAPTS TOGETHER**: once it's
-collectively survived enough damage of one TYPE (bullet, beam, glob, shell or melee),
-EVERY Strain unit anywhere hardens a strong resistance to that type at once — but
-earning a new resistance always **burns away the old one**, so a foe must keep switching
-weapons to keep cutting through an adapted swarm. Click any Strain unit to see exactly
-what the hivemind is currently hardened against. Getting hit also **pays you**: every
+in the game) is the plan, not a setback. **ADAPTATION is earned on the battlefield**:
+send an unarmed **Gene Sampler** to stand near the fighting — as your units endure one
+damage TYPE (bullet, beam, glob, shell or melee) it fills a sample of it; walk the locked
+sample home to an **Assimilation Chamber** and every unit that chamber breeds from then
+on **permanently resists that type**. A new deposit swaps the chamber's strain (units
+already bred keep theirs for life), and the **Dual Genome** research lets a chamber hold
+two strains at once. Getting hit also **pays you**: every
 point of damage a Strain unit *endures* earns Genome (the masochistic mirror of the
 Ember's damage-*dealt* Plunder), so throwing chaff into the grinder funds the next wave.
 **Spawning Wells** breed free **Whelps** forever; a **Feeding Nest** trains ranged

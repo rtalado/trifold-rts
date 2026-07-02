@@ -12,6 +12,11 @@ function update(dt) {
 
   refreshGrafts();   // Verdant: which Heartwood Grafts are standing this tick
 
+  // Strain: cache the live Gene Samplers once per tick so evoMitigate (which runs per
+  // damage event, potentially dozens of times a frame) never scans all entities itself
+  game._samplers = game.players.strain
+    ? game.entities.filter(e => !e.dead && e.def.collector) : null;
+
   game.creepTimer -= dt;
   if (game.creepTimer <= 0) { game.creepTimer = 0.5; recomputeCreep(); recomputeWellsprings(); }
 

@@ -494,6 +494,9 @@ function aiTick(fac) {
     if (have('vat') < aiGrow(3, 1, 7) && p.res >= 170) aiPlace(fac, 'vat', p.base);
     else if (have('nest') < aiGrow(2, 1, 5) && p.res >= 170 && game.t > 60) aiPlace(fac, 'nest', p.base);
     else if (have('spawnwell') < aiGrow(2, 1, 6) && p.res >= 150 && game.t > 60) aiPlace(fac, 'spawnwell', p.base);
+    // the adaptation chamber — the AI's version self-assimilates the damage type its
+    // army endures most (see evoMitigate's AI fallback), no sampler micro needed
+    else if (have('assimchamber') < aiGrow(1, 1, 2) && p.res >= 200 && game.t > 120 && techMet(fac, 'assimchamber')) aiPlace(fac, 'assimchamber', p.base);
     else if (have('barb') < aiGrow(3, 1, 8) && p.res >= 110 && game.t > 90) aiPlace(fac, 'barb', p.base);
     else if (have('genlab') < 1 && p.res >= 150 && game.t > 90) aiPlace(fac, 'genlab', p.base);
     else if (have('mutaworks') < 1 && p.res >= 200 && game.t > 110 && techMet(fac, 'mutaworks')) aiPlace(fac, 'mutaworks', p.base);
@@ -503,6 +506,14 @@ function aiTick(fac) {
     }
     for (const n of ents(e => e.fac === fac && e.type === 'nest' && !e.growing))
       if (!n.queue.length && p.res >= 85) enqueue(n, (Math.random() < 0.5 && p.res >= 120) ? 'lasher' : 'stinger');
+    // breed hardened bodies out of every chamber that has assimilated a strain
+    for (const ch of ents(e => e.fac === fac && e.type === 'assimchamber' && !e.growing && (e.strains || []).length))
+      if (!ch.queue.length && p.res >= 58) {
+        const r = Math.random();
+        enqueue(ch, (r < 0.3 && p.res >= 120 && techMet(fac, 'lasher')) ? 'lasher'
+          : (r < 0.55 && p.res >= 85 && techMet(fac, 'stinger')) ? 'stinger'
+          : (r < 0.8) ? 'biter' : 'spawnling');
+      }
     for (const mw of ents(e => e.fac === fac && e.type === 'mutaworks' && !e.growing))
       if (!mw.queue.length && p.res >= 90) {
         const r = Math.random();

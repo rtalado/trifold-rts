@@ -394,6 +394,12 @@ function drawSelectionOverlays() {
       ctx.beginPath(); ctx.arc(e.x, e.y, ar, 0, Math.PI * 2); ctx.stroke();
       ctx.setLineDash([]);
     }
+    // Gene Sampler: show how close it must stand to the fighting to collect
+    if (e.def.collectR) {
+      ctx.strokeStyle = '#e8ff8a66'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.def.collectR, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
     // order destination line (units only)
     if (e.def.kind !== 'unit') continue;
     const o = e.order; let dx = null, dy = null, hostile = false;
@@ -575,17 +581,17 @@ function drawEnt(e) {
     ctx.beginPath(); ctx.arc(x, y, s + 2.5, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
-  // Virulent Strain ADAPTATION (hivemind): a ring coloured to the damage type the
-  // WHOLE faction has hardened against — every one of its units shows it at once.
+  // Virulent Strain ADAPTATION: a unit bred from an Assimilation Chamber carries its
+  // strain(s) for life — one ring per resisted damage type, coloured to the type.
   // Adaptive Surge briefly flares a bright ring over the top on just this unit.
-  { const evoP = game.players[e.fac];
-    if (evoP && evoP.evoResist) {
-      ctx.save();
-      ctx.globalAlpha = 0.5 + 0.25 * Math.sin(game.t * 4 + e.id);
-      ctx.strokeStyle = EVO_COLOR[evoP.evoResist] || '#c8e639'; ctx.lineWidth = 2.2;
-      ctx.beginPath(); ctx.arc(x, y, s + 4, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
-    }
+  if (e.resist && e.resist.length && e.def.kind === 'unit') {
+    ctx.save();
+    e.resist.forEach((rs, i) => {
+      ctx.globalAlpha = 0.5 + 0.25 * Math.sin(game.t * 4 + e.id + i * 2);
+      ctx.strokeStyle = EVO_COLOR[rs] || '#c8e639'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(x, y, s + 4 + i * 3.2, 0, Math.PI * 2); ctx.stroke();
+    });
+    ctx.restore();
   }
   if (e.evoSurgeUntil > game.t) {
     ctx.save();
@@ -1810,6 +1816,25 @@ function drawEnt(e) {
         ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(x, y - s * 0.3); ctx.lineTo(x, y - s * 0.6); ctx.stroke();
         ctx.fillStyle = '#e8ff8a'; ctx.beginPath(); ctx.arc(x, y - s * 0.6, 2.6, 0, Math.PI * 2); ctx.fill();
+      } else if (e.type === 'assimchamber') { // assimilation chamber: orbiting strain-helix
+        ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.58, 0, Math.PI * 2); ctx.stroke();
+        const strains = e.strains || [];
+        if (strains.length) {
+          // one bright rotating arc per active strain, coloured to the resisted type
+          strains.forEach((rs, i) => {
+            const a0 = game.t * 0.9 + i * Math.PI;
+            ctx.strokeStyle = EVO_COLOR[rs] || '#c8e639'; ctx.lineWidth = 2.6;
+            ctx.beginPath(); ctx.arc(x, y, s * (0.36 + i * 0.16), a0, a0 + Math.PI * 1.2); ctx.stroke();
+            ctx.fillStyle = EVO_COLOR[rs] || '#c8e639';
+            ctx.beginPath(); ctx.arc(x + Math.cos(a0) * s * (0.36 + i * 0.16), y + Math.sin(a0) * s * (0.36 + i * 0.16), 2.6, 0, Math.PI * 2); ctx.fill();
+          });
+        } else { // dormant — an empty socket waiting for its first sample
+          ctx.globalAlpha *= 0.45;
+          ctx.strokeStyle = '#8fa64a'; ctx.lineWidth = 1.4; ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.arc(x, y, s * 0.32, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]); ctx.globalAlpha /= 0.45;
+        }
       }
     } else if (e.type === 'genabomination') { // THE GENESIS ABOMINATION — a fused mountain of over-adapted flesh
       ctx.save(); ctx.translate(x, y); ctx.rotate(facingAngle(e) + Math.PI / 2);
@@ -1876,8 +1901,25 @@ function drawEnt(e) {
       } else if (e.type === 'lasher') { // a lashing spore-tongue
         ctx.strokeStyle = col; ctx.lineWidth = 1.6;
         ctx.beginPath(); ctx.moveTo(0, -s * wob); ctx.quadraticCurveTo(s * 0.3, -s * 1.3, 0, -s * 1.6); ctx.stroke();
+      } else if (e.type === 'sampler') { // gene sampler: a collector dish on a stalk
+        ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.3); ctx.lineTo(0, -s * 0.85); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -s * 1.0, s * 0.42, Math.PI * 0.1, Math.PI * 0.9, true); ctx.stroke();
       }
       ctx.restore();
+      if (e.type === 'sampler') {
+        if (e.sample) { // carrying a locked sample: a glowing orb in the type's colour
+          const gl = 0.6 + 0.35 * Math.sin(game.t * 6 + e.id);
+          ctx.fillStyle = EVO_COLOR[e.sample] || '#c8e639'; ctx.globalAlpha = gl;
+          ctx.beginPath(); ctx.arc(x, y - s * 1.3, s * 0.38, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(x, y - s * 1.3, s * 0.38, 0, Math.PI * 2); ctx.stroke();
+        } else if (e.collectFrac > 0) { // collecting: a filling progress arc
+          ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(x, y, s + 5, -Math.PI / 2, -Math.PI / 2 + e.collectFrac * Math.PI * 2); ctx.stroke();
+        }
+      }
     }
   }
 

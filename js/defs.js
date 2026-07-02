@@ -13,7 +13,7 @@
 
 // ---------------- constants ----------------
 // Displayed in the main menu. Keep in sync with "version" in package.json on each release.
-const APP_VERSION = '1.0.34';
+const APP_VERSION = '1.0.35';
 const TILE = 32;
 // map size grows with the player count; set per match in buildMatch
 let GW = 160, GH = 104, WORLD_W = GW * TILE, WORLD_H = GH * TILE;
@@ -65,7 +65,7 @@ const HINTS = {
   verdant: 'THREE harvests feed the garden: Sap from Blooms, Pollen from Pollen Spires, Loam from Mulch Beds — your grandest plants and beasts demand a MIX of all three. But a home garden CAPS OUT, and the scarce Pollen & Loam are choked. The answer is to spread: plant a Bloom on a WELLSPRING to root a thriving new ecosystem — it pours out bonus Sap, Pollen AND Loam, and grows a fertilising buff that makes every nearby plant & beast hit harder. So claim fertile ground all across the map. The Heartwood musters the whole army (Bramblehorn, Spore Caller need an Arboretum); Groves breed free Saplings; the Arboretum cultivates the Grafts, the Heart Grove and the INDESTRUCTIBLE Erdtree. Protect the Heartwood.',
   stormforge: 'An engine that accelerates — but no longer just by waiting. Your home Dynamos pay a FLAT rate and soon max out; the acceleration now lives on the MAP. Raise a Dynamo beside a WELLSPRING (a Storm Font) to harness it — and the longer you HOLD that font, the more Power it ramps out. So seize ground early and never let it go. Few machines, but shielded and devastating: Charge Pylons re-energise their shields mid-fight, so a defended push never stops. Defend the Reactor.',
   pact: 'Death is your harvest — but only your own. Every one of your units that falls spills Blood to fund the next, greater summoning — and whips the horde around it into a BLOOD FRENZY (the survivors strike harder and faster), so your own dying makes the rest deadlier. Throw cheap Thralls and fast Flayers into the grinder and raise Behemoths from their deaths. Raise the FLESH VATS for the elite horrors — a horde-healing BLOOD PRIEST, the heavy ABOMINATION and the winged GARGOYLE — anchor HEMORRHAGE SPIRES, and work the Altar’s CRIMSON RITE to rupture a field of foes and enrage the swarm. Raise Bone Shrines beside WELLSPRINGS to bleed extra Blood from the map. Reckless by design. Keep the Altar.',
-  strain: 'Your bodies are weak and dirt-cheap — that is the point. Every unit ADAPTS: survive enough of one kind of damage (bullet, beam, glob, shell, melee) and it hardens a strong resistance to that type — but gaining a new resistance always burns away the old one, so keep switching up how you hit them. Getting hit ALSO pays you: every point of damage your units endure earns Genome, so throwing cheap Spawnlings and Biters into the grinder funds the next wave (a Gene Vat mints a small trickle too). Raise a Feeding Nest for ranged Stingers and beam-lashing Lashers, a Mutagen Works for the heavy Brute, siege Bloater, flying Drifter and the healing Mender; a Spawning Well breeds free Whelps forever. Trigger the Progenitor’s ADAPTIVE SURGE to instantly harden your whole army against everything for a few seconds. Raise Genewells beside WELLSPRINGS for extra Genome. Protect the Progenitor.',
+  strain: 'Your bodies are weak and dirt-cheap — that is the point. ADAPTATION is earned, not given: send an unarmed GENE SAMPLER to stand near the fighting — as your units endure one kind of damage (bullet, beam, glob, shell, melee) it fills a sample of that type. Walk the locked sample home and deposit it in an ASSIMILATION CHAMBER: every unit that chamber breeds from then on PERMANENTLY resists that damage type (a new deposit swaps the strain; research DUAL GENOME to hold two at once). Getting hit ALSO pays you: every point of damage your units endure earns Genome, so throwing cheap Spawnlings and Biters into the grinder funds the next wave (a Gene Vat mints a small trickle too). Raise a Feeding Nest for ranged Stingers and beam-lashing Lashers, a Mutagen Works for the heavy Brute, siege Bloater, flying Drifter and the healing Mender; a Spawning Well breeds free Whelps forever. Trigger the Progenitor’s ADAPTIVE SURGE to instantly harden your whole army against everything for a few seconds. Raise Genewells beside WELLSPRINGS for extra Genome. Protect the Progenitor.',
 };
 
 // verb shown on a faction's build buttons ('Build X' by default)
@@ -385,16 +385,20 @@ const DEFS = {
   abomination:{ fac:'pact', kind:'unit', name:'Abomination', hp:600, size:17, speed:58, cost:300, time:16, dmg:30, range:24, cd:1.2, aggro:185, shot:'melee', splash:40 },
   gargoyle:  { fac:'pact', kind:'unit', name:'Gargoyle', hp:130, size:10, speed:122, cost:150, time:10, dmg:13, range:125, cd:0.75, aggro:200, shot:'glob' },
 
-  // ----- THE VIRULENT STRAIN (evolution: mostly weak, dirt-cheap spam whose units
-  //   ADAPT — survive enough of one damage TYPE and they harden a strong resistance to
-  //   it, always replacing whatever resistance they had before (see applyDamage/evoAdapt
-  //   in sim.js). Every point of damage a Strain unit ENDURES also pays Genome, so
-  //   throwing chaff into the grinder funds the next wave — a masochistic economy that
-  //   mirrors the Ember's damage-DEALT Plunder, but inverted.) -----
+  // ----- THE VIRULENT STRAIN (evolution: mostly weak, dirt-cheap spam. ADAPTATION is
+  //   now an active pipeline, not a passive perk: an unarmed GENE SAMPLER must stand
+  //   near the fighting to collect a sample of the damage type your units are enduring,
+  //   then carry it home and deposit it in an ASSIMILATION CHAMBER — every unit that
+  //   chamber breeds afterwards PERMANENTLY resists that damage type (see evoMitigate/
+  //   depositSample in sim.js). Depositing a different sample swaps the chamber's
+  //   active strain; the Dual Genome tech lets it hold two at once. Every point of
+  //   damage a Strain unit ENDURES also pays Genome, so throwing chaff into the
+  //   grinder funds the next wave — a masochistic economy that mirrors the Ember's
+  //   damage-DEALT Plunder, but inverted.) -----
   progenitor: { fac:'strain', kind:'building', name:'The Progenitor', hp:1750, size:40, core:true,
                 dmg:9, range:160, cd:0.85, aggro:190, shot:'glob',
-                produces:['spawnling','biter','lurker'],
-                grows:['cyst','vat','genewell','spawnwell','nest','mutaworks','barb','genlab','radar_strain','genmaw'],
+                produces:['spawnling','biter','lurker','sampler'],
+                grows:['cyst','vat','genewell','spawnwell','assimchamber','nest','mutaworks','barb','genlab','radar_strain','genmaw'],
                 // the Strain's active: instantly harden every nearby unit against ALL
                 // damage for a few seconds — a burst of mass adaptation, not attrition.
                 ability:{ key:'surge', name:'Adaptive Surge', range:2200, cd:38, radius:220, dur:6,
@@ -403,6 +407,15 @@ const DEFS = {
   vat:       { fac:'strain', kind:'building', name:'Gene Vat', hp:420, size:22, cost:170, time:12 },
   genewell:  { fac:'strain', kind:'building', name:'Genewell', hp:380, size:16, cost:140, time:10 },
   spawnwell: { fac:'strain', kind:'building', name:'Spawning Well', hp:370, size:21, cost:150, time:13, spawns:'whelp', spawnEvery:5 },
+  // -- the ADAPTATION pipeline: the Gene Sampler is an unarmed collector that must
+  // stand near the fighting (within collectR of a Strain unit being hit) to fill a
+  // sample of the enemy's damage type; carried home to an Assimilation Chamber, the
+  // deposit sets that chamber's active strain — every unit the chamber breeds from
+  // then on PERMANENTLY resists that type. A new deposit swaps the strain out
+  // (Dual Genome research lets the chamber hold two at once). --
+  sampler:   { fac:'strain', kind:'unit', name:'Gene Sampler', hp:110, size:9, speed:96, cost:90, time:8, aggro:0, collector:true, collectR:210 },
+  assimchamber: { fac:'strain', kind:'building', name:'Assimilation Chamber', hp:560, size:23, cost:200, time:15,
+                  spawns:'whelp', spawnEvery:6, produces:['spawnling','biter','stinger','lasher'] },
   nest:      { fac:'strain', kind:'building', name:'Feeding Nest', hp:520, size:22, cost:170, time:13, produces:['stinger','lasher'] },
   barb:      { fac:'strain', kind:'building', name:'Barb Node', hp:370, size:13, cost:110, time:8, dmg:12, range:172, cd:0.85, aggro:190, shot:'glob' },
   genlab:    { fac:'strain', kind:'building', name:'Mutagen Vault', hp:500, size:22, cost:150, time:13, researchLab:true },
@@ -699,11 +712,13 @@ const META = {
   abomination:{ desc: 'Stitched horror — a heavy splashing bruiser, tougher than a Behemoth-in-waiting and cheaper to mass. The Vats’ front line.', req: 'fleshvats' },
   gargoyle:  { desc: 'Winged blood-fiend — the Pact’s air. Fast, lashes from afar, and runs down stragglers and flyers.', req: 'fleshvats' },
   // THE VIRULENT STRAIN
-  progenitor:{ desc: 'Your core. Musters the base Spawnling/Biter/Lurker line and works ADAPTIVE SURGE — instantly hardening every nearby unit against ALL damage for a few seconds. Every point of damage your units endure already pays Genome.' },
+  progenitor:{ desc: 'Your core. Musters the base Spawnling/Biter/Lurker line plus the Gene Sampler, and works ADAPTIVE SURGE — instantly hardening every nearby unit against ALL damage for a few seconds. Every point of damage your units endure already pays Genome.' },
   cyst:      { desc: 'Cheap networked outgrowth. Extends your build range toward distant ground.' },
   vat:       { desc: 'Mints a small, steady trickle of Genome. Stack a few for a base income floor.' },
   genewell:  { desc: 'Harnesses a Wellspring for a heavy flow of Genome. Build it within range of an unclaimed font.' },
   spawnwell: { desc: 'Breeds free Whelps endlessly, for free — cheap chaff that costs nothing but still bleeds Genome when it’s hit.' },
+  sampler:   { desc: 'Unarmed collector — the key to ADAPTATION. Stand it near the fighting: as your units endure one damage type it fills a gene sample of it. Carry the locked sample home to an Assimilation Chamber to set that chamber’s strain.' },
+  assimchamber: { desc: 'The heart of ADAPTATION. Deposit a Gene Sampler’s locked sample here and every unit this chamber breeds from then on PERMANENTLY resists that damage type. A new deposit swaps the strain; Dual Genome research lets it hold two.', reqs: ['spawnwell'] },
   nest:      { desc: 'Feeding Nest — trains ranged Stingers and the piercing beam-Lasher.' },
   barb:      { desc: 'Static defensive spore-turret. Cheap base protection.' },
   genlab:    { desc: 'Research building. Refines the Strain’s mutations and upgrades.' },
@@ -892,20 +907,22 @@ const TURN_RATE = 5.0;          // rad/s — most units snap to a new heading br
 // before they can shoot, the whole point of a "ship" unit on a battlefield.
 const BROADSIDE_ARC = 0.32;     // radians of tolerance either side of exactly abeam
 
-// The Virulent Strain's ADAPTATION. This is a HIVEMIND trait, tracked once per
-// player (not per unit): the whole faction shares one running "streak" of the last
-// damage TYPE (the attacker's `shot`) landing on ANY of its units; a different type
-// resets the streak. Once the streak's cumulative damage (summed across every unit
-// that's been hit) crosses `threshold`, the WHOLE SWARM adapts at once — every
-// Strain unit, everywhere, hardens a `resist` reduction to that type, replacing
-// whatever resistance it had before (only one active at a time — see evoAdapt in
-// sim.js). Because the whole army benefits from one unit's punishment, the enemy
-// has to keep mixing up its damage types across the whole fight, not just avoid
-// overusing one weapon on a single target. Adaptive Surge (the Progenitor's active)
-// instead grants a brief, no-strings resistance to everything. Getting hit also
-// pays Genome (`lootPerDmg` of damage endured) — the masochistic mirror of the
-// Ember's damage-DEALT Plunder.
-const EVO = { threshold: 650, resist: 0.45, lootPerDmg: 0.35, surgeResist: 0.6 };
+// The Virulent Strain's ADAPTATION — an active pipeline, no longer automatic.
+// 1) A GENE SAMPLER must stand near the fighting: whenever a Strain unit within its
+//    collectR endures damage, the sampler tallies it by damage TYPE (the attacker's
+//    `shot`). Once one type's tally crosses `sampleNeed` the sampler LOCKS a sample
+//    of that type and stops collecting.
+// 2) Walk the loaded sampler back to an ASSIMILATION CHAMBER: the sample deposits
+//    automatically on contact and becomes the chamber's active strain.
+// 3) Every unit that chamber breeds (its queue AND its free Whelps) from then on
+//    PERMANENTLY carries a `resist` reduction against that type — the unit keeps it
+//    for life, even if the chamber's strain is later swapped by a new deposit.
+//    The Dual Genome research (strain_dual) lets a chamber hold TWO strains at once;
+//    its units then resist both.
+// Adaptive Surge (the Progenitor's active) still grants a brief, no-strings
+// resistance to everything. Getting hit also pays Genome (`lootPerDmg` of damage
+// endured) — the masochistic mirror of the Ember's damage-DEALT Plunder.
+const EVO = { sampleNeed: 400, resist: 0.45, lootPerDmg: 0.35, surgeResist: 0.6 };
 const SHOT_TYPES = ['melee', 'bullet', 'beam', 'glob', 'shell'];
 const EVO_COLOR = { melee: '#e0574d', bullet: '#e0c94d', beam: '#4dc7e0', glob: '#7de04d', shell: '#b06de0' };
 
@@ -952,6 +969,17 @@ const RESEARCH_BY_FAC = {};
 })();
 // the Warden's Bulwark used to gate on the old 'warden_atk2'; it now maps to Weapons II
 const WARDEN_SIEGE_DOCTRINE = 'warden_wpn2';
+
+// Strain-only extra node: lets the Assimilation Chamber hold a SECOND active strain,
+// so the units it breeds carry two permanent resistances at once. No stat multiplier —
+// its effect is read at deposit time (see depositSample in sim.js). Sits in a fifth
+// Defense-row column of the Strain's tech tree (the grid sizes itself to fit).
+RESEARCH.strain_dual = {
+  fac: 'strain', rid: 'strain_dual', key: 'dual', branch: 1, tier: 4,
+  name: 'Dual Genome', cost: 340, time: 44, req: 'strain_arm2',
+  desc: 'Assimilation Chambers can hold a SECOND active strain — units they breed permanently resist BOTH deposited damage types.',
+};
+RESEARCH_BY_FAC.strain.push('strain_dual');
 
 // which building each faction researches at (the base-less Exodus uses its Ark)
 const LAB_OF = {};

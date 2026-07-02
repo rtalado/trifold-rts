@@ -39,7 +39,15 @@ function buildSnap() {
     if (e.evoSurgeUntil > game.t) fl |= 65536; // Strain Adaptive Surge (bit 16)
     // truly idle unit (bit 13) — lets guests find their own idle workers accurately
     if (e.def.kind === 'unit' && e.order && e.order.type === 'idle' && !e.constructing && !e.growing) fl |= 8192;
-    const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100) : 0;
+    // Strain adaptation state as a 5-bit SHOT_TYPES mask (bits 17-21): a unit's
+    // permanent resist(s), an Assimilation Chamber's active strain(s), or the sample
+    // a Gene Sampler is carrying — the decoder tells them apart by entity type.
+    const em = (e.resist && e.resist.length) ? e.resist
+      : (e.strains && e.strains.length) ? e.strains
+      : (e.sample ? [e.sample] : null);
+    if (em) for (const st of em) { const si = SHOT_TYPES.indexOf(st); if (si >= 0) fl |= 1 << (17 + si); }
+    const prog = (e.constructing || e.growing) ? Math.round(e.progress / e.def.time * 100)
+      : (e.def.collector ? Math.round((e.collectFrac || 0) * 100) : 0); // sampler: collection %
     const q = e.queue && e.queue.length ? e.queue[0] : null;
     const rq = e.rqueue && e.rqueue.length ? e.rqueue[0] : null;
     const ql = (e.queue || []).map(it => TYPE_IDX[it.type]);   // production: type indices
@@ -61,9 +69,7 @@ function buildSnap() {
   const players = {};
   for (const f in game.players) {
     const p = game.players[f];
-    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1), p.arkTier || 0, Math.round(p.powder || 0), +(p.powderInc || 0).toFixed(1),
-      // Virulent Strain: the whole faction's current hivemind resistance (see evoAdapt)
-      p.evoResist ? SHOT_TYPES.indexOf(p.evoResist) + 1 : 0];
+    players[f] = [Math.round(p.res), +p.income.toFixed(1), p.kills, p.creepTiles || 0, [...p.research], Math.round(p.iron || 0), +(p.ironInc || 0).toFixed(1), p.arkTier || 0, Math.round(p.powder || 0), +(p.powderInc || 0).toFixed(1)];
   }
   return {
     t: 'snap', gt: +game.t.toFixed(2), players, units,
@@ -81,7 +87,6 @@ function applySnap(m) {
     if (p) { p.res = a[0]; p.income = a[1]; p.kills = a[2]; p.creepTiles = a[3];
       p.research = new Set(a[4] || []); p.iron = a[5] || 0; p.ironInc = a[6] || 0;
       p.arkTier = a[7] || 0; p.powder = a[8] || 0; p.powderInc = a[9] || 0;
-      p.evoResist = a[10] ? SHOT_TYPES[a[10] - 1] : null;
       // research only ever grows, so its upgrade multipliers only need recomputing when the
       // set actually changes — skip the per-snapshot recalc (×players ×10/s) otherwise.
       const rc = (a[4] || []).length;
@@ -127,6 +132,13 @@ function applySnap(m) {
     e.tgt = tgt || 0;                                // what its weapon is tracking (turret barrels aim with this)
     e.auxTgt = Array.isArray(auxT) ? auxT : null;    // per-gun targets for aux machine-gun rings
     e.isIdle = !!(fl & 8192);                        // truly idle on the sim side (idle-worker finder)
+    // Strain adaptation mask (bits 17-21) — same 5 bits, meaning depends on what this is
+    { const em = (fl >> 17) & 31;
+      const list = em ? SHOT_TYPES.filter((st, i) => em & (1 << i)) : null;
+      if (e.def.collector) e.sample = list ? list[0] : null;             // Gene Sampler's cargo
+      else if (e.type === 'assimchamber') e.strains = list || [];        // Chamber's active strains
+      else e.resist = list;                                              // unit's permanent resist(s)
+    }
     e.deployed = !!(fl & 1); e.constructing = !!(fl & 2); e.growing = !!(fl & 4);
     e.withered = !!(fl & 256); e.mutated = !!(fl & 512);
     e.corruptUntil = (fl & 1024) ? game.t + 1 : 0;   // Myriad corruption marker (cosmetic on guests)
@@ -138,6 +150,7 @@ function applySnap(m) {
     const ownIdx = (fl >> 4) & 15; e.owner = ownIdx ? Object.keys(FACTIONS)[ownIdx - 1] : null;
     e.order = (fl & 8) ? { type: 'harvest', carry: 1 } : { type: 'idle' };
     e.progress = prog / 100 * e.def.time;
+    if (e.def.collector) e.collectFrac = prog / 100;   // sampler: how full its sample is
     e.abilityCd = acd || 0;
     // production and research queues (only the front item shows live progress)
     e.queue = (ql || []).map((v, i) => ({ type: TYPE_LIST[v], t: i === 0 ? (1 - qp / 100) : 1, total: 1 }));

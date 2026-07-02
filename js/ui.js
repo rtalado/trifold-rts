@@ -293,11 +293,17 @@ function ensureSelStructure(si) {
   si.__main = m; si.__queues = q; si.__qsig = null;
 }
 
-// the Virulent Strain's current hivemind resistance — every unit shares one, so this
-// reads straight off the player record rather than the selected entity
-function evoResistNote(fac) {
-  const p = game.players[fac];
-  return (p && p.evoResist) ? 'Swarm-wide: hardened against ' + p.evoResist + ' damage' : 'Swarm-wide: not yet adapted to anything';
+// a Strain unit's own adaptation status — resistance is per-unit now, baked in at
+// birth by the Assimilation Chamber that bred it
+function strainResistNote(e) {
+  if (e.def.collector) {
+    if (e.sample) return 'Carrying a ' + e.sample.toUpperCase() + ' sample — walk it to an Assimilation Chamber';
+    if (e.collectFrac > 0) return 'Collecting… ' + Math.round((e.collectFrac || 0) * 100) + '% — keep it near units under fire';
+    return 'Stand near the fighting to collect the enemy’s damage type';
+  }
+  return (e.resist && e.resist.length)
+    ? 'Hardened for life against ' + e.resist.join(' & ').toUpperCase() + ' damage'
+    : 'No hardened resistance — units bred from an Assimilation Chamber get one';
 }
 
 function renderSelInfo(si) {
@@ -338,7 +344,13 @@ function buildSelMainHTML() {
     if (e.type === 'vault') notes.push('Bullion stored — raises your interest cap & pays rent');
     if (e.def.ability) notes.push(e.def.ability.name + ((e.abilityCd || 0) > 0 ? ': reloading ' + Math.ceil(e.abilityCd) + 's' : ': READY — target via the command card'));
     if (e.fac === 'choir' && e.def.kind === 'unit') notes.push('Fades away from the lattice — heals by dealing damage');
-    if (e.fac === 'strain' && e.def.kind === 'unit') notes.push(evoResistNote('strain'));
+    if (e.fac === 'strain' && e.def.kind === 'unit') notes.push(strainResistNote(e));
+    if (e.type === 'assimchamber') {
+      const st = e.strains || [];
+      notes.push(st.length
+        ? 'Active strain' + (st.length > 1 ? 's' : '') + ': ' + st.join(' & ').toUpperCase() + ' — units bred here resist ' + (st.length > 1 ? 'these' : 'it') + ' for life'
+        : 'Dormant — deposit a Gene Sampler’s locked sample to set its strain');
+    }
     if (notes.length) h += '<div class="sel-status">' + notes.map(n => '<div>' + n + '</div>').join('') + '</div>';
     // description only when there's no editable queue taking the space
     const ownsQueues = e.fac === game.localFac && ((e.queue && e.queue.length) || (e.rqueue && e.rqueue.length));
@@ -349,8 +361,12 @@ function buildSelMainHTML() {
   const counts = {};
   for (const e of game.sel) counts[e.type] = (counts[e.type] || 0) + 1;
   let h = '<div class="sel-head"><span class="sel-name">' + game.sel.length + ' SELECTED</span></div>';
-  if (game.sel.some(e => e.fac === 'strain' && e.def.kind === 'unit'))
-    h += '<div class="sel-status"><div>' + evoResistNote('strain') + '</div></div>';
+  { const su = game.sel.filter(e => e.fac === 'strain' && e.def.kind === 'unit');
+    if (su.length) {
+      const hard = su.filter(e => e.resist && e.resist.length).length;
+      h += '<div class="sel-status"><div>' + hard + '/' + su.length + ' hardened (bred from an Assimilation Chamber)</div></div>';
+    }
+  }
   h += '<div class="sel-list">';
   for (const t in counts) {
     const d = DEFS[t];
@@ -507,7 +523,10 @@ function buildTechTree() {
   const title = document.getElementById('techTitle');
   title.textContent = F.name + ' — TECH TREE'; title.style.color = F.color;
 
-  const W = TECH_PADX + 4 * TECH_COLW, H = TECH_PADY + 4 * TECH_ROWH;
+  // size the grid to the faction's actual nodes (the Strain's Dual Genome adds a 5th column)
+  let maxTier = 3, maxBranch = 3;
+  for (const rid of list) { const r = RESEARCH[rid]; if (r.tier > maxTier) maxTier = r.tier; if (r.branch > maxBranch) maxBranch = r.branch; }
+  const W = TECH_PADX + (maxTier + 1) * TECH_COLW, H = TECH_PADY + (maxBranch + 1) * TECH_ROWH;
   const nodes = document.getElementById('techNodes'), svg = document.getElementById('techLines');
   nodes.style.width = W + 'px'; nodes.style.height = H + 'px';
   svg.setAttribute('width', W); svg.setAttribute('height', H);

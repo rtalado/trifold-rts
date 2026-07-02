@@ -201,7 +201,6 @@ function setupFaction(fac, base, isAI, diff) {
     speedMul: 1, rangeMul: 1, cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0,
     arkTier: 0,   // Solari Exodus: how far the Ark has been upgraded
     gMoon: false, gNecro: false, gWild: false,   // Verdant: standing Heartwood Grafts
-    evoResist: null, evoType: null, evoAccum: 0,   // Virulent Strain: hivemind adaptation (see evoAdapt)
 
     // difficulty handicaps (1 / neutral for humans)
     diff: isAI ? (diff || 'normal') : null,
@@ -310,38 +309,72 @@ function spawnEnt(type, fac, x, y, opts = {}) {
 }
 
 // ---------------- damage / death ----------------
-// Virulent Strain ADAPTATION (hivemind): `shot` is the attacker's damage type. A
-// brief Adaptive Surge (self-cast, see fireAbility) blunts everything on THIS unit;
-// otherwise, if the whole faction has already hardened against this exact type, cut
-// the damage. Either way, feed the FACTION-WIDE streak of consecutive same-type
-// damage landing on any of its units — once it crosses EVO.threshold, the entire
-// swarm adapts at once (every unit, everywhere), discarding whatever resistance it
-// had before.
-function evoAdapt(t, dmg, shot) {
-  const p = game.players[t.fac];
+// Virulent Strain ADAPTATION: `shot` is the attacker's damage type. A brief Adaptive
+// Surge (self-cast, see fireAbility) blunts everything on THIS unit; otherwise a unit
+// bred from an Assimilation Chamber carries the chamber's strain(s) for life (e.resist)
+// and shrugs off that damage type. Either way, any GENE SAMPLER standing close enough
+// to witness the hit tallies the endured damage by type — once one type crosses
+// EVO.sampleNeed the sampler LOCKS a sample of it, ready to carry home and deposit
+// (see depositSample). Adaptation must be gathered from the battlefield now — it no
+// longer happens on its own.
+function evoMitigate(t, dmg, shot) {
   if (t.evoSurgeUntil > game.t) dmg *= (1 - EVO.surgeResist);
-  else if (p.evoResist === shot) dmg *= (1 - EVO.resist);
-  if (p.evoType !== shot) { p.evoType = shot; p.evoAccum = 0; }
-  p.evoAccum += dmg;
-  if (p.evoResist !== shot && p.evoAccum >= EVO.threshold) {
-    p.evoResist = shot; p.evoAccum = 0;
-    for (const e of game.entities) {
-      if (e.dead || e.fac !== t.fac || e.def.kind !== 'unit') continue;
-      addFx({ kind: 'boom', x: e.x, y: e.y, r: e.size * 1.3, ttl: 0.4, max: 0.4, color: EVO_COLOR[shot] || '#c8e639' });
+  else if (t.resist && t.resist.includes(shot)) dmg *= (1 - EVO.resist);
+  // feed every empty sampler near the unit that's being hit
+  const samplers = game._samplers;
+  if (samplers) for (const s of samplers) {
+    if (s.dead || s.sample) continue;
+    const dx = s.x - t.x, dy = s.y - t.y, r = s.def.collectR;
+    if (dx * dx + dy * dy > r * r) continue;
+    const tal = s.tally || (s.tally = {});
+    tal[shot] = (tal[shot] || 0) + dmg;
+    let mx = 0; for (const k in tal) if (tal[k] > mx) mx = tal[k];
+    s.collectFrac = Math.min(1, mx / EVO.sampleNeed);
+    if (tal[shot] >= EVO.sampleNeed) {
+      s.sample = shot; s.tally = null; s.collectFrac = 1;
+      addFx({ kind: 'shock', x: s.x, y: s.y, r: s.size * 3, ttl: 0.6, max: 0.6, color: EVO_COLOR[shot] || '#c8e639' });
+      localMsg(t.fac, 'Sample locked: ' + shot.toUpperCase() + ' — carry the Sampler to an Assimilation Chamber');
     }
-    localMsg(t.fac, 'The swarm adapts — hardened against ' + shot + ' damage!');
+  }
+  // AI fallback: bots don't micro a sampler, so an AI Strain's chambers slowly
+  // self-assimilate the type its army endures most (roughly the old hivemind pace).
+  const p = game.players[t.fac];
+  if (p && p.isAI) {
+    if (p.aiEvoType !== shot) { p.aiEvoType = shot; p.aiEvoAccum = 0; }
+    p.aiEvoAccum = (p.aiEvoAccum || 0) + dmg;
+    if (p.aiEvoAccum >= EVO.sampleNeed * 2) {
+      p.aiEvoAccum = 0;
+      const ch = ents(e => e.fac === t.fac && e.type === 'assimchamber' && !e.growing)
+        .find(c => !(c.strains || []).includes(shot));
+      if (ch) depositStrain(t.fac, ch, shot);
+    }
   }
   return dmg;
+}
+
+// deposit a damage-type strain into an Assimilation Chamber: it becomes the chamber's
+// active strain (the oldest is flushed once past capacity — 1, or 2 with Dual Genome).
+// Units the chamber breeds from then on carry the strains for life.
+function depositStrain(fac, ch, shot) {
+  const p = game.players[fac];
+  const cap = (p && p.research.has('strain_dual')) ? 2 : 1;
+  ch.strains = ch.strains || [];
+  if (!ch.strains.includes(shot)) {
+    ch.strains.push(shot);
+    while (ch.strains.length > cap) ch.strains.shift();
+  }
+  addFx({ kind: 'shock', x: ch.x, y: ch.y, r: ch.size + 18, ttl: 0.7, max: 0.7, color: EVO_COLOR[shot] || '#c8e639' });
+  localMsg(fac, 'Strain assimilated — this chamber now breeds units resisting ' + ch.strains.join(' & ').toUpperCase() + ' damage');
 }
 function applyDamage(t, dmg, attacker) {
   if (t.dead || t.def.noTarget) return;  // Obelisks are captured, never destroyed
   if (game.sandboxGod) return;  // sandbox god mode: nothing takes damage
   if (t.def.invuln && !t.constructing && !t.growing) return;  // the Erdtree: an indestructible living wall
-  // Virulent Strain ADAPTATION: mitigate by whatever damage type this unit has hardened
-  // against (or is momentarily immune to via Adaptive Surge), and track the streak
-  // toward hardening a (new) resistance — see evoAdapt.
+  // Virulent Strain ADAPTATION: mitigate by whatever strain this unit was bred with
+  // (or the momentary Adaptive Surge), and feed any Gene Sampler standing close enough
+  // to collect the enemy's damage type — see evoMitigate.
   if (attacker && t.fac === 'strain' && t.def.kind === 'unit' && attacker.def.shot)
-    dmg = evoAdapt(t, dmg, attacker.def.shot);
+    dmg = evoMitigate(t, dmg, attacker.def.shot);
   const dmg0 = dmg;
   t.lastHurt = game.t;
   const p = game.players[t.fac];
@@ -654,7 +687,7 @@ function fireAbility(fac, e, wx, wy) {
   }
   // surge-type ability (the Virulent Strain's Adaptive Surge): a self-targeted ally
   // buff — instantly harden every nearby Strain unit against ALL damage for a few
-  // seconds (read live in evoAdapt), no enemies harmed.
+  // seconds (read live in evoMitigate), no enemies harmed.
   if (ab.key === 'surge') {
     e.abilityCd = ab.cd;
     for (const o of game.entities) {
@@ -845,6 +878,18 @@ function updateUnit(e, dt) {
   e.blinkCd = Math.max(0, e.blinkCd - dt);
   const o = e.order;
 
+  // Gene Sampler: a locked sample deposits itself the moment the sampler touches a
+  // finished Assimilation Chamber — no extra click needed, just walk it home.
+  if (d.collector && e.sample) {
+    e.scanT -= dt;
+    if (e.scanT <= 0) {
+      e.scanT = 0.25;
+      const ch = ents(c => c.fac === e.fac && c.type === 'assimchamber' && !c.growing && !c.constructing
+        && dist(e, c) < c.size + e.size + 26)[0];
+      if (ch) { depositStrain(e.fac, ch, e.sample); e.sample = null; e.collectFrac = 0; }
+    }
+  }
+
   // the Ark fires on its own while doing anything
   if (d.stationary && d.dmg) {
     e.scanT -= dt;
@@ -993,6 +1038,8 @@ function updateBuilding(e, dt) {
       if (free ? countFree(e.fac) < freeCapOf(e.fac) : countUnits(e.fac) < capOf(e.fac)) {
         const a = Math.random() * Math.PI * 2;
         const u = spawnEnt(d.spawns, e.fac, e.x + Math.cos(a) * (e.size + 12), e.y + Math.sin(a) * (e.size + 12));
+        // an Assimilation Chamber's spawn carries its active strain(s) for life
+        if (e.strains && e.strains.length) u.resist = e.strains.slice();
         const r = game.players[e.fac].swarmRally;
         u.order = { type: 'amove', x: r.x, y: r.y };
       }
@@ -1026,6 +1073,8 @@ function tickQueue(e, dt) {
         e.queue.shift();
         const a = Math.random() * Math.PI * 2;
         const u = spawnEnt(item.type, e.fac, e.x + Math.cos(a) * (e.size + 14), e.y + Math.sin(a) * (e.size + 14));
+        // units bred from an Assimilation Chamber permanently carry its strain(s)
+        if (e.strains && e.strains.length) u.resist = e.strains.slice();
         const r = e.rally || { x: e.x + 50, y: e.y + 50 };
         u.order = u.def.harvester ? { type: 'move', x: r.x, y: r.y } : { type: 'amove', x: r.x, y: r.y };
       }
@@ -1288,7 +1337,6 @@ function sandboxSpawn(type, fac, x, y) {
       gainAccum: 0, income: 0, swarmRally: { x, y }, lastAttack: null, waveSize: 0,
       research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1, speedMul: 1, rangeMul: 1,
       cdMul: 1, splashMul: 1, econMul: 1, capBonus: 0, arkTier: 0, gMoon: false, gNecro: false, gWild: false,
-      evoResist: null, evoType: null, evoAccum: 0,
       diff: null, incomeMul: 1, firstWave: 1e9, waveStep: 0 };
   }
   return spawnEnt(type, fac, x, y);
