@@ -1,10 +1,13 @@
 /* ============================================================
-   MULTIPLAYER — serverless peer-to-peer over a WebRTC DataChannel.
-   Signaling is manual copy/paste: the host generates an INVITE code,
-   the guest pastes it and sends back a REPLY code. No server involved
-   (a public STUN address is used only for NAT discovery).
+   MULTIPLAYER — serverless peer-to-peer over WebRTC DataChannels.
+   Signaling goes through the free PeerJS broker (join by 5-letter
+   code); gameplay traffic is direct peer-to-peer, with the public
+   PeerJS STUN/TURN servers for NAT traversal.
    The host is authoritative: it simulates and streams snapshots;
    the guest renders snapshots and sends commands.
+   Each guest↔host link uses TWO channels: an ordered reliable one
+   for control traffic (join/commands/chat) and an UNORDERED one for
+   snapshots, so packet loss can't head-of-line-block the world state.
    ============================================================ */
 
 const TYPE_LIST = Object.keys(DEFS);
@@ -186,13 +189,15 @@ function guestTick(dt) {
 // runs the room logic (slots, lobby, relay) that a server would normally handle.
 // Up to 4 players (humans + AI) share one lobby, joined by a 5-letter code.
 const PEER_PREFIX = 'trifold-rts-v1-';
-const net = { peer: null, hostConn: null, connected: false, slot: -1, code: '', host: false, players: [], aiCount: 1, inGame: false };
+const net = { peer: null, hostConn: null, snapConn: null, connected: false, slot: -1, code: '', host: false, players: [], aiCount: 1, inGame: false };
 let room = null; // host only: { started, roster, seed, members:[{ pid, conn, slot, fac, host }] }
 
 // failsafe: what a guest needs to reconnect to a running match after a freeze/drop.
 // Kept outside `net` (which onDisconnect wipes) so the Rejoin button survives a drop.
 let rejoinInfo = null;       // { code, slot, fac } for the guest's live match
 let lastSnapAt = 0;          // performance.now() of the last snapshot a guest applied
+let lastSnapGt = -1;         // game-time of the newest snapshot applied (unordered channel
+                             // can deliver frames late — a stale one must be skipped)
 let rejoining = false;       // true while a reconnect attempt is in flight
 
 // ---- match-pause failsafe (so a dropped/frozen player can always rejoin & finish) ----
@@ -213,16 +218,34 @@ const numOk = v => typeof v === 'number' && isFinite(v);
 
 function netConnected() { return net.connected; }
 
-// host: is THIS guest's data channel backed up? Each snapshot is the full state
+// Snapshots ride a SECOND, UNORDERED data channel (label 'snap'), separate from the
+// ordered channel that carries joins/commands/chat. On a lossy connection an ordered
+// channel head-of-line blocks: one lost packet holds back EVERY later message until
+// it's retransmitted, so the guest's world freezes for seconds at a time and, past
+// the watchdog timeout, tears down a link that was actually alive. Unordered delivery
+// lets fresh snapshots keep flowing past a lost one — each snapshot is the full world
+// state, so a gap costs nothing (the guest just skips any stale frame that shows up
+// late). If the snap channel is missing/closed we fall back to the ordered channel.
+const snapConns = new Map(); // host only: pid → that guest's unordered snapshot channel
+function snapChannel(m) {
+  const sc = snapConns.get(m.pid);
+  return (sc && sc.open) ? sc : m.conn;
+}
+
+// host: is THIS guest's snapshot channel backed up? Each snapshot is the full state
 // of the world, so when a guest can't keep up the right move is to DROP the next
 // snapshot for that guest rather than queue it — a growing backlog is what freezes
 // a joiner in long matches (PeerJS overflow-buffers above 8 MB and the guest never
 // catches up). Checked per member so one slow joiner can't starve the others.
-const SNAP_BUFFER_LIMIT = 256 * 1024; // bytes already queued on the RTCDataChannel
+const SNAP_BUFFER_LIMIT = 64 * 1024; // bytes already queued on the RTCDataChannel
+                                     // (≈ under a second of snapshots — any more queued
+                                     // data is pure added latency for that guest)
 function memberBacklogged(m) {
-  if (m.pid === 'HOST' || !m.conn || !m.conn.open) return false;
-  if (m.conn.bufferSize > 0) return true; // PeerJS already overflow-buffering
-  const dc = m.conn.dataChannel;
+  if (m.pid === 'HOST') return false;
+  const c = snapChannel(m);
+  if (!c || !c.open) return false;
+  if (c.bufferSize > 0) return true; // PeerJS already overflow-buffering
+  const dc = c.dataChannel;
   return !!(dc && dc.bufferedAmount > SNAP_BUFFER_LIMIT);
 }
 function mpStatus(s) { document.getElementById('mpStatus').textContent = s || ''; }
@@ -258,7 +281,12 @@ function hostSendTo(pid, o) {
 function hostBroadcast(o, exceptPid) {
   for (const m of room.members) {
     if (m.pid === exceptPid) continue;
-    if (o.t === 'snap' && memberBacklogged(m)) continue; // drop this frame for a slow guest only
+    if (o.t === 'snap' && m.pid !== 'HOST') {
+      if (memberBacklogged(m)) continue; // drop this frame for a slow guest only
+      const c = snapChannel(m);          // prefer the unordered channel (see snapConns)
+      if (c && c.open) { try { c.send(o); } catch (e) {} }
+      continue;
+    }
     hostSendTo(m.pid, o);
   }
 }
@@ -399,6 +427,17 @@ function hostGame() {
   });
   peer.on('connection', conn => {
     const pid = conn.peer;
+    if (conn.label === 'snap') {
+      // the guest's second, UNORDERED channel — snapshots ride here (see snapConns).
+      // Its lifecycle never affects membership: if it dies we just fall back to the
+      // ordered channel; data on it (heartbeats) still proves the peer is alive.
+      conn.on('open', () => { snapConns.set(pid, conn); });
+      conn.on('data', msg => hostHandleMsg(pid, msg));
+      const gone = () => { if (snapConns.get(pid) === conn) snapConns.delete(pid); };
+      conn.on('close', gone);
+      conn.on('error', gone);
+      return;
+    }
     conn.on('open', () => { room.members.push({ pid, conn, slot: -1, fac: null, host: false }); });
     conn.on('data', msg => hostHandleMsg(pid, msg));
     const drop = () => {
@@ -424,6 +463,17 @@ function joinStatus(s) {
 function joinGame(code, rejoin) {
   const peer = new Peer({ debug: 1 });
   net.peer = peer; let opened = false;
+  // Hard deadline for the WHOLE attempt — broker registration included. This used to
+  // start counting only after the broker said 'open'; if the broker socket itself hung
+  // (exactly what happens right after a wifi drop, the moment reconnects matter most)
+  // the attempt neither succeeded nor failed, `rejoining` stayed true forever, and
+  // every future auto-reconnect was blocked — the player had to reload the page.
+  setTimeout(() => {
+    if (opened || net.peer !== peer) return;
+    try { peer.destroy(); } catch (e) {}
+    joinStatus(rejoin ? 'The host is no longer reachable.' : 'No room with that code (or the host went offline).');
+    rejoinFailed();
+  }, 9000);
   // keep the broker registration alive (see the matching handler in hostGame)
   peer.on('disconnected', () => { if (net.peer === peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} } });
   peer.on('open', () => {
@@ -433,11 +483,19 @@ function joinGame(code, rejoin) {
       opened = true; net.host = false; net.connected = true;
       if (rejoin) conn.send({ t: 'rejoin', code: code.toUpperCase(), slot: rejoin.slot, fac: rejoin.fac });
       else conn.send({ t: 'join', code: code.toUpperCase() });
+      // second, UNORDERED channel for snapshots — lost packets on the ordered channel
+      // must not hold the world state back (see the snapConns comment). If it fails to
+      // open (ancient host build, odd network) the host falls back to this channel.
+      const sc = peer.connect(PEER_PREFIX + code.toUpperCase(), { label: 'snap', reliable: false, serialization: 'json' });
+      sc.on('open', () => { net.snapConn = sc; });
+      sc.on('data', msg => handleNet(msg));
+      const scGone = () => { if (net.snapConn === sc) net.snapConn = null; };
+      sc.on('close', scGone);
+      sc.on('error', scGone);
     });
     conn.on('data', msg => handleNet(msg));
     conn.on('close', () => { if (opened) onDisconnect(); });
     conn.on('error', () => { if (!opened) { joinStatus(rejoin ? 'Could not reach the host to rejoin.' : 'Could not reach that room.'); rejoinFailed(); } else onDisconnect(); });
-    setTimeout(() => { if (!opened) { joinStatus(rejoin ? 'The host is no longer reachable.' : 'No room with that code (or the host went offline).'); rejoinFailed(); } }, 9000);
   });
   peer.on('error', e => {
     if (e.type === 'peer-unavailable') { joinStatus(rejoin ? 'The host is no longer reachable.' : 'No room with that code.'); rejoinFailed(); }
@@ -449,7 +507,9 @@ function joinGame(code, rejoin) {
 // Reconnecting used to get exactly ONE automatic attempt — if the player's wifi was
 // still re-associating (the common case right after a drop) it failed and dumped them
 // on a button. Now it keeps trying by itself with a short breather between attempts.
-const REJOIN_MAX_AUTO = 6;      // automatic attempts before falling back to the button
+const REJOIN_MAX_AUTO = 12;     // automatic attempts before falling back to the button —
+                                // ~2 minutes of trying, matching the host's PAUSE_GRACE_MS
+                                // window, so a router reboot doesn't end in a manual click
 const REJOIN_RETRY_MS = 3000;   // breather between attempts
 let rejoinAttempts = 0;
 function tryRejoin() {
@@ -457,7 +517,7 @@ function tryRejoin() {
   rejoining = true;
   rejoinAttempts++;
   if (net.peer) { try { net.peer.destroy(); } catch (e) {} net.peer = null; }
-  net.hostConn = null; net.connected = false;
+  net.hostConn = null; net.snapConn = null; net.connected = false;
   net.code = rejoinInfo.code; net.slot = rejoinInfo.slot; // restore so `start` maps us to our faction
   document.getElementById('endRejoin').style.display = 'none';
   document.getElementById('endTitle').textContent = 'CONNECTION LOST';
@@ -488,10 +548,16 @@ function handleNet(m) {
       net.inGame = true; rejoining = false; rejoinAttempts = 0;
       const me = m.roster.find(r => r.slot === net.slot) || m.roster[0];
       buildMatch(m.roster.map(r => ({ fac: r.fac, ai: r.ai, diff: r.diff })), me.fac, net.host ? 'host' : 'guest', m.seed);
-      if (!net.host) { rejoinInfo = { code: net.code, slot: net.slot, fac: me.fac }; lastSnapAt = performance.now(); }
+      if (!net.host) { rejoinInfo = { code: net.code, slot: net.slot, fac: me.fac }; lastSnapAt = performance.now(); lastSnapGt = -1; }
       break;
     }
-    case 'snap': if (game && game.mode === 'guest' && !game.over) { lastSnapAt = performance.now(); applySnap(m); } break;
+    case 'snap': if (game && game.mode === 'guest' && !game.over) {
+      lastSnapAt = performance.now(); // any snapshot proves the link is alive…
+      // …but only a frame at least as new as the last applied one may touch the world —
+      // the unordered snap channel can deliver a lost-and-retransmitted frame LATE, and
+      // applying it would snap every unit backwards for a beat (rubber-banding).
+      if (m.gt >= lastSnapGt) { lastSnapGt = m.gt; applySnap(m); }
+    } break;
     case 'cmd':  if (game && game.mode === 'host' && !game.over) handleCmd(m); break;
     case 'msg':  if (!m.to || m.to === game.localFac) floatMsg(m.text); break;
     case 'end':  if (game && game.mode !== 'host' && !game.over) endGame(m.winner); break;
@@ -568,7 +634,8 @@ function onDisconnect() {
     document.getElementById('endscreen').style.display = 'flex';
   }
   if (net.peer) { try { net.peer.destroy(); } catch (e) {} }
-  net.peer = null; net.hostConn = null; net.connected = false; room = null;
+  net.peer = null; net.hostConn = null; net.snapConn = null; net.connected = false; room = null;
+  snapConns.clear();
   net.slot = -1; net.code = ''; net.host = false; net.players = []; net.inGame = false;
   document.getElementById('mpLobby').style.display = 'none';
   document.getElementById('mpPanel').style.display = 'none';
@@ -598,6 +665,10 @@ setInterval(() => {
 setInterval(() => {
   if (net.connected && !net.host && net.hostConn && net.hostConn.open) {
     try { net.hostConn.send({ t: 'ping' }); } catch (e) {}
+    // also ping over the unordered channel: when packet loss head-of-line-blocks the
+    // ordered channel, this one still gets through, so the host doesn't mistake a
+    // congested-but-present player for a frozen one and pause the match on them
+    if (net.snapConn && net.snapConn.open) { try { net.snapConn.send({ t: 'ping' }); } catch (e) {} }
   }
 }, GUEST_PING_MS);
 
