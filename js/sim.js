@@ -155,6 +155,7 @@ function buildMatch(roster, localFac, mode, seed) {
     aiFacs: roster.filter(r => r.ai).map(r => r.fac),
     eliminated: new Set(),
     sel: [], placing: null, groups: {},   // control groups: digit -> [entity ids]
+    speed: 1,   // single-player time scale (locked to 1× in multiplayer to stay in sync)
     cam: { x: 0, y: 0, z: 1 },
     creepTimer: 0, hudTimer: 0, aiTimer: 0, aiCursor: 0, netTimer: 0, netFx: [],
     aiInterval: 1.0,
@@ -192,6 +193,9 @@ function setupFaction(fac, base, isAI, diff) {
   const D = (isAI && DIFFS[diff]) ? DIFFS[diff] : DIFFS.normal;
   const p = {
     res: 0, isAI, base, kills: 0,
+    // end-of-match tally (shown on the post-game scoreboard). Tracked only on the
+    // simulating side; the host ships it to guests inside the `end` message.
+    stat: { built: 0, lost: 0, structures: 0, gathered: 0, peakArmy: 0 },
     iron: 0, ironAccum: 0, ironInc: 0,   // secondary resource (Warden: Iron)
     powder: 0, powderAccum: 0, powderInc: 0,   // tertiary resource (Warden: Powder)
     gainAccum: 0, income: 0,
@@ -303,6 +307,11 @@ function spawnEnt(type, fac, x, y, opts = {}) {
   if (opts.constructing) { e.constructing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.12); }
   if (opts.growing) { e.growing = true; e.progress = 0; e.hp = Math.max(20, d.hp * 0.25); }
   if (d.kind === 'building') game.navDirty = true;   // new blocker → re-plan paths
+  // scoreboard tally — count everything produced DURING the match (game.t > 0 skips the
+  // free starting roster spawned at setup time, when game.t is still 0)
+  if (p && p.stat && game.t > 0) {
+    if (d.kind === 'building') p.stat.structures++; else p.stat.built++;
+  }
   game.entities.push(e);
   if (game._idx) game._idx.set(e.id, e);             // keep the byId() index live mid-tick
   return e;
@@ -426,6 +435,8 @@ function applyDamage(t, dmg, attacker) {
     }
     t.dead = true;
     if (t.def.kind === 'building') game.navDirty = true;   // blocker gone → re-plan paths
+    // scoreboard: tally a unit lost by its owner (buildings and neutrals don't count)
+    if (t.def.kind === 'unit' && game.players[t.fac] && game.players[t.fac].stat) game.players[t.fac].stat.lost++;
     // Necrotic Graft: the garden feeds on the enemy dead nearby, growing permanently stronger
     if (t.def.kind === 'unit' && t.fac !== 'neutral')
       for (const f in game.players)
@@ -1333,6 +1344,7 @@ function sandboxSpawn(type, fac, x, y) {
   if (!game || !game.sandbox || !DEFS[type]) return null;
   if (!game.players[fac]) {
     game.players[fac] = { res: SANDBOX_RES, isAI: false, base: { x, y }, kills: 0,
+      stat: { built: 0, lost: 0, structures: 0, gathered: 0, peakArmy: 0 },
       iron: SANDBOX_RES, ironAccum: 0, ironInc: 0, powder: SANDBOX_RES, powderAccum: 0, powderInc: 0,
       gainAccum: 0, income: 0, swarmRally: { x, y }, lastAttack: null, waveSize: 0,
       research: new Set(), dmgMul: 1, hpBonusMul: 1, shBonusMul: 1, speedMul: 1, rangeMul: 1,

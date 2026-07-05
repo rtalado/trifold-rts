@@ -7,6 +7,93 @@ function floatMsg(text) {
   msgTimer = setTimeout(() => { m.style.opacity = 0; }, 1800);
 }
 
+// ---------------- post-game scoreboard ----------------
+// Build the ranked stats table on the end screen from the tally in `stats`
+// (keyed by faction). The winner sits on top; the local player's row is marked.
+function renderScoreboard(winner, stats) {
+  const host = document.getElementById('endStats');
+  if (!host) return;
+  if (!stats) { host.innerHTML = ''; return; }
+  const rows = Object.keys(stats).map(fac => ({ fac, ...stats[fac] }));
+  // rank: winner first, survivors above the fallen, then by kills
+  rows.sort((a, b) =>
+    (b.fac === winner) - (a.fac === winner) || (b.alive - a.alive) || (b.kills - a.kills));
+  const cell = (v) => '<td>' + v + '</td>';
+  let html = '<table id="sbTable"><thead><tr>'
+    + '<th>Faction</th><th>Kills</th><th>Built</th><th>Lost</th><th>Peak army</th><th>Gathered</th>'
+    + '</tr></thead><tbody>';
+  for (const r of rows) {
+    const F = FACTIONS[r.fac] || { name: r.fac, color: '#8fa3c4' };
+    const me = r.fac === game.localFac;
+    const cls = (r.fac === winner ? ' class="sb-win"' : (!r.alive ? ' class="sb-dead"' : ''));
+    const tag = (r.fac === winner ? ' 👑' : '') + (me ? ' (you)' : '') + (r.ai ? '' : ' *');
+    html += '<tr' + cls + '>'
+      + '<td class="sb-fac"><span class="sb-dot" style="background:' + F.color + '"></span>'
+      + '<span style="color:' + F.color + '">' + F.name + '</span>'
+      + '<span class="sb-tag">' + tag + '</span></td>'
+      + cell(r.kills) + cell(r.built) + cell(r.lost) + cell(r.peak) + cell(r.gathered)
+      + '</tr>';
+  }
+  html += '</tbody></table>';
+  host.innerHTML = html;
+}
+
+// ---------------- live standings overlay (Tab) ----------------
+// A quick "who's winning" table shown mid-match. Every side has the full entity list
+// (host simulates it, guests receive it in snapshots) plus the synced per-player figures
+// (resources, income, kills), so this reads correctly for host, guest and single player.
+let scoreboardOpen = false;
+function toggleScoreboard() {
+  if (!game) return;
+  scoreboardOpen = !scoreboardOpen;
+  document.getElementById('scoreboard').style.display = scoreboardOpen ? 'block' : 'none';
+  if (scoreboardOpen) refreshScoreboard();
+}
+function closeScoreboard() {
+  scoreboardOpen = false;
+  document.getElementById('scoreboard').style.display = 'none';
+}
+function refreshScoreboard() {
+  const body = document.getElementById('scoreboardBody'); if (!body || !game) return;
+  const rows = game.roster.map(r => {
+    const p = game.players[r.fac] || {};
+    const alive = !game.eliminated.has(r.fac);
+    const units = alive ? game.entities.reduce((n, e) => n + (!e.dead && e.fac === r.fac && e.def.kind === 'unit' ? 1 : 0), 0) : 0;
+    const army = alive ? armyOf(r.fac).length : 0;
+    return { fac: r.fac, ai: !!r.ai, alive, units, army, kills: p.kills | 0, res: Math.floor(p.res || 0), income: p.income || 0 };
+  });
+  rows.sort((a, b) => (b.alive - a.alive) || (b.army - a.army) || (b.kills - a.kills));
+  let html = '<table class="sbl"><thead><tr><th>Faction</th><th>Army</th><th>Units</th><th>Kills</th><th>Econ</th></tr></thead><tbody>';
+  for (const r of rows) {
+    const F = FACTIONS[r.fac] || { name: r.fac, color: '#8fa3c4' };
+    const me = r.fac === game.localFac;
+    const cls = !r.alive ? ' class="sb-dead"' : (me ? ' class="sb-me"' : '');
+    const econ = r.alive ? (r.res + ' <span style="opacity:.6">+' + r.income.toFixed(0) + '</span>') : '—';
+    html += '<tr' + cls + '><td class="sb-fac"><span class="sb-dot" style="background:' + F.color + '"></span>'
+      + '<span style="color:' + F.color + '">' + F.name + '</span>'
+      + (me ? '<span class="sb-tag"> (you)</span>' : '') + (r.ai ? '' : '<span class="sb-tag"> *</span>')
+      + (!r.alive ? '<span class="sb-tag"> ✕ out</span>' : '') + '</td>'
+      + '<td>' + (r.alive ? r.army : '—') + '</td><td>' + (r.alive ? r.units : '—') + '</td>'
+      + '<td>' + r.kills + '</td><td>' + econ + '</td></tr>';
+  }
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+// ---------------- under-attack alert banner ----------------
+// A clickable banner that jumps the camera to the threatened spot. Sits above the
+// old floatMsg nudge; auto-hides after a few seconds.
+let _alertHideT = null;
+function showAlert(text, x, y) {
+  const el = document.getElementById('alertbox'); if (!el) return;
+  el.textContent = text;
+  el.style.display = 'block';
+  el.onclick = () => { if (x != null && game) centerCam(x, y); hideAlert(); };
+  clearTimeout(_alertHideT);
+  _alertHideT = setTimeout(hideAlert, 5000);
+}
+function hideAlert() { const el = document.getElementById('alertbox'); if (el) el.style.display = 'none'; }
+
 function currentCommands() {
   if (!game || !game.sel.length) return [];
   const fac = game.localFac, p = game.players[fac];
@@ -469,7 +556,7 @@ function updateHUD() {
   }
   // idle-worker nudge (press H to cycle through them)
   const idle = idleHarvesters().length;
-  if (idle) armyHtml += ' · <b style="color:#e0b84d">' + idle + ' idle</b> <span style="opacity:.7">(H)</span>';
+  if (idle) armyHtml += ' · <span id="hudIdle" style="cursor:pointer"><b style="color:#e0b84d">' + idle + ' idle</b> <span style="opacity:.7">(H)</span></span>';
   document.getElementById('hudArmy').innerHTML = armyHtml;
 
   // under-attack warning: if something of ours is taking hits off-screen, say so
@@ -477,9 +564,11 @@ function updateHUD() {
   const la = p.lastAttack;
   if (la && !game.defeated && game.t - la.t < 0.6 && game.t - (game._alertT || -99) > 12 && !onScreen(la.x, la.y)) {
     game._alertT = game.t;
-    floatMsg('⚠ Under attack! Check the minimap');
+    showAlert('⚠ Under attack — click to view', la.x, la.y);
     playSfxThrottled('alert', 4000);
   }
+
+  updateSpeedHud();   // keep the SP time-scale readout in sync
 
   // match timer (elapsed match time — game.t is shared across host/guest/SP)
   const secs = Math.max(0, Math.floor(game.t));
@@ -497,6 +586,7 @@ function updateHUD() {
   else refreshCard();
 
   if (techOpen) refreshTechTree(); // keep the open tech tree live (no DOM rebuild)
+  if (scoreboardOpen) refreshScoreboard(); // keep the standings overlay live while it's up
 }
 
 // ---------------- visual tech tree ----------------

@@ -25,6 +25,7 @@
       <button class="bigbtn" id="btnSandbox"><span class="bb-t">SANDBOX</span><span class="bb-s">No AI, unlimited resources — spawn any unit/building from any faction to test it</span></button>
     </div>
     <button class="minibtn" id="btnSettings">⚙ SETTINGS</button>
+    <button class="minibtn" id="btnControls">⌨ CONTROLS</button>
   </div>
 
   <div id="screenSP" class="screen" style="display:none">
@@ -216,6 +217,7 @@
     <span class="stat" id="hudRes3"></span>
     <span class="stat" id="hudIncome"></span>
     <span class="stat" id="hudArmy"></span>
+    <span class="stat" id="hudSpeed" title="Game speed (SP only) — click to cycle, − / = to change" style="display:none;cursor:pointer"></span>
     <span class="stat" style="margin-left:auto" id="hudTime"></span>
     <span class="stat" id="hudEnemy"></span>
     <button id="hudSandboxBtn" style="display:none">⚙ SPAWN (B)</button>
@@ -223,7 +225,9 @@
   <div id="hint"></div>
   <div id="fps"></div>
   <div id="msg"></div>
+  <div id="alertbox"></div>
   <div id="tooltip"></div>
+  <div id="scoreboard"><div class="sb-hd">STANDINGS <span class="sb-hint">Tab to close</span></div><div id="scoreboardBody"></div></div>
   <div id="bottombar">
     <div id="minimapWrap"><canvas id="minimap" width="220" height="143"></canvas></div>
     <div id="selinfo"></div>
@@ -234,8 +238,12 @@
 <div id="endscreen">
   <h1 id="endTitle"></h1>
   <div class="detail" id="endDetail"></div>
-  <button id="endRejoin" style="display:none">↻ REJOIN MATCH</button>
-  <button id="endMenuBtn">RETURN TO MENU</button>
+  <div id="endStats"></div>
+  <div id="endBtns">
+    <button id="endRejoin" style="display:none">↻ REJOIN MATCH</button>
+    <button id="endRematch" style="display:none">↻ REMATCH</button>
+    <button id="endMenuBtn">RETURN TO MENU</button>
+  </div>
 </div>
 
 <div id="netpause">
@@ -253,6 +261,7 @@
     <h1>PAUSED</h1>
     <div id="pauseMpNote" class="pausenote">Multiplayer — the match keeps running while this menu is open.</div>
     <button class="pausebtn primary" id="pauseResume">▶ RESUME</button>
+    <button class="pausebtn" id="pauseControls">⌨ CONTROLS</button>
     <button class="pausebtn" id="pauseSettings">⚙ SETTINGS</button>
     <button class="pausebtn danger" id="pauseQuit">⮌ QUIT TO MENU</button>
     <div class="pausehint">Press <b>Esc</b> to resume</div>
@@ -283,6 +292,50 @@
       <div class="setrow">
         <div class="setlabel">Show FPS<span class="setsub">Display a frame-rate counter while in a match</span></div>
         <label class="switch"><input type="checkbox" id="setShowFps"><span class="slider"></span></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="controls">
+  <div class="setbox">
+    <div class="setbar"><span class="settitle">CONTROLS</span>
+      <button id="ctrlClose" class="setclose">✕ CLOSE</button></div>
+    <div class="ctrlbody">
+      <div class="ctrlgroup">
+        <h3>Camera</h3>
+        <div class="ctrlrow"><kbd>W A S D</kbd> / <kbd>Arrows</kbd><span>Pan the map</span></div>
+        <div class="ctrlrow"><kbd>Middle-drag</kbd><span>Pan the map</span></div>
+        <div class="ctrlrow"><kbd>Mouse wheel</kbd><span>Zoom in / out</span></div>
+        <div class="ctrlrow"><kbd>Space</kbd><span>Centre on your base</span></div>
+        <div class="ctrlrow"><kbd>Click minimap</kbd><span>Jump the camera there</span></div>
+      </div>
+      <div class="ctrlgroup">
+        <h3>Selection</h3>
+        <div class="ctrlrow"><kbd>Left-drag</kbd><span>Box-select units</span></div>
+        <div class="ctrlrow"><kbd>Double-click</kbd><span>Select all of that type on screen</span></div>
+        <div class="ctrlrow"><kbd>F</kbd><span>Select your whole army</span></div>
+        <div class="ctrlrow"><kbd>H</kbd><span>Cycle idle workers</span></div>
+        <div class="ctrlrow"><kbd>Alt</kbd>+<kbd>1–9</kbd><span>Assign a control group</span></div>
+        <div class="ctrlrow"><kbd>Shift</kbd>+<kbd>1–9</kbd><span>Add to a control group</span></div>
+        <div class="ctrlrow"><kbd>1–9</kbd><span>Recall a group (double-tap to jump)</span></div>
+      </div>
+      <div class="ctrlgroup">
+        <h3>Orders</h3>
+        <div class="ctrlrow"><kbd>Right-click</kbd><span>Move / attack / harvest</span></div>
+        <div class="ctrlrow"><kbd>Shift</kbd>+<kbd>Right</kbd><span>Attack-move to a point</span></div>
+        <div class="ctrlrow"><kbd>Ctrl</kbd>+<kbd>Right</kbd><span>Attack toward that direction</span></div>
+        <div class="ctrlrow"><kbd>Right-drag</kbd><span>Form up along a line</span></div>
+        <div class="ctrlrow"><kbd>Del</kbd><span>Scuttle selected units</span></div>
+      </div>
+      <div class="ctrlgroup">
+        <h3>Command &amp; match</h3>
+        <div class="ctrlrow"><kbd>1–0</kbd><span>Command-card hotkeys (build / train / ability)</span></div>
+        <div class="ctrlrow"><kbd>T</kbd><span>Open the tech tree</span></div>
+        <div class="ctrlrow"><kbd>Tab</kbd><span>Live standings</span></div>
+        <div class="ctrlrow"><kbd>−</kbd> / <kbd>=</kbd><span>Game speed (single-player)</span></div>
+        <div class="ctrlrow"><kbd>B</kbd><span>Spawn panel (sandbox only)</span></div>
+        <div class="ctrlrow"><kbd>Esc</kbd><span>Cancel / pause menu</span></div>
       </div>
     </div>
   </div>

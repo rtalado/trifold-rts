@@ -266,20 +266,35 @@ function applyOrder(fac, selEnts, wx, wy, mode, line) {
   }
 }
 
+// select the next idle worker/harvester and jump the camera to it (H key, or clicking the
+// idle count in the HUD). Cycles through them on repeat use.
+function selectIdleWorker() {
+  if (!game || game.over) return;
+  const idle = idleHarvesters();
+  if (!idle.length) { floatMsg('No idle workers'); return; }
+  game._idleIx = ((game._idleIx || 0) + 1) % idle.length;
+  const w = idle[game._idleIx];
+  game.sel = [w]; centerCam(w.x, w.y); refreshCard(); playSfx('select');
+}
+
 addEventListener('keydown', ev => {
   keys[ev.key.toLowerCase()] = true;
   const k = ev.key.toLowerCase();
   // overlays first — these work regardless of game state
   if (k === 'escape') {
+    if (controlsOpen) { closeControls(); return; }
     if (settingsOpen) { closeSettings(); return; }
     if (pauseOpen) { resumeGame(); return; }
   }
   if (!game || game.over) return;
+  // Tab toggles the live standings overlay (prevent the browser's focus-cycling)
+  if (k === 'tab') { ev.preventDefault(); toggleScoreboard(); return; }
   if (k === 'escape') {
     // Esc cancels whatever you're doing; if there's nothing to cancel, it pauses.
     // The sandbox panel doesn't block the map (you're meant to leave it open while
     // placing several things), so disarming the current item takes priority over
     // closing it — closing is what the B key (or the panel's own button) is for.
+    if (scoreboardOpen) { closeScoreboard(); return; }
     if (game.sandboxPlacing) { game.sandboxPlacing = null; refreshSandboxArmedState(); return; }
     if (sandboxOpen) { closeSandboxPanel(); return; }
     if (techOpen) { closeTechTree(); return; }
@@ -294,6 +309,9 @@ addEventListener('keydown', ev => {
   if (game.netPaused && ![' ', 'f', 'w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return;
   if (k === 't') { ev.preventDefault(); toggleTechTree(); return; }
   if (k === 'b' && game.sandbox) { ev.preventDefault(); toggleSandboxPanel(); return; }
+  // single-player time scale: − slows, = / + speeds up (ignored in multiplayer)
+  if ((k === '-' || k === '_') && game.mode === 'sp') { stepGameSpeed(-1); return; }
+  if ((k === '=' || k === '+') && game.mode === 'sp') { stepGameSpeed(1); return; }
   if (k === ' ') {
     ev.preventDefault();
     const core = ents(e => e.fac === game.localFac && e.def.core)[0];
@@ -303,14 +321,7 @@ addEventListener('keydown', ev => {
     game.sel = armyOf(game.localFac);
     refreshCard();
   }
-  if (k === 'h') { // cycle through idle workers/harvesters
-    const idle = idleHarvesters();
-    if (!idle.length) { floatMsg('No idle workers'); return; }
-    game._idleIx = ((game._idleIx || 0) + 1) % idle.length;
-    const w = idle[game._idleIx];
-    game.sel = [w]; centerCam(w.x, w.y); refreshCard(); playSfx('select');
-    return;
-  }
+  if (k === 'h') { selectIdleWorker(); return; } // cycle through idle workers/harvesters
   if (k === 'delete' || k === 'backspace') { // scuttle the selected unit(s) — no confirmation, matches the command card
     const ids = game.sel.filter(e => e.fac === game.localFac && e.def.kind === 'unit' && !e.def.core).map(e => e.id);
     if (ids.length) {

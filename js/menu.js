@@ -55,9 +55,21 @@ $('spBack').addEventListener('click', () => showScreen('home'));
 $('mpBack').addEventListener('click', () => { if (net.peer) onDisconnect(); showScreen('home'); });
 $('spAiMinus').addEventListener('click', () => { SP.ai = Math.max(1, SP.ai - 1); refreshSP(); });
 $('spAiPlus').addEventListener('click', () => { SP.ai = Math.min(3, SP.ai + 1); refreshSP(); });
+// remembered single-player setup, so the end screen's REMATCH can restart it in one click
+let lastMatchSetup = null;
+function startSingle() {
+  if (SP.sandbox) newSandbox(lastMatchSetup.fac);
+  else newGame(lastMatchSetup.fac, lastMatchSetup.ai, lastMatchSetup.diff);
+}
 $('spStart').addEventListener('click', () => {
   if (!SP.fac) return;
-  if (SP.sandbox) newSandbox(SP.fac); else newGame(SP.fac, SP.ai, SP.diff);
+  lastMatchSetup = { fac: SP.fac, ai: SP.ai, diff: SP.diff, sandbox: SP.sandbox };
+  startSingle();
+});
+$('endRematch').addEventListener('click', () => {
+  if (!lastMatchSetup) { backToMenu(); return; }
+  document.getElementById('endscreen').style.display = 'none';
+  startSingle();
 });
 
 $('mpHostBtn').addEventListener('click', () => {
@@ -99,11 +111,17 @@ $('lobbyCopy').addEventListener('click', () => {
     navigator.clipboard.writeText(code).then(flash).catch(() => { fallbackCopy(code); flash(); });
   } else { fallbackCopy(code); flash(); }
 });
+$('hudSpeed').addEventListener('click', cycleGameSpeed);   // click the SP time-scale readout to cycle it
+// the idle-worker count in the HUD is rebuilt each tick, so delegate its click from the army stat
+$('hudArmy').addEventListener('click', e => { if (e.target.closest('#hudIdle')) selectIdleWorker(); });
 $('mpAiMinus').addEventListener('click', () => { net.aiCount = Math.max(0, net.aiCount - 1); updateLobby(); });
 $('mpAiPlus').addEventListener('click', () => { net.aiCount = Math.min(4 - net.players.length, net.aiCount + 1); updateLobby(); });
 
 // ---------------- pause menu & settings ----------------
-let pauseOpen = false, settingsOpen = false;
+let pauseOpen = false, settingsOpen = false, controlsOpen = false;
+
+function openControls() { controlsOpen = true; $('controls').style.display = 'flex'; }
+function closeControls() { controlsOpen = false; $('controls').style.display = 'none'; }
 
 function openPauseMenu() {
   if (!game || game.over) return;
@@ -137,6 +155,9 @@ function openSettings() { settingsOpen = true; syncSettingsUI(); $('settings').s
 function closeSettings() { settingsOpen = false; $('settings').style.display = 'none'; }
 
 $('btnSettings').addEventListener('click', openSettings);
+$('btnControls').addEventListener('click', openControls);
+$('pauseControls').addEventListener('click', openControls);
+$('ctrlClose').addEventListener('click', closeControls);
 $('setClose').addEventListener('click', closeSettings);
 $('pauseResume').addEventListener('click', resumeGame);
 $('pauseSettings').addEventListener('click', openSettings);

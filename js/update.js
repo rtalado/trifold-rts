@@ -42,6 +42,10 @@ function update(dt) {
     const p = game.players[fac];
     p.incomeT = (p.incomeT || 0) + dt;
     if (p.incomeT >= 1) {
+      // scoreboard: all primary-resource income (mining, obelisks, wellsprings, bounties)
+      // funnels through gainAccum, so tally it here before the per-second reset. Also snapshot
+      // the faction's peak army size — this once-a-second pass is cheap enough for the O(n) count.
+      if (p.stat) { p.stat.gathered += Math.max(0, p.gainAccum); p.stat.peakArmy = Math.max(p.stat.peakArmy, countUnits(fac)); }
       p.income = p.gainAccum / p.incomeT; p.gainAccum = 0;
       p.ironInc = p.ironAccum / p.incomeT; p.ironAccum = 0;
       p.powderInc = p.powderAccum / p.incomeT; p.powderAccum = 0;
@@ -112,24 +116,49 @@ function refreshGrafts() {
   p.gWild  = hasGraft('verdant', 'wild');
 }
 
-function endGame(winner) {
+// Roll up every faction's end-of-match tally (runs on the simulating side — SP or host,
+// which are the only sides that actually track the numbers). The host ships the result to
+// guests in the `end` message so their scoreboard matches.
+function collectMatchStats() {
+  const out = {};
+  for (const r of game.roster) {
+    const p = game.players[r.fac]; if (!p) continue;
+    const s = p.stat || {};
+    out[r.fac] = {
+      kills: p.kills | 0, built: s.built | 0, lost: s.lost | 0,
+      gathered: Math.round(s.gathered || 0), peak: s.peakArmy | 0,
+      alive: !game.eliminated.has(r.fac), ai: !!r.ai,
+    };
+  }
+  return out;
+}
+
+function endGame(winner, stats) {
   game.over = true;
-  if (game.mode === 'host') netSend({ t: 'end', winner });
+  closeScoreboard();
+  stats = stats || collectMatchStats();
+  if (game.mode === 'host') netSend({ t: 'end', winner, stats });
   const won = winner === game.localFac;
   const t = document.getElementById('endTitle');
-  t.textContent = won ? 'VICTORY' : 'DEFEAT';
-  t.style.color = won ? '#7dffa8' : '#ff7d7d';
+  t.textContent = won ? 'VICTORY' : (winner ? 'DEFEAT' : 'DRAW');
+  t.style.color = won ? '#7dffa8' : (winner ? '#ff7d7d' : '#e0b84d');
   const mins = Math.floor(game.t / 60), secs = Math.floor(game.t % 60);
   const who = winner ? FACTIONS[winner].name + ' prevails' : 'Mutual annihilation';
-  const myKills = game.players[game.localFac] ? game.players[game.localFac].kills : 0;
   document.getElementById('endDetail').textContent =
-    who + ' — ' + mins + 'm ' + String(secs).padStart(2, '0') + 's · your kills: ' + myKills;
+    who + ' · ' + mins + 'm ' + String(secs).padStart(2, '0') + 's';
+  renderScoreboard(winner, stats);
+  hideAlert();                          // clear any lingering under-attack banner
+  playSfx(won ? 'victory' : 'defeat');  // end-of-match sting
+  // offer a one-click rematch in single player / sandbox (a fresh battle with the same setup)
+  document.getElementById('endRematch').style.display =
+    (game.mode === 'sp' && lastMatchSetup) ? 'inline-block' : 'none';
   document.getElementById('endscreen').style.display = 'flex';
 }
 
 function backToMenu() {
   game = null;
   rejoinInfo = null; rejoining = false; // gave up on / finished the match — no stale reconnect
+  closeScoreboard(); hideAlert();
   document.getElementById('endscreen').style.display = 'none';
   document.getElementById('hud').style.display = 'none';
   document.getElementById('hudSandboxBtn').style.display = 'none';

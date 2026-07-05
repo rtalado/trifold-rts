@@ -61,6 +61,13 @@ const SFX = {
   // under-attack klaxon: two urgent falling tones
   alert:  (c, t) => { tone(c, t, { type: 'square', f0: 920, f1: 620, dur: 0.13, gain: 0.13 });
                       tone(c, t + 0.16, { type: 'square', f0: 920, f1: 620, dur: 0.13, gain: 0.13 }); },
+  // end-of-match stings: a rising major triad for victory, a heavy falling pair for defeat
+  victory: (c, t) => { tone(c, t,        { type: 'triangle', f0: 523, dur: 0.18, gain: 0.16 });
+                       tone(c, t + 0.14, { type: 'triangle', f0: 659, dur: 0.18, gain: 0.16 });
+                       tone(c, t + 0.28, { type: 'triangle', f0: 784, dur: 0.40, gain: 0.18 });
+                       tone(c, t + 0.28, { type: 'triangle', f0: 1046, dur: 0.40, gain: 0.10 }); },
+  defeat:  (c, t) => { tone(c, t,        { type: 'sawtooth', f0: 330, f1: 220, dur: 0.42, gain: 0.14 });
+                       tone(c, t + 0.20, { type: 'sawtooth', f0: 247, f1: 120, dur: 0.70, gain: 0.14 }); },
 };
 
 function playSfx(name) {

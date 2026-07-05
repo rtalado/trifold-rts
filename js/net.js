@@ -524,6 +524,8 @@ function tryRejoin() {
   net.hostConn = null; net.snapConn = null; net.connected = false;
   net.code = rejoinInfo.code; net.slot = rejoinInfo.slot; // restore so `start` maps us to our faction
   document.getElementById('endRejoin').style.display = 'none';
+  document.getElementById('endRematch').style.display = 'none';
+  document.getElementById('endStats').innerHTML = '';   // no match-result table on the reconnect screen
   document.getElementById('endTitle').textContent = 'CONNECTION LOST';
   document.getElementById('endTitle').style.color = '#e0b84d';
   document.getElementById('endDetail').textContent =
@@ -564,7 +566,7 @@ function handleNet(m) {
     } break;
     case 'cmd':  if (game && game.mode === 'host' && !game.over) handleCmd(m); break;
     case 'msg':  if (!m.to || m.to === game.localFac) floatMsg(m.text); break;
-    case 'end':  if (game && game.mode !== 'host' && !game.over) endGame(m.winner); break;
+    case 'end':  if (game && game.mode !== 'host' && !game.over) endGame(m.winner, m.stats); break;
     case 'hostleft': onDisconnect(); break;
     // the host paused the world because a human dropped/froze — hold here until they're back
     case 'netpause': if (game && !game.over) { game.netPaused = true; netPauseTarget = performance.now() + (m.grace || 120) * 1000; showNetPause(m.names || []); } break;
@@ -635,6 +637,8 @@ function onDisconnect() {
       ? 'The connection dropped — trying to reconnect…'
       : 'The peer-to-peer connection dropped.';
     document.getElementById('endRejoin').style.display = 'none';
+    document.getElementById('endRematch').style.display = 'none';
+    document.getElementById('endStats').innerHTML = '';
     document.getElementById('endscreen').style.display = 'flex';
   }
   if (net.peer) { try { net.peer.destroy(); } catch (e) {} }
