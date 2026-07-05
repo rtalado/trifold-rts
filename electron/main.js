@@ -42,12 +42,24 @@ function createWindow() {
 
   // Open any real external links (e.g. the PeerJS broker is internal, but if a
   // link is ever clicked) in the user's real browser, not a new app window.
+  // Anything that isn't a plain http(s) URL (file:, javascript:, data:, …) is
+  // refused outright — the game never legitimately opens such a window, so this
+  // closes it as an injection vector.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
       shell.openExternal(url);
-      return { action: 'deny' };
     }
-    return { action: 'allow' };
+    return { action: 'deny' };
+  });
+
+  // Lock the window to the bundled game: never let the page navigate away from
+  // the local index.html (a stray link, redirect or injected navigation would
+  // otherwise replace the game with arbitrary remote content inside the app).
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    if (url !== mainWindow.webContents.getURL()) {
+      e.preventDefault();
+      if (url.startsWith('http://') || url.startsWith('https://')) shell.openExternal(url);
+    }
   });
 
   mainWindow.on('closed', () => { mainWindow = null; });

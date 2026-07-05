@@ -344,9 +344,13 @@ function hostHandleMsg(pid, m) {
   } else if (!mem || mem.slot < 0) {
     // ignore anything before this peer has joined a slot
   } else if (m.t === 'pick') {
+    if (!FACTIONS[m.fac]) return;   // ignore picks for non-existent factions (bad key would
+                                    // otherwise crash every client's lobby render — see updateLobby)
     mem.fac = m.fac;
     hostBroadcast(lobbyMsg());
   } else if (m.t === 'start') {
+    if (pid !== 'HOST') return;    // only the host's own loopback may start the match — a guest
+                                   // must never force-start it with a roster/seed it chose
     room.started = true;
     room.roster = m.roster; room.seed = m.seed; // kept so dropped guests can rejoin
     hostBroadcast({ t: 'start', roster: m.roster, seed: m.seed }); // to everyone, host included

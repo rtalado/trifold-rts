@@ -692,3 +692,12 @@ document.getElementById('sandboxHealBtn').addEventListener('click', sandboxHealS
 document.getElementById('sandboxKillBtn').addEventListener('click', sandboxKillSelection);
 document.getElementById('sandboxClearBtn').addEventListener('click', sandboxClearOthers);
 document.getElementById('sandboxGodChk').addEventListener('change', ev => { if (game) game.sandboxGod = ev.target.checked; });
+
+// Handlers that used to be inline on* attributes in index.html — moved here so a strict
+// Content-Security-Policy (script-src 'self', no unsafe-inline) can block injected scripts.
+document.getElementById('hudSandboxBtn').addEventListener('click', toggleSandboxPanel);
+document.getElementById('techCloseBtn').addEventListener('click', closeTechTree);
+document.getElementById('sandboxCloseBtn').addEventListener('click', closeSandboxPanel);
+document.getElementById('endMenuBtn').addEventListener('click', backToMenu);
+// click on the tech-tree backdrop (outside the panel) closes it
+document.getElementById('techtree').addEventListener('click', ev => { if (ev.target === ev.currentTarget) closeTechTree(); });

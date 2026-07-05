@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Content-Security-Policy: everything the game needs is self-hosted, so lock the page
+     down to same-origin assets. WebRTC signalling/media reach the PeerJS broker + public
+     STUN/TURN servers (connect-src), which is the only outbound contact the game makes.
+     No remote scripts, no inline <script> (all JS lives in js/*.js), no framing. This
+     neutralises any future XSS regression in the UI's innerHTML paths. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com https://*.peerjs.com wss://*.peerjs.com stun: turn: stuns: turns:; base-uri 'none'; object-src 'none'; form-action 'none'">
 <title>TRIFOLD — Asymmetric RTS</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -212,7 +218,7 @@
     <span class="stat" id="hudArmy"></span>
     <span class="stat" style="margin-left:auto" id="hudTime"></span>
     <span class="stat" id="hudEnemy"></span>
-    <button id="hudSandboxBtn" style="display:none" onclick="toggleSandboxPanel()">⚙ SPAWN (B)</button>
+    <button id="hudSandboxBtn" style="display:none">⚙ SPAWN (B)</button>
   </div>
   <div id="hint"></div>
   <div id="fps"></div>
@@ -229,7 +235,7 @@
   <h1 id="endTitle"></h1>
   <div class="detail" id="endDetail"></div>
   <button id="endRejoin" style="display:none">↻ REJOIN MATCH</button>
-  <button onclick="backToMenu()">RETURN TO MENU</button>
+  <button id="endMenuBtn">RETURN TO MENU</button>
 </div>
 
 <div id="netpause">
@@ -282,12 +288,12 @@
   </div>
 </div>
 
-<div id="techtree" onclick="if(event.target===this)closeTechTree()">
+<div id="techtree">
   <div id="techPanel">
     <div id="techBar">
       <span id="techTitle"></span>
       <span id="techRes"></span>
-      <button id="techCloseBtn" onclick="closeTechTree()">✕ CLOSE&nbsp;(T)</button>
+      <button id="techCloseBtn">✕ CLOSE&nbsp;(T)</button>
     </div>
     <div id="techScroll">
       <div id="techBody">
@@ -306,7 +312,7 @@
       <button id="sandboxHealBtn">✚ Heal selection</button>
       <button id="sandboxKillBtn">☠ Kill selection</button>
       <button id="sandboxClearBtn">🗑 Clear all but mine</button>
-      <button id="sandboxCloseBtn" onclick="closeSandboxPanel()">✕ CLOSE&nbsp;(B)</button>
+      <button id="sandboxCloseBtn">✕ CLOSE&nbsp;(B)</button>
     </div>
     <div id="sandboxFacRow"></div>
     <div id="sandboxScroll"><div id="sandboxGrid"></div></div>
